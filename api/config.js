@@ -1,6 +1,9 @@
 const { sql, ensureSchema } = require('../lib/db');
+const { authenticate } = require('../lib/auth');
 
 module.exports = async (req, res) => {
+  const session = authenticate(req);
+  if (!session) return res.status(401).json({ error: 'No autorizado' });
   try {
     await ensureSchema();
 
