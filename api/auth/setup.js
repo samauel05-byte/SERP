@@ -1,34 +1,47 @@
-const { sql, ensureSchema } = require('../../lib/db');
-const { createToken, hashPassword, randomHex } = require('../../lib/auth');
+const supabase = require('../../lib/supabase');
 
 module.exports = async (req, res) => {
   try {
-    await ensureSchema();
-
     if (req.method === 'GET') {
-      const { rows } = await sql`SELECT COUNT(*) AS cnt FROM users`;
-      return res.json({ hasUsers: parseInt(rows[0].cnt) > 0 });
+      const { count } = await supabase
+        .from('direct_profiles')
+        .select('*', { count: 'exact', head: true });
+      return res.json({ hasUsers: (count || 0) > 0 });
     }
 
     if (req.method === 'POST') {
-      const { rows: existing } = await sql`SELECT COUNT(*) AS cnt FROM users`;
-      if (parseInt(existing[0].cnt) > 0) return res.status(409).json({ error: 'Ya existe un administrador' });
+      const { count } = await supabase
+        .from('direct_profiles')
+        .select('*', { count: 'exact', head: true });
+      if ((count || 0) > 0) return res.status(409).json({ error: 'Ya existe un administrador' });
 
-      const { username, password, vaultKeyIv, vaultKeyCt, userSalt } = req.body || {};
-      if (!username || !password) return res.status(400).json({ error: 'Campos requeridos' });
+      const { email, password, vaultKeyIv, vaultKeyCt, userSalt } = req.body || {};
+      if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
 
-      const passwordSalt = randomHex(16);
-      const passwordHash = await hashPassword(password, passwordSalt);
-      const id = 'user_' + Date.now();
+      const { data: { user }, error } = await supabase.auth.admin.createUser({
+        email: email.toLowerCase().trim(),
+        password,
+        email_confirm: true,
+      });
+      if (error) return res.status(400).json({ error: error.message });
 
-      await sql`
-        INSERT INTO users (id, username, password_hash, password_salt, user_key_salt, role, allowed_portals, vault_key_iv, vault_key_ct, created_at)
-        VALUES (${id}, ${username.toLowerCase().trim()}, ${passwordHash}, ${passwordSalt}, ${userSalt||''}, 'admin',
-                '["dgii","tss","trabajo","sirla"]', ${vaultKeyIv||null}, ${vaultKeyCt||null}, ${Date.now()})
-      `;
+      const { error: profileError } = await supabase.from('direct_profiles').insert({
+        id: user.id,
+        role: 'admin',
+        access_direct: true,
+        access_cami: true,
+        access_nala: true,
+        portals_direct: ['dgii', 'tss', 'trabajo', 'sirla'],
+        user_key_salt: userSalt || null,
+        vault_key_iv: vaultKeyIv || null,
+        vault_key_ct: vaultKeyCt || null,
+      });
+      if (profileError) {
+        await supabase.auth.admin.deleteUser(user.id);
+        return res.status(500).json({ error: profileError.message });
+      }
 
-      const token = createToken({ userId: id, role: 'admin', portals: ['dgii','tss','trabajo','sirla'], exp: Date.now() + 28800000 });
-      return res.json({ ok: true, token });
+      return res.json({ ok: true });
     }
 
     res.status(405).end();

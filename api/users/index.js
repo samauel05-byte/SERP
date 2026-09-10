@@ -1,39 +1,71 @@
-const { sql, ensureSchema } = require('../../lib/db');
-const { authenticate, hashPassword, randomHex } = require('../../lib/auth');
+const supabase = require('../../lib/supabase');
+const { authenticate } = require('../../lib/auth');
 
 module.exports = async (req, res) => {
-  const session = authenticate(req);
+  const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
 
   try {
-    await ensureSchema();
-
     if (req.method === 'GET') {
-      const { rows } = await sql`SELECT id, username, role, allowed_portals, created_at FROM users ORDER BY created_at ASC`;
-      return res.json({ ok: true, users: rows });
+      const { data: profiles } = await supabase
+        .from('direct_profiles')
+        .select('id, role, access_direct, access_cami, access_nala, portals_direct, created_at')
+        .order('created_at');
+
+      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const emailMap = {};
+      for (const u of authUsers || []) emailMap[u.id] = u.email;
+
+      const users = (profiles || []).map(p => ({
+        id: p.id,
+        email: emailMap[p.id] || '',
+        role: p.role,
+        access_direct: p.access_direct,
+        access_cami: p.access_cami,
+        access_nala: p.access_nala,
+        portals_direct: p.portals_direct,
+        created_at: p.created_at,
+      }));
+
+      return res.json({ ok: true, users });
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, portals, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
-      if (!username || !password) return res.status(400).json({ error: 'Campos requeridos' });
+      const { email, password, role, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
 
-      const passwordSalt = randomHex(16);
-      const passwordHash = await hashPassword(password, passwordSalt);
-      const id = 'user_' + Date.now();
-      const allowedPortals = JSON.stringify(portals || ['dgii','tss','trabajo','sirla']);
+      const { data: { user }, error } = await supabase.auth.admin.createUser({
+        email: email.toLowerCase().trim(),
+        password,
+        email_confirm: true,
+      });
+      if (error) return res.status(400).json({ error: error.message });
 
-      await sql`
-        INSERT INTO users (id, username, password_hash, password_salt, user_key_salt, role, allowed_portals, vault_key_iv, vault_key_ct, created_at)
-        VALUES (${id}, ${username.toLowerCase().trim()}, ${passwordHash}, ${passwordSalt}, ${userSalt||''},
-                ${role||'user'}, ${allowedPortals}, ${vaultKeyIv||null}, ${vaultKeyCt||null}, ${Date.now()})
-      `;
-      return res.json({ ok: true, id });
+      const { error: profileError } = await supabase.from('direct_profiles').insert({
+        id: user.id,
+        role: role || 'user',
+        access_direct: true,
+        access_cami: access_cami || false,
+        access_nala: access_nala || false,
+        portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla'],
+        user_key_salt: userSalt || null,
+        vault_key_iv: vaultKeyIv || null,
+        vault_key_ct: vaultKeyCt || null,
+      });
+      if (profileError) {
+        await supabase.auth.admin.deleteUser(user.id);
+        return res.status(500).json({ error: profileError.message });
+      }
+
+      return res.json({ ok: true, id: user.id });
     }
 
     res.status(405).end();
   } catch (e) {
-    if (e.message?.includes('unique') || e.message?.includes('duplicate')) return res.status(409).json({ error: 'Usuario ya existe' });
+    if (e.message?.includes('already registered') || e.message?.includes('duplicate')) {
+      return res.status(409).json({ error: 'Email ya registrado' });
+    }
     res.status(500).json({ error: e.message });
   }
 };
