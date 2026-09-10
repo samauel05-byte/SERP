@@ -297,11 +297,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <script>
 'use strict';
 
+const LOGOS = {
+  dgii: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><g transform="translate(50,50)"><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#5a9e1c" transform="rotate(0)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#6ab820" transform="rotate(22.5)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#84cc16" transform="rotate(45)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#a3e635" transform="rotate(67.5)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#bef264" transform="rotate(90)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#d9f99d" transform="rotate(112.5)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#bef264" transform="rotate(135)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#a3e635" transform="rotate(157.5)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#84cc16" transform="rotate(180)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#65a30d" transform="rotate(202.5)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#4d7c0f" transform="rotate(225)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#3f6212" transform="rotate(247.5)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#4d7c0f" transform="rotate(270)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#65a30d" transform="rotate(292.5)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#84cc16" transform="rotate(315)"/><rect x="-4.5" y="-44" width="9" height="20" rx="3" fill="#a3e635" transform="rotate(337.5)"/><circle r="22" fill="white"/></g></svg>`,
+  tss: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect x="4" y="44" width="29" height="54" rx="7" fill="#1547a8"/><rect x="36" y="27" width="29" height="71" rx="7" fill="#0099c7"/><rect x="68" y="9" width="29" height="89" rx="7" fill="#3db849"/><text x="18" y="87" text-anchor="middle" fill="white" font-size="26" font-weight="900" font-family="Arial Black,sans-serif">T</text><text x="50" y="87" text-anchor="middle" fill="white" font-size="26" font-weight="900" font-family="Arial Black,sans-serif">S</text><text x="82" y="87" text-anchor="middle" fill="white" font-size="22" font-weight="900" font-family="Arial Black,sans-serif">s</text></svg>`,
+  trabajo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect x="46" y="2" width="8" height="11" rx="2" fill="#1a3d8f"/><rect x="43" y="12" width="14" height="4" rx="1" fill="#0f2d7a"/><path d="M18,58 Q18,12 50,8 Q82,12 82,58 Z" fill="#1a3d8f"/><rect x="18" y="55" width="64" height="7" fill="#0f2d7a"/><rect x="14" y="62" width="72" height="4" rx="1" fill="#1a3d8f"/><rect x="10" y="66" width="80" height="4" rx="1" fill="#0f2d7a"/><rect x="8" y="70" width="84" height="4" fill="#dc2626"/><text x="50" y="88" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="800" font-family="Georgia,serif" letter-spacing="2">TRABAJO</text></svg>`,
+  sisaril: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><path d="M22,26 Q50,4 78,26" fill="none" stroke="#3db849" stroke-width="8" stroke-linecap="round"/><path d="M28,31 Q50,14 72,31" fill="none" stroke="#2a9c35" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="28" r="10" fill="#1547a8"/><line x1="50" y1="50" x2="22" y2="70" stroke="#1547a8" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="50" x2="78" y2="70" stroke="#3db849" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="72" x2="22" y2="95" stroke="#3db849" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="72" x2="78" y2="95" stroke="#1547a8" stroke-width="13" stroke-linecap="round"/><circle cx="50" cy="61" r="7" fill="#1547a8"/></svg>`,
+};
+
 const INST = {
-  dgii:    { name:'DGII',        desc:'Dirección General de Impuestos Internos', grad:'linear-gradient(135deg,#004e89 0%,#2563eb 100%)', abbr:'DGII',  uf:'usuario', pf:'contrasena' },
-  tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',         grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',   uf:'usuario', pf:'contrasena' },
-  trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                    grad:'linear-gradient(135deg,#5b21b6 0%,#7c3aed 100%)', abbr:'MT',    uf:'usuario', pf:'contrasena' },
-  sirla:   { name:'SISARIL',     desc:'Registro Laboral y Actuarial',             grad:'linear-gradient(135deg,#92400e 0%,#b45309 100%)', abbr:'SISARIL', uf:'usuario', pf:'contrasena' },
+  dgii:    { name:'DGII',        desc:'Dirección General de Impuestos Internos',    grad:'linear-gradient(135deg,#004e89 0%,#2563eb 100%)', abbr:'DGII',    uf:'usuario', pf:'contrasena' },
+  tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',     uf:'usuario', pf:'contrasena' },
+  trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',      uf:'usuario', pf:'contrasena' },
+  sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL', uf:'usuario', pf:'contrasena' },
 };
 
 let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
@@ -422,10 +429,11 @@ function renderPortalGrid() {
     const hasUrl=!!appConfig[key+'_loginUrl'];
     const card=document.createElement('div');
     card.className='p-card';
-    const fsz=inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px';
+    const logoKey=key==='sirla'?'sisaril':key;
+    const logoHtml=LOGOS[logoKey]?`<div class="p-logo" style="background:#fff;padding:4px">${LOGOS[logoKey]}</div>`:`<div class="p-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px'}">${inst.abbr}</div>`;
     card.innerHTML=`
       <div class="p-card-top">
-        <div class="p-logo" style="background:${inst.grad};font-size:${fsz}">${inst.abbr}</div>
+        ${logoHtml}
         <div class="p-info">
           <div class="p-name">${inst.name}</div>
           <div class="p-desc">${inst.desc}</div>
@@ -445,10 +453,11 @@ async function renderCompaniesView() {
   const hasUrl=!!appConfig[activePortal+'_loginUrl'];
 
   // banner
-  const fsz=inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px';
+  const logoKey2=activePortal==='sirla'?'sisaril':activePortal;
+  const bannerLogo=LOGOS[logoKey2]?`<div class="banner-logo" style="background:#fff;padding:3px">${LOGOS[logoKey2]}</div>`:`<div class="banner-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px'}">${inst.abbr}</div>`;
   document.getElementById('portal-banner').innerHTML=`
     <div class="portal-banner">
-      <div class="banner-logo" style="background:${inst.grad};font-size:${fsz}">${inst.abbr}</div>
+      ${bannerLogo}
       <div class="banner-info">
         <div class="banner-name">${inst.name}</div>
         <div class="banner-sub">${hasUrl?'Portal configurado — listo para entrar':'URL de login sin configurar'}</div>
