@@ -203,7 +203,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <p class="auth-logo-slogan">Plataforma multifuncional para contables</p>
     <p class="auth-ttl">Crear cuenta de administrador</p>
     <p class="auth-sub">Primera configuración — crea tu cuenta de acceso. No podrás recuperar esta contraseña si la olvidas.</p>
-    <div class="field"><label>Email</label><input id="setup-email" type="email" placeholder="admin@empresa.com" autocomplete="email"></div>
+    <div class="field"><label>Usuario</label><input id="setup-username" type="text" placeholder="Ej: admin" autocomplete="username"></div>
     <div class="field"><label>Contraseña</label><input id="setup-pw" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password"></div>
     <div class="field"><label>Confirmar contraseña</label><input id="setup-pw2" type="password" placeholder="Repite la contraseña" autocomplete="new-password"><div class="ferr" id="setup-err" hidden></div></div>
     <button class="btn-full" onclick="handleSetup()">Crear cuenta</button>
@@ -220,7 +220,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <p class="auth-logo-slogan">Plataforma multifuncional para contables</p>
     <p class="auth-ttl">Bienvenido de vuelta</p>
     <p class="auth-sub">Introduce tus credenciales para acceder al sistema.</p>
-    <div class="field"><label>Email</label><input id="login-email" type="email" placeholder="Tu email" autocomplete="email"></div>
+    <div class="field"><label>Usuario</label><input id="login-username" type="text" placeholder="Tu usuario" autocomplete="username"></div>
     <div class="field"><label>Contraseña</label><input id="login-pw" type="password" placeholder="Tu contraseña" autocomplete="current-password"><div class="ferr" id="login-err" hidden></div></div>
     <button class="btn-full" onclick="handleLogin()">Entrar</button>
   </div>
@@ -407,7 +407,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="modal-body">
       <input type="hidden" id="modal-user-id">
       <p class="slabel">Datos de acceso</p>
-      <div class="field"><label>Email</label><input id="u-email" type="email" placeholder="Ej: usuario@empresa.com" autocomplete="off"></div>
+      <div class="field"><label>Usuario</label><input id="u-username" type="text" placeholder="Ej: juan" autocomplete="off"></div>
       <div class="field"><label id="u-pw-label">Contraseña</label><input id="u-pw" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
       <p class="slabel">Rol</p>
       <div class="field">
@@ -515,15 +515,18 @@ const A = {
 /* ── Boot ── */
 async function boot() {
   show('view-loading');
+  let cfgOk = false;
   try {
     // Init Supabase client
     const cfgR = await fetch('/api/supabase-config').then(r=>r.json());
+    if (!cfgR.url || !cfgR.anonKey) throw new Error('Env vars de Supabase no configuradas en Vercel. Agrega SUPABASE_URL y SUPABASE_ANON_KEY y redespliega.');
+    cfgOk = true;
     sbClient = supabase.createClient(cfgR.url, cfgR.anonKey);
     sbClient.auth.onAuthStateChange((_e, sess) => { sessionToken = sess?.access_token || null; });
 
     // Check if any users are configured
     const setupCheck = await fetch('/api/auth/setup').then(r=>r.json()).catch(()=>({hasUsers:false}));
-    if (!setupCheck.hasUsers) { show('view-setup'); document.getElementById('setup-email').focus(); return; }
+    if (!setupCheck.hasUsers) { show('view-setup'); document.getElementById('setup-username').focus(); return; }
 
     // Try to restore Supabase session
     const { data: { session } } = await sbClient.auth.getSession();
@@ -544,17 +547,23 @@ async function boot() {
         } catch { masterKey=null; vaultSecret=null; }
       }
     }
-    show('view-login'); document.getElementById('login-email').focus();
-  } catch(e) { show('view-login'); toast('Error al conectar con el servidor','err'); }
+    show('view-login'); document.getElementById('login-username').focus();
+  } catch(e) {
+    const msg = (!cfgR?.url || !cfgR?.anonKey)
+      ? 'Configuración de Supabase incompleta — verifica las env vars en Vercel y redespliega'
+      : (e?.message || 'Error al conectar con el servidor');
+    show('view-login'); toast(msg,'err');
+  }
 }
 
 async function handleSetup() {
-  const email=document.getElementById('setup-email').value.trim().toLowerCase();
+  const username=document.getElementById('setup-username').value.trim().toLowerCase().replace(/\s+/g,'');
   const pw=document.getElementById('setup-pw').value, pw2=document.getElementById('setup-pw2').value;
   const err=document.getElementById('setup-err'); err.hidden=true;
-  if (!email){err.textContent='Escribe tu email';err.hidden=false;return;}
+  if (!username){err.textContent='Escribe un nombre de usuario';err.hidden=false;return;}
   if (pw.length<8){err.textContent='Mínimo 8 caracteres';err.hidden=false;return;}
   if (pw!==pw2){err.textContent='Las contraseñas no coinciden';err.hidden=false;return;}
+  const email = username + '@direct.local';
   try {
     const vaultSecretBytes = crypto.getRandomValues(new Uint8Array(32));
     const vaultSalt = C.randB64(16);
@@ -566,7 +575,7 @@ async function handleSetup() {
 
     const res = await fetch('/api/auth/setup', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ email, password:pw, vaultKeyIv:vkIv, vaultKeyCt:vkCt, userSalt })
+      body:JSON.stringify({ username, password:pw, vaultKeyIv:vkIv, vaultKeyCt:vkCt, userSalt })
     }).then(r=>r.json());
     if (!res.ok){ err.textContent=res.error||'Error al crear cuenta'; err.hidden=false; return; }
 
@@ -590,10 +599,11 @@ async function handleSetup() {
 }
 
 async function handleLogin() {
-  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const username=document.getElementById('login-username').value.trim().toLowerCase().replace(/\s+/g,'');
   const pw=document.getElementById('login-pw').value;
   const err=document.getElementById('login-err'); err.hidden=true;
-  if (!email||!pw){ err.textContent='Completa todos los campos'; err.hidden=false; return; }
+  if (!username||!pw){ err.textContent='Completa todos los campos'; err.hidden=false; return; }
+  const email = username + '@direct.local';
   try {
     // 1. Sign in via Supabase
     const { data: authData, error: signInErr } = await sbClient.auth.signInWithPassword({ email, password: pw });
@@ -637,9 +647,9 @@ function lockVault() {
   stopPolling();
   if (sbClient) sbClient.auth.signOut();
   show('view-login');
-  document.getElementById('login-email').value='';
+  document.getElementById('login-username').value='';
   document.getElementById('login-pw').value='';
-  document.getElementById('login-email').focus();
+  document.getElementById('login-username').focus();
 }
 
 /* ── Views ── */
@@ -671,14 +681,15 @@ async function renderUsersList() {
       if (user.access_direct) modules.push('Direct');
       if (user.access_cami) modules.push('CAMI');
       if (user.access_nala) modules.push('NALA');
-      const initials=(user.email||'?').charAt(0).toUpperCase();
-      const userData=JSON.stringify({id:user.id,email:user.email,role:user.role,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
+      const uname=(user.username||user.email||'?').replace('@direct.local','');
+      const initials=uname.charAt(0).toUpperCase();
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
         <div class="user-avatar">${initials}</div>
         <div class="user-info">
-          <div class="user-name">${user.email}</div>
+          <div class="user-name">${uname}</div>
           <div class="user-meta">
             <span class="user-role-badge ${user.role==='admin'?'admin':''}">${user.role==='admin'?'Admin':'Usuario'}</span>
             ${modules.map(m=>`<span class="portal-chip">${m}</span>`).join('')}
@@ -702,7 +713,7 @@ function openUserModal(userData=null) {
   const isEdit = userData && userData.id;
   document.getElementById('modal-user-id').value = isEdit ? userData.id : '';
   document.getElementById('modal-user-title').textContent = isEdit ? 'Editar usuario' : 'Nuevo usuario';
-  document.getElementById('u-email').value = userData?.email || '';
+  document.getElementById('u-username').value = userData?.username || '';
   document.getElementById('u-pw').value = '';
   document.getElementById('u-pw-label').textContent = isEdit ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña';
   document.getElementById('u-role').value = userData?.role || 'user';
@@ -716,14 +727,15 @@ function openUserModal(userData=null) {
 
 async function saveUser() {
   const userId=document.getElementById('modal-user-id').value;
-  const email=document.getElementById('u-email').value.trim().toLowerCase();
+  const username=document.getElementById('u-username').value.trim().toLowerCase().replace(/\s+/g,'');
+  const email = username + '@direct.local';
   const password=document.getElementById('u-pw').value;
   const role=document.getElementById('u-role').value;
   const portals_direct=['dgii','tss','trabajo','sirla'].filter(p=>document.getElementById('u-portal-'+p).checked);
   const access_cami=document.getElementById('u-access-cami').checked;
   const access_nala=document.getElementById('u-access-nala').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
-  if (!email){err.textContent='Escribe un email';err.hidden=false;return;}
+  if (!username){err.textContent='Escribe un nombre de usuario';err.hidden=false;return;}
   if (!userId && !password){err.textContent='La contraseña es requerida';err.hidden=false;return;}
   if (password && password.length<6){err.textContent='Mínimo 6 caracteres';err.hidden=false;return;}
   try {
@@ -734,7 +746,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={email, role, portals_direct, access_cami, access_nala};
+    const body={username, role, portals_direct, access_cami, access_nala};
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
     else await A.post('/api/users',body);
