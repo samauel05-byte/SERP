@@ -15,11 +15,12 @@ module.exports = async (req, res) => {
         .select('*', { count: 'exact', head: true });
       if ((count || 0) > 0) return res.status(409).json({ error: 'Ya existe un administrador' });
 
-      const { email, password, vaultKeyIv, vaultKeyCt, userSalt } = req.body || {};
-      if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
+      const { username, password, vaultKeyIv, vaultKeyCt, userSalt } = req.body || {};
+      if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+      const email = username.toLowerCase().trim() + '@direct.local';
 
       const { data: { user }, error } = await supabase.auth.admin.createUser({
-        email: email.toLowerCase().trim(),
+        email,
         password,
         email_confirm: true,
       });

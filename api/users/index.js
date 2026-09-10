@@ -15,11 +15,11 @@ module.exports = async (req, res) => {
 
       const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
       const emailMap = {};
-      for (const u of authUsers || []) emailMap[u.id] = u.email;
+      for (const u of authUsers || []) emailMap[u.id] = (u.email || '').replace('@direct.local', '');
 
       const users = (profiles || []).map(p => ({
         id: p.id,
-        email: emailMap[p.id] || '',
+        username: emailMap[p.id] || '',
         role: p.role,
         access_direct: p.access_direct,
         access_cami: p.access_cami,
@@ -32,11 +32,12 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { email, password, role, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
-      if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
+      const { username, password, role, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+      const email = username.toLowerCase().trim() + '@direct.local';
 
       const { data: { user }, error } = await supabase.auth.admin.createUser({
-        email: email.toLowerCase().trim(),
+        email,
         password,
         email_confirm: true,
       });
@@ -64,7 +65,7 @@ module.exports = async (req, res) => {
     res.status(405).end();
   } catch (e) {
     if (e.message?.includes('already registered') || e.message?.includes('duplicate')) {
-      return res.status(409).json({ error: 'Email ya registrado' });
+      return res.status(409).json({ error: 'Usuario ya registrado' });
     }
     res.status(500).json({ error: e.message });
   }
