@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
         access_direct: access_direct !== false,
         access_cami: access_cami || false,
         access_nala: access_nala || false,
-        portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla'],
+        portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         user_key_salt: userSalt || null,
         vault_key_iv: vaultKeyIv || null,
         vault_key_ct: vaultKeyCt || null,
