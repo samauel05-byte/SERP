@@ -1,0 +1,1125 @@
+<title>Llave Maestra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root {
+  --ground:   #0C1620;
+  --shell:    #142030;
+  --shell-2:  #1A2A3E;
+  --rim:      #243850;
+  --rim-dim:  #182438;
+  --gold:     #D4A520;
+  --gold-dim: rgba(212,165,32,0.12);
+  --gold-glow:rgba(212,165,32,0.06);
+  --teal:     #4DC8C0;
+  --teal-dim: rgba(77,200,192,0.08);
+  --mist:     #8BA3BC;
+  --fog:      #5A7290;
+  --hi:       #D0E2F4;
+  --danger:   #D95C5C;
+  --ok:       #45B87C;
+  --sidebar-w:260px;
+}
+@media(prefers-color-scheme:light){
+  :root:not([data-theme=dark]){
+    --ground:   #EEF3F8;
+    --shell:    #FFFFFF;
+    --shell-2:  #F4F8FC;
+    --rim:      #CDD8E4;
+    --rim-dim:  #DFE8F0;
+    --gold:     #B07D08;
+    --gold-dim: rgba(176,125,8,0.1);
+    --gold-glow:rgba(176,125,8,0.04);
+    --teal:     #0E8B85;
+    --teal-dim: rgba(14,139,133,0.07);
+    --mist:     #6A88A3;
+    --fog:      #9AAFC0;
+    --hi:       #1A2B40;
+    --danger:   #B83434;
+    --ok:       #1E8A54;
+  }
+}
+[data-theme=dark]{
+  --ground:#0C1620;--shell:#142030;--shell-2:#1A2A3E;--rim:#243850;--rim-dim:#182438;
+  --gold:#D4A520;--gold-dim:rgba(212,165,32,0.12);--gold-glow:rgba(212,165,32,0.06);
+  --teal:#4DC8C0;--teal-dim:rgba(77,200,192,0.08);--mist:#8BA3BC;--fog:#5A7290;
+  --hi:#D0E2F4;--danger:#D95C5C;--ok:#45B87C;
+}
+[data-theme=light]{
+  --ground:#EEF3F8;--shell:#FFFFFF;--shell-2:#F4F8FC;--rim:#CDD8E4;--rim-dim:#DFE8F0;
+  --gold:#B07D08;--gold-dim:rgba(176,125,8,0.1);--gold-glow:rgba(176,125,8,0.04);
+  --teal:#0E8B85;--teal-dim:rgba(14,139,133,0.07);--mist:#6A88A3;--fog:#9AAFC0;
+  --hi:#1A2B40;--danger:#B83434;--ok:#1E8A54;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;font-size:14px;
+  background:var(--ground);color:var(--hi);
+  display:flex;height:100vh;overflow:hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:var(--shell);border-right:1px solid var(--rim);
+  display:flex;flex-direction:column;height:100vh;
+}
+.sb-brand{
+  padding:18px 16px 14px;border-bottom:1px solid var(--rim-dim);
+  display:flex;align-items:center;gap:10px;
+}
+.sb-key{
+  width:34px;height:34px;background:var(--gold);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.sb-key svg{color:#0C1620}
+.sb-title-wrap{}
+.sb-title{
+  font-family:'Libre Baskerville',Georgia,serif;font-size:16px;font-weight:700;
+  color:var(--hi);line-height:1.1;
+}
+.sb-sub{
+  font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--fog);margin-top:1px;font-weight:600;
+}
+.sb-search-wrap{padding:10px 12px;border-bottom:1px solid var(--rim-dim)}
+.sb-search{position:relative}
+.sb-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--fog);pointer-events:none}
+.sb-search input{
+  width:100%;background:var(--shell-2);border:1px solid var(--rim);
+  border-radius:6px;padding:7px 10px 7px 31px;
+  color:var(--hi);font-family:inherit;font-size:12.5px;outline:none;
+  transition:border-color .15s;
+}
+.sb-search input::placeholder{color:var(--fog)}
+.sb-search input:focus{border-color:var(--gold)}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 0}
+.sb-label{
+  font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--fog);padding:8px 16px 4px;font-weight:600;
+}
+.sb-item{
+  display:flex;align-items:center;gap:9px;padding:9px 12px;
+  cursor:pointer;border-left:3px solid transparent;
+  color:var(--mist);transition:all .12s;text-decoration:none;
+}
+.sb-item:hover{background:var(--gold-glow);color:var(--hi)}
+.sb-item.active{background:var(--gold-dim);border-left-color:var(--gold);color:var(--hi)}
+.sb-inst-icon{
+  width:26px;height:26px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;font-family:'DM Sans',sans-serif;
+  flex-shrink:0;letter-spacing:.02em;
+}
+.sb-item-name{font-size:13px;font-weight:500;flex:1}
+.sb-badge{
+  font-size:10px;background:var(--rim);color:var(--mist);
+  border-radius:10px;padding:1px 7px;font-variant-numeric:tabular-nums;
+}
+.sb-item.active .sb-badge{background:var(--gold-dim);color:var(--gold)}
+.sb-footer{
+  padding:12px 14px;border-top:1px solid var(--rim-dim);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sb-footer-note{font-size:10px;color:var(--fog)}
+.sb-lock-btn{
+  display:flex;align-items:center;gap:5px;background:none;
+  border:1px solid var(--rim);border-radius:5px;padding:4px 8px;
+  color:var(--mist);font-size:11px;font-family:inherit;
+  cursor:pointer;transition:all .12s;
+}
+.sb-lock-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ── Main ── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.main-hdr{
+  padding:18px 24px 14px;border-bottom:1px solid var(--rim);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  background:var(--ground);position:sticky;top:0;z-index:10;
+}
+.main-title{
+  font-family:'Libre Baskerville',serif;font-size:22px;font-weight:700;
+  color:var(--hi);display:flex;align-items:center;gap:10px;text-wrap:balance;
+}
+.inst-tag{
+  font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.07em;text-transform:uppercase;
+  padding:3px 9px;border-radius:4px;
+}
+.main-actions{display:flex;align-items:center;gap:8px}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:6px;border:1px solid transparent;
+  font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;
+  outline:none;transition:all .13s;
+}
+.btn:focus-visible{box-shadow:0 0 0 2px var(--gold)}
+.btn-primary{background:var(--gold);color:#0C1620;border-color:var(--gold)}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-ghost{background:transparent;color:var(--mist);border-color:var(--rim)}
+.btn-ghost:hover{background:var(--shell);color:var(--hi)}
+.btn-danger-ghost{background:transparent;color:var(--danger);border-color:var(--danger)}
+.btn-danger-ghost:hover{background:rgba(217,92,92,.08)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.main-body{padding:20px 24px;flex:1}
+
+/* ── Overview cards ── */
+.overview-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;
+  margin-bottom:8px;
+}
+.ov-card{
+  background:var(--shell);border:1px solid var(--rim);border-radius:12px;
+  padding:18px;cursor:pointer;transition:all .15s;
+}
+.ov-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.ov-card-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ov-icon{
+  width:42px;height:42px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;
+  letter-spacing:.03em;flex-shrink:0;
+}
+.ov-names{}
+.ov-abbr{font-family:'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--hi);line-height:1}
+.ov-full{font-size:11px;color:var(--mist);margin-top:2px;line-height:1.3}
+.ov-stats{display:flex;gap:20px}
+.ov-stat-n{
+  font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:500;
+  color:var(--hi);font-variant-numeric:tabular-nums;
+}
+.ov-stat-l{font-size:10px;color:var(--fog);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.ov-arrow{color:var(--gold);font-size:12px;font-weight:600;margin-top:8px;display:flex;align-items:center;gap:3px}
+
+/* ── Section headers ── */
+.sec-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;margin-top:22px;
+}
+.sec-hdr:first-child{margin-top:0}
+.sec-label{
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--fog);font-weight:600;
+}
+.sec-divider{flex:1;height:1px;background:var(--rim-dim);margin-left:10px}
+
+/* ── Credential cards ── */
+.cred-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));
+  gap:11px;margin-bottom:20px;
+}
+.cred-card{
+  background:var(--shell);border:1px solid var(--rim);border-radius:10px;
+  overflow:hidden;transition:border-color .15s,box-shadow .15s;
+}
+.cred-card:hover{border-color:var(--rim);box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.cred-top{
+  padding:11px 14px 9px;border-bottom:1px solid var(--rim-dim);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.cred-name{font-size:13px;font-weight:600;color:var(--hi);display:flex;align-items:center;gap:7px}
+.cred-chip{
+  font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 7px;border-radius:3px;
+}
+.cred-btns{display:flex;gap:3px}
+.icon-btn{
+  width:28px;height:28px;background:transparent;border:none;border-radius:5px;
+  color:var(--fog);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .12s;outline:none;
+}
+.icon-btn:hover{background:var(--shell-2);color:var(--hi)}
+.icon-btn:focus-visible{box-shadow:0 0 0 2px var(--gold)}
+.icon-btn.del:hover{background:rgba(217,92,92,.1);color:var(--danger)}
+.cred-fields{padding:11px 14px;display:flex;flex-direction:column;gap:9px}
+.cred-field{}
+.f-lbl{
+  font-size:9.5px;color:var(--fog);text-transform:uppercase;
+  letter-spacing:.07em;font-weight:600;margin-bottom:3px;
+}
+.f-row{
+  display:flex;align-items:center;gap:6px;
+  background:var(--shell-2);border:1px solid var(--rim-dim);
+  border-radius:5px;padding:6px 9px;
+}
+.f-val{
+  font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--teal);
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-variant-numeric:tabular-nums;user-select:text;
+}
+.f-val.masked{filter:blur(4px);transition:filter .2s;user-select:none;cursor:pointer}
+.f-val.masked:hover{filter:blur(0)}
+.f-copy{
+  width:22px;height:22px;border:none;background:transparent;color:var(--fog);
+  cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .12s,color .12s;flex-shrink:0;
+}
+.f-row:hover .f-copy{opacity:1}
+.f-copy:hover{color:var(--teal)}
+.f-copy.ok{opacity:1;color:var(--ok)}
+.cred-note-bar{
+  padding:7px 14px;border-top:1px solid var(--rim-dim);
+  font-size:11px;color:var(--fog);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ── Empty state ── */
+.empty{
+  padding:48px 24px;display:flex;flex-direction:column;align-items:center;
+  text-align:center;color:var(--mist);
+}
+.empty-ring{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--shell);border:1px solid var(--rim);
+  display:flex;align-items:center;justify-content:center;color:var(--fog);
+  margin-bottom:14px;
+}
+.empty-h{
+  font-family:'Libre Baskerville',serif;font-size:17px;font-weight:700;
+  color:var(--hi);margin-bottom:6px;
+}
+.empty-p{font-size:13px;max-width:280px;line-height:1.55;color:var(--mist)}
+
+/* ── Modal ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;
+}
+.overlay[hidden]{display:none!important}
+.modal{
+  background:var(--shell);border:1px solid var(--rim);border-radius:14px;
+  width:100%;max-width:480px;max-height:92vh;overflow-y:auto;
+  box-shadow:0 28px 64px rgba(0,0,0,.45);
+}
+.modal-hdr{
+  padding:18px 22px 14px;border-bottom:1px solid var(--rim-dim);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-title{
+  font-family:'Libre Baskerville',serif;font-size:19px;font-weight:700;color:var(--hi);
+}
+.modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.modal-ftr{
+  padding:14px 22px;border-top:1px solid var(--rim-dim);
+  display:flex;justify-content:flex-end;gap:8px;
+}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:12px;font-weight:500;color:var(--mist);letter-spacing:.03em}
+.fg input,.fg select,.fg textarea{
+  background:var(--shell-2);border:1px solid var(--rim);border-radius:6px;
+  padding:8px 11px;color:var(--hi);font-family:inherit;font-size:13.5px;
+  outline:none;transition:border-color .15s;width:100%;
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold)}
+.fg input::placeholder,.fg textarea::placeholder{color:var(--fog)}
+.fg select option{background:var(--shell)}
+.fg textarea{resize:vertical;min-height:64px;line-height:1.5}
+.fg input.mono,.fg textarea.mono{
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--teal);
+}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:38px}
+.pw-eye{
+  position:absolute;right:9px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--fog);cursor:pointer;
+  padding:3px;outline:none;border-radius:3px;
+}
+.pw-eye:hover{color:var(--hi)}
+
+/* Dynamic fields list */
+.dyn-fields{display:flex;flex-direction:column;gap:8px}
+.dyn-field{
+  display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;align-items:center;
+}
+.dyn-field input{min-width:0}
+.dyn-rm{
+  width:28px;height:28px;background:transparent;border:1px solid var(--rim);
+  border-radius:5px;color:var(--fog);cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;transition:all .12s;
+}
+.dyn-rm:hover{border-color:var(--danger);color:var(--danger);background:rgba(217,92,92,.08)}
+.secret-chk-wrap{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--mist)}
+.secret-chk-wrap input{width:14px;height:14px;cursor:pointer;accent-color:var(--gold)}
+.add-field-btn{
+  display:flex;align-items:center;gap:6px;background:transparent;
+  border:1px dashed var(--rim);border-radius:6px;padding:7px 12px;
+  color:var(--mist);font-size:12.5px;font-family:inherit;cursor:pointer;
+  transition:all .15s;width:100%;justify-content:center;
+}
+.add-field-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+/* Delete confirm overlay */
+.confirm-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;
+}
+.confirm-overlay[hidden]{display:none!important}
+.confirm-box{
+  background:var(--shell);border:1px solid var(--rim);border-radius:12px;
+  padding:24px;max-width:360px;width:100%;text-align:center;
+  box-shadow:0 24px 56px rgba(0,0,0,.5);
+}
+.confirm-icon{color:var(--danger);margin-bottom:12px;display:flex;justify-content:center}
+.confirm-h{font-family:'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--hi);margin-bottom:6px}
+.confirm-p{font-size:13px;color:var(--mist);line-height:1.5;margin-bottom:18px}
+.confirm-btns{display:flex;gap:8px;justify-content:center}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:20px;right:20px;
+  background:var(--shell);border:1px solid var(--ok);border-radius:8px;
+  padding:10px 16px;font-size:13px;font-weight:500;color:var(--ok);
+  box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:300;
+  display:flex;align-items:center;gap:7px;
+  opacity:0;transform:translateY(8px);transition:all .2s;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--rim);border-radius:3px}
+
+/* Responsive */
+@media(max-width:680px){
+  .sidebar{display:none}
+  .cred-grid{grid-template-columns:1fr}
+  .overview-grid{grid-template-columns:1fr}
+  .dyn-field{grid-template-columns:1fr 1fr auto}
+}
+
+@media(prefers-reduced-motion:no-preference){
+  .cred-card{animation:fadeUp .18s ease both}
+  .ov-card{animation:fadeUp .2s ease both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+</style>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-key">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="7.5" cy="15.5" r="5.5"/>
+        <path d="M21 2L13 10"/>
+        <path d="M16 5l2 2"/>
+        <path d="M13 10l1.5 1.5"/>
+      </svg>
+    </div>
+    <div class="sb-title-wrap">
+      <div class="sb-title">Llave Maestra</div>
+      <div class="sb-sub">Bóveda de credenciales</div>
+    </div>
+  </div>
+  <div class="sb-search-wrap">
+    <div class="sb-search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Buscar credenciales…" autocomplete="off">
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-label">Vista</div>
+    <div class="sb-item active" data-view="overview" tabindex="0" role="button">
+      <div class="sb-inst-icon" style="background:var(--gold-dim);color:var(--gold)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <span class="sb-item-name">Resumen</span>
+      <span class="sb-badge" id="totalBadge">0</span>
+    </div>
+    <div class="sb-label" style="margin-top:6px">Instituciones</div>
+    <div class="sb-item" data-view="dgii" tabindex="0" role="button">
+      <div class="sb-inst-icon" style="background:rgba(32,100,204,.18);color:#4A9EF8">DGII</div>
+      <span class="sb-item-name">DGII</span>
+      <span class="sb-badge" id="badge-dgii">0</span>
+    </div>
+    <div class="sb-item" data-view="tss" tabindex="0" role="button">
+      <div class="sb-inst-icon" style="background:rgba(40,168,100,.15);color:#3DBB7A">TSS</div>
+      <span class="sb-item-name">TSS</span>
+      <span class="sb-badge" id="badge-tss">0</span>
+    </div>
+    <div class="sb-item" data-view="mintrabajo" tabindex="0" role="button">
+      <div class="sb-inst-icon" style="background:rgba(140,70,200,.15);color:#BE8FEC">MT</div>
+      <span class="sb-item-name">Min. de Trabajo</span>
+      <span class="sb-badge" id="badge-mintrabajo">0</span>
+    </div>
+    <div class="sb-item" data-view="sirla" tabindex="0" role="button">
+      <div class="sb-inst-icon" style="background:rgba(220,110,30,.15);color:#F0924A">SIRLA</div>
+      <span class="sb-item-name">SIRLA</span>
+      <span class="sb-badge" id="badge-sirla">0</span>
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <span class="sb-footer-note" id="credCountNote">0 credenciales guardadas</span>
+    <button class="sb-lock-btn" id="themeToggle" title="Cambiar tema">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      Tema
+    </button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="main-hdr">
+    <div class="main-title" id="mainTitle">Resumen</div>
+    <div class="main-actions">
+      <button class="btn btn-ghost btn-sm" id="addCredBtn" style="display:none" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva credencial
+      </button>
+      <button class="btn btn-primary btn-sm" id="addCredBtnOv">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Agregar
+      </button>
+    </div>
+  </div>
+  <div class="main-body" id="mainBody">
+    <!-- content rendered by JS -->
+  </div>
+</main>
+
+<!-- ADD/EDIT MODAL -->
+<div class="overlay" id="modalOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modalTitle">Agregar credencial</div>
+      <button class="icon-btn" id="modalClose" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label for="mInstitution">Institución</label>
+        <select id="mInstitution">
+          <option value="dgii">DGII — Dirección General de Impuestos Internos</option>
+          <option value="tss">TSS — Tesorería de la Seguridad Social</option>
+          <option value="mintrabajo">Ministerio de Trabajo</option>
+          <option value="sirla">SIRLA — Sistema de Reg. Laboral y de Acceso</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label for="mCategory">Categoría / Portal</label>
+        <select id="mCategory">
+          <!-- populated dynamically -->
+        </select>
+      </div>
+      <div class="fg">
+        <label for="mName">Nombre del acceso</label>
+        <input type="text" id="mName" placeholder="Ej: Cuenta principal, Usuario #2…">
+      </div>
+      <!-- Dynamic fields -->
+      <div>
+        <div style="font-size:12px;font-weight:500;color:var(--mist);margin-bottom:8px;letter-spacing:.03em">Campos</div>
+        <div class="dyn-fields" id="dynFields"></div>
+        <button class="add-field-btn" id="addFieldBtn" type="button" style="margin-top:8px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Agregar campo
+        </button>
+      </div>
+      <div class="fg">
+        <label for="mNotes">Notas (opcional)</label>
+        <textarea id="mNotes" placeholder="Vigencia del token, datos adicionales…"></textarea>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-ghost" id="modalCancel">Cancelar</button>
+      <button class="btn btn-primary" id="modalSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="confirm-overlay" id="confirmOverlay" hidden>
+  <div class="confirm-box">
+    <div class="confirm-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    </div>
+    <div class="confirm-h">¿Eliminar credencial?</div>
+    <p class="confirm-p">Esta acción no se puede deshacer. La credencial será eliminada permanentemente.</p>
+    <div class="confirm-btns">
+      <button class="btn btn-ghost" id="confirmCancel">Cancelar</button>
+      <button class="btn btn-danger-ghost" id="confirmDelete">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Copiado al portapapeles</span>
+</div>
+
+<script>
+'use strict';
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'llave-maestra-v1';
+
+const INSTITUTIONS = {
+  dgii: {
+    name: 'DGII',
+    full: 'Dirección General de Impuestos Internos',
+    color: '#4A9EF8',
+    bg: 'rgba(32,100,204,.18)',
+    tag: { bg: 'rgba(32,100,204,.18)', color: '#4A9EF8' },
+    categories: ['Portal OGT (Oficina Virtual)', 'Factura Electrónica (e-CF)', 'Consulta ITBIS', 'ITBIS Simplificado', 'RNC Único', 'Otro']
+  },
+  tss: {
+    name: 'TSS',
+    full: 'Tesorería de la Seguridad Social',
+    color: '#3DBB7A',
+    bg: 'rgba(40,168,100,.15)',
+    tag: { bg: 'rgba(40,168,100,.15)', color: '#3DBB7A' },
+    categories: ['Portal TSS', 'Certificado Digital', 'Afiliación Empleador', 'Otro']
+  },
+  mintrabajo: {
+    name: 'Ministerio de Trabajo',
+    full: 'Ministerio de Trabajo',
+    color: '#BE8FEC',
+    bg: 'rgba(140,70,200,.15)',
+    tag: { bg: 'rgba(140,70,200,.15)', color: '#BE8FEC' },
+    categories: ['Portal Empleador', 'SISTTRADO', 'Inspección Laboral', 'Conciliación', 'Otro']
+  },
+  sirla: {
+    name: 'SIRLA',
+    full: 'Sistema de Información de Registro Laboral y de Acceso',
+    color: '#F0924A',
+    bg: 'rgba(220,110,30,.15)',
+    tag: { bg: 'rgba(220,110,30,.15)', color: '#F0924A' },
+    categories: ['Portal Principal', 'Registro de Personal', 'Consultas', 'Otro']
+  }
+};
+
+const FIELD_SUGGESTIONS = ['Usuario', 'Contraseña', 'RNC', 'PIN', 'Token', 'Número Patronal', 'Código de Acceso', 'Certificado', 'NIF', 'URL'];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let credentials = [];
+let currentView = 'overview';
+let editingId = null;
+let deleteTargetId = null;
+let searchQuery = '';
+
+// ── Persistence ────────────────────────────────────────────────────────────
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    credentials = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    credentials = [];
+  }
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
+  } catch (e) { /* quota */ }
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ── Data helpers ───────────────────────────────────────────────────────────
+function getFiltered() {
+  if (!searchQuery) return credentials;
+  const q = searchQuery.toLowerCase();
+  return credentials.filter(c => {
+    if (c.institution.includes(q)) return true;
+    if (c.category.toLowerCase().includes(q)) return true;
+    if (c.name.toLowerCase().includes(q)) return true;
+    if (c.notes && c.notes.toLowerCase().includes(q)) return true;
+    return c.fields.some(f => {
+      if (f.key.toLowerCase().includes(q)) return true;
+      if (!f.secret && f.value.toLowerCase().includes(q)) return true;
+      return false;
+    });
+  });
+}
+
+function countFor(inst) {
+  return credentials.filter(c => c.institution === inst).length;
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderBadges() {
+  const total = credentials.length;
+  document.getElementById('totalBadge').textContent = total;
+  document.getElementById('credCountNote').textContent =
+    total === 1 ? '1 credencial guardada' : `${total} credenciales guardadas`;
+  Object.keys(INSTITUTIONS).forEach(k => {
+    document.getElementById('badge-' + k).textContent = countFor(k);
+  });
+}
+
+function renderOverview() {
+  const body = document.getElementById('mainBody');
+  const list = getFiltered();
+  let html = '<div class="overview-grid">';
+  Object.entries(INSTITUTIONS).forEach(([key, inst]) => {
+    const n = list.filter(c => c.institution === key).length;
+    const total = countFor(key);
+    html += `
+      <div class="ov-card" data-inst="${key}" tabindex="0" role="button" aria-label="Ver ${inst.name}">
+        <div class="ov-card-top">
+          <div class="ov-icon" style="background:${inst.bg};color:${inst.color}">${inst.name}</div>
+          <div class="ov-names">
+            <div class="ov-abbr">${inst.name}</div>
+            <div class="ov-full">${inst.full}</div>
+          </div>
+        </div>
+        <div class="ov-stats">
+          <div class="ov-stat">
+            <div class="ov-stat-n">${total}</div>
+            <div class="ov-stat-l">Credenciales</div>
+          </div>
+        </div>
+        <div class="ov-arrow">Ver accesos <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      </div>`;
+  });
+  html += '</div>';
+  if (list.length === 0 && searchQuery) {
+    html += emptyState('Sin resultados', `No hay credenciales que coincidan con "${searchQuery}".`);
+  } else if (credentials.length === 0) {
+    html += `<div class="empty">
+      <div class="empty-ring"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2L13 10"/><path d="M16 5l2 2"/><path d="M13 10l1.5 1.5"/></svg></div>
+      <div class="empty-h">Bóveda vacía</div>
+      <p class="empty-p">Presiona <strong>Agregar</strong> para registrar la primera credencial institucional.</p>
+    </div>`;
+  }
+  body.innerHTML = html;
+  body.querySelectorAll('.ov-card').forEach(el => {
+    el.addEventListener('click', () => setView(el.dataset.inst));
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') setView(el.dataset.inst); });
+  });
+}
+
+function emptyState(h, p) {
+  return `<div class="empty">
+    <div class="empty-ring"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    <div class="empty-h">${h}</div>
+    <p class="empty-p">${p}</p>
+  </div>`;
+}
+
+function renderCredCard(cred) {
+  const inst = INSTITUTIONS[cred.institution];
+  let fieldsHtml = '';
+  cred.fields.forEach((f, fi) => {
+    const display = f.value || '—';
+    fieldsHtml += `
+      <div class="cred-field">
+        <div class="f-lbl">${escHtml(f.key)}</div>
+        <div class="f-row">
+          <span class="f-val${f.secret ? ' masked' : ''}"
+                title="${f.secret ? 'Pasar el cursor para ver' : ''}"
+                data-cid="${cred.id}" data-fi="${fi}">${escHtml(display)}</span>
+          <button class="f-copy" title="Copiar" data-val="${escAttr(f.value)}" aria-label="Copiar ${escHtml(f.key)}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
+        </div>
+      </div>`;
+  });
+  const chipStyle = `background:${inst.tag.bg};color:${inst.color}`;
+  return `
+    <div class="cred-card" data-id="${cred.id}">
+      <div class="cred-top">
+        <div class="cred-name">
+          ${escHtml(cred.name)}
+          <span class="cred-chip" style="${chipStyle}">${escHtml(cred.category.split(' ')[0])}</span>
+        </div>
+        <div class="cred-btns">
+          <button class="icon-btn edit-btn" title="Editar" data-id="${cred.id}" aria-label="Editar ${escHtml(cred.name)}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn del delete-btn" title="Eliminar" data-id="${cred.id}" aria-label="Eliminar ${escHtml(cred.name)}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="cred-fields">${fieldsHtml}</div>
+      ${cred.notes ? `<div class="cred-note-bar">📎 ${escHtml(cred.notes)}</div>` : ''}
+    </div>`;
+}
+
+function renderInstitution(instKey) {
+  const inst = INSTITUTIONS[instKey];
+  const list = getFiltered().filter(c => c.institution === instKey);
+  const body = document.getElementById('mainBody');
+  if (list.length === 0) {
+    body.innerHTML = emptyState(
+      `Sin credenciales — ${inst.name}`,
+      `Presiona "Nueva credencial" para agregar el primer acceso a ${inst.full}.`
+    );
+    bindCardEvents();
+    return;
+  }
+  const byCat = {};
+  list.forEach(c => {
+    if (!byCat[c.category]) byCat[c.category] = [];
+    byCat[c.category].push(c);
+  });
+  let html = '';
+  Object.entries(byCat).forEach(([cat, cards]) => {
+    html += `<div class="sec-hdr">
+      <span class="sec-label">${escHtml(cat)}</span>
+      <div class="sec-divider"></div>
+    </div>
+    <div class="cred-grid">`;
+    cards.forEach(c => { html += renderCredCard(c); });
+    html += '</div>';
+  });
+  body.innerHTML = html;
+  bindCardEvents();
+}
+
+function bindCardEvents() {
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+  });
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => openDeleteConfirm(btn.dataset.id));
+  });
+  document.querySelectorAll('.f-copy').forEach(btn => {
+    btn.addEventListener('click', () => copyToClipboard(btn.dataset.val, btn));
+  });
+  document.querySelectorAll('.f-val.masked').forEach(el => {
+    el.addEventListener('click', () => el.classList.toggle('masked'));
+  });
+}
+
+function render() {
+  renderBadges();
+  const titleEl = document.getElementById('mainTitle');
+  const addBtn = document.getElementById('addCredBtn');
+  const addBtnOv = document.getElementById('addCredBtnOv');
+
+  document.querySelectorAll('.sb-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === currentView);
+  });
+
+  if (currentView === 'overview') {
+    titleEl.innerHTML = 'Resumen';
+    addBtn.hidden = true;
+    addBtnOv.hidden = false;
+    renderOverview();
+  } else {
+    const inst = INSTITUTIONS[currentView];
+    titleEl.innerHTML = `<span class="inst-tag" style="background:${inst.tag.bg};color:${inst.color}">${inst.name}</span> ${inst.full}`;
+    addBtn.hidden = false;
+    addBtnOv.hidden = true;
+    renderInstitution(currentView);
+  }
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  render();
+  window.scrollTo(0, 0);
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function buildCategoryOptions(instKey) {
+  const catSel = document.getElementById('mCategory');
+  catSel.innerHTML = '';
+  INSTITUTIONS[instKey].categories.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    catSel.appendChild(opt);
+  });
+}
+
+function addDynField(key = '', value = '', secret = false) {
+  const container = document.getElementById('dynFields');
+  const row = document.createElement('div');
+  row.className = 'dyn-field';
+  const secretId = 'sc-' + uid();
+  row.innerHTML = `
+    <input type="text" placeholder="Campo (ej: Usuario)" value="${escAttr(key)}" class="field-key" list="fieldSuggestions">
+    <div class="pw-wrap" style="grid-column:2">
+      <input type="${secret ? 'password' : 'text'}" placeholder="Valor" value="${escAttr(value)}" class="field-val mono">
+      <button type="button" class="pw-eye" title="Mostrar/Ocultar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <label class="secret-chk-wrap" title="Campo secreto (contraseña, token, PIN)">
+      <input type="checkbox" ${secret ? 'checked' : ''} id="${secretId}">
+      <span class="sr">Secreto</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--mist)"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    </label>
+    <button type="button" class="dyn-rm" title="Quitar campo">−</button>`;
+  const keyIn = row.querySelector('.field-key');
+  const valIn = row.querySelector('.field-val');
+  const eyeBtn = row.querySelector('.pw-eye');
+  const secretChk = row.querySelector('input[type=checkbox]');
+  const rmBtn = row.querySelector('.dyn-rm');
+  // sync secret checkbox ↔ input type
+  function syncType() {
+    valIn.type = secretChk.checked ? 'password' : 'text';
+  }
+  secretChk.addEventListener('change', syncType);
+  // auto-check secret for common field names
+  keyIn.addEventListener('change', () => {
+    const k = keyIn.value.toLowerCase();
+    if (['contraseña','clave','password','token','pin','certificado'].some(s => k.includes(s))) {
+      secretChk.checked = true;
+      syncType();
+    }
+  });
+  eyeBtn.addEventListener('click', () => {
+    const isText = valIn.type === 'text';
+    valIn.type = isText ? 'password' : 'text';
+    eyeBtn.querySelector('.eye-icon').style.opacity = isText ? '.4' : '1';
+  });
+  rmBtn.addEventListener('click', () => row.remove());
+  container.appendChild(row);
+}
+
+function collectFields() {
+  const rows = document.querySelectorAll('.dyn-field');
+  return Array.from(rows).map(row => ({
+    key: row.querySelector('.field-key').value.trim(),
+    value: row.querySelector('.field-val').value,
+    secret: row.querySelector('input[type=checkbox]').checked
+  })).filter(f => f.key);
+}
+
+function openAddModal(instKey) {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Nueva credencial';
+  document.getElementById('mInstitution').value = instKey || (currentView !== 'overview' ? currentView : 'dgii');
+  buildCategoryOptions(document.getElementById('mInstitution').value);
+  document.getElementById('mName').value = '';
+  document.getElementById('mNotes').value = '';
+  document.getElementById('dynFields').innerHTML = '';
+  // Default fields per institution
+  const inst = document.getElementById('mInstitution').value;
+  if (inst === 'dgii') {
+    addDynField('RNC', '', false);
+    addDynField('Usuario', '', false);
+    addDynField('Contraseña', '', true);
+  } else if (inst === 'tss') {
+    addDynField('Número Patronal', '', false);
+    addDynField('Usuario', '', false);
+    addDynField('Contraseña', '', true);
+  } else if (inst === 'mintrabajo') {
+    addDynField('Usuario', '', false);
+    addDynField('Contraseña', '', true);
+  } else {
+    addDynField('Usuario', '', false);
+    addDynField('Contraseña', '', true);
+    addDynField('Código de Acceso', '', true);
+  }
+  document.getElementById('modalOverlay').hidden = false;
+  document.getElementById('mName').focus();
+}
+
+function openEditModal(id) {
+  const cred = credentials.find(c => c.id === id);
+  if (!cred) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Editar credencial';
+  document.getElementById('mInstitution').value = cred.institution;
+  buildCategoryOptions(cred.institution);
+  document.getElementById('mCategory').value = cred.category;
+  document.getElementById('mName').value = cred.name;
+  document.getElementById('mNotes').value = cred.notes || '';
+  document.getElementById('dynFields').innerHTML = '';
+  cred.fields.forEach(f => addDynField(f.key, f.value, f.secret));
+  document.getElementById('modalOverlay').hidden = false;
+  document.getElementById('mName').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').hidden = true;
+}
+
+function saveModal() {
+  const inst = document.getElementById('mInstitution').value;
+  const cat = document.getElementById('mCategory').value;
+  const name = document.getElementById('mName').value.trim();
+  const notes = document.getElementById('mNotes').value.trim();
+  const fields = collectFields();
+  if (!name) { document.getElementById('mName').focus(); return; }
+  if (editingId) {
+    const idx = credentials.findIndex(c => c.id === editingId);
+    if (idx !== -1) {
+      credentials[idx] = { ...credentials[idx], institution: inst, category: cat, name, notes, fields, updatedAt: new Date().toISOString() };
+    }
+  } else {
+    credentials.push({ id: uid(), institution: inst, category: cat, name, notes, fields, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    if (currentView === 'overview') setView(inst);
+  }
+  save();
+  closeModal();
+  render();
+  showToast('Credencial guardada');
+}
+
+// ── Delete ─────────────────────────────────────────────────────────────────
+function openDeleteConfirm(id) {
+  deleteTargetId = id;
+  document.getElementById('confirmOverlay').hidden = false;
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').hidden = true;
+  deleteTargetId = null;
+}
+
+function confirmDelete() {
+  if (!deleteTargetId) return;
+  credentials = credentials.filter(c => c.id !== deleteTargetId);
+  save();
+  closeConfirm();
+  render();
+  showToast('Credencial eliminada');
+}
+
+// ── Copy ───────────────────────────────────────────────────────────────────
+async function copyToClipboard(val, btn) {
+  try {
+    await navigator.clipboard.writeText(val);
+    btn.classList.add('ok');
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    showToast('Copiado al portapapeles');
+    setTimeout(() => {
+      btn.classList.remove('ok');
+      btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
+    }, 1800);
+  } catch (e) {
+    showToast('No se pudo copiar');
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const root = document.documentElement;
+  const cur = root.getAttribute('data-theme');
+  if (!cur) {
+    const sys = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', sys ? 'light' : 'dark');
+  } else {
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  }
+  try { localStorage.setItem('llave-maestra-theme', root.getAttribute('data-theme')); } catch (e) {}
+}
+
+function restoreTheme() {
+  try {
+    const t = localStorage.getItem('llave-maestra-theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+}
+
+// ── Escape ─────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(str) {
+  return String(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+(function init() {
+  restoreTheme();
+  load();
+
+  // Sidebar nav
+  document.querySelectorAll('.sb-item').forEach(el => {
+    el.addEventListener('click', () => setView(el.dataset.view));
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') setView(el.dataset.view); });
+  });
+
+  // Search
+  document.getElementById('searchInput').addEventListener('input', e => {
+    searchQuery = e.target.value.trim();
+    render();
+  });
+
+  // Institution select → update categories + default fields
+  document.getElementById('mInstitution').addEventListener('change', e => {
+    buildCategoryOptions(e.target.value);
+    document.getElementById('dynFields').innerHTML = '';
+    const inst = e.target.value;
+    if (inst === 'dgii') {
+      addDynField('RNC', '', false);
+      addDynField('Usuario', '', false);
+      addDynField('Contraseña', '', true);
+    } else if (inst === 'tss') {
+      addDynField('Número Patronal', '', false);
+      addDynField('Usuario', '', false);
+      addDynField('Contraseña', '', true);
+    } else if (inst === 'mintrabajo') {
+      addDynField('Usuario', '', false);
+      addDynField('Contraseña', '', true);
+    } else {
+      addDynField('Usuario', '', false);
+      addDynField('Contraseña', '', true);
+      addDynField('Código de Acceso', '', true);
+    }
+  });
+
+  // Add buttons
+  document.getElementById('addCredBtn').addEventListener('click', () => openAddModal(currentView));
+  document.getElementById('addCredBtnOv').addEventListener('click', () => openAddModal(currentView === 'overview' ? null : currentView));
+
+  // Add field
+  document.getElementById('addFieldBtn').addEventListener('click', () => addDynField());
+
+  // Modal close/cancel/save
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('modalSave').addEventListener('click', saveModal);
+  document.getElementById('modalOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  });
+
+  // Confirm delete
+  document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
+  document.getElementById('confirmDelete').addEventListener('click', confirmDelete);
+  document.getElementById('confirmOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('confirmOverlay')) closeConfirm();
+  });
+
+  // Theme toggle
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (!document.getElementById('confirmOverlay').hidden) closeConfirm();
+      else if (!document.getElementById('modalOverlay').hidden) closeModal();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      document.getElementById('searchInput').focus();
+    }
+  });
+
+  // Field suggestions datalist
+  const dl = document.createElement('datalist');
+  dl.id = 'fieldSuggestions';
+  FIELD_SUGGESTIONS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    dl.appendChild(opt);
+  });
+  document.body.appendChild(dl);
+
+  render();
+})();
+</script>
