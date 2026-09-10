@@ -1,0 +1,856 @@
+<title>Llave Maestra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root {
+  --ground:    #0C1620;
+  --shell:     #142030;
+  --shell-2:   #1A2A3E;
+  --rim:       #243850;
+  --rim-dim:   #182438;
+  --gold:      #D4A520;
+  --gold-dim:  rgba(212,165,32,.12);
+  --gold-glow: rgba(212,165,32,.06);
+  --teal:      #4DC8C0;
+  --teal-dim:  rgba(77,200,192,.08);
+  --mist:      #8BA3BC;
+  --fog:       #5A7290;
+  --hi:        #D0E2F4;
+  --danger:    #D95C5C;
+  --ok:        #45B87C;
+  --warn:      #E8943A;
+}
+@media(prefers-color-scheme:light){:root:not([data-theme=dark]){
+  --ground:#EEF3F8;--shell:#FFFFFF;--shell-2:#F4F8FC;--rim:#CDD8E4;--rim-dim:#DFE8F0;
+  --gold:#B07D08;--gold-dim:rgba(176,125,8,.1);--gold-glow:rgba(176,125,8,.04);
+  --teal:#0E8B85;--teal-dim:rgba(14,139,133,.07);--mist:#6A88A3;--fog:#9AAFC0;
+  --hi:#1A2B40;--danger:#B83434;--ok:#1E8A54;--warn:#C05C00;
+}}
+[data-theme=dark]{--ground:#0C1620;--shell:#142030;--shell-2:#1A2A3E;--rim:#243850;--rim-dim:#182438;--gold:#D4A520;--gold-dim:rgba(212,165,32,.12);--gold-glow:rgba(212,165,32,.06);--teal:#4DC8C0;--teal-dim:rgba(77,200,192,.08);--mist:#8BA3BC;--fog:#5A7290;--hi:#D0E2F4;--danger:#D95C5C;--ok:#45B87C;--warn:#E8943A}
+[data-theme=light]{--ground:#EEF3F8;--shell:#FFFFFF;--shell-2:#F4F8FC;--rim:#CDD8E4;--rim-dim:#DFE8F0;--gold:#B07D08;--gold-dim:rgba(176,125,8,.1);--gold-glow:rgba(176,125,8,.04);--teal:#0E8B85;--teal-dim:rgba(14,139,133,.07);--mist:#6A88A3;--fog:#9AAFC0;--hi:#1A2B40;--danger:#B83434;--ok:#1E8A54;--warn:#C05C00}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;font-size:14px;background:var(--ground);color:var(--hi);min-height:100vh}
+
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--ground)}
+#loginScreen[hidden]{display:none!important}
+.login-card{width:100%;max-width:400px;background:var(--shell);border:1px solid var(--rim);border-radius:16px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.45)}
+.login-top{padding:28px 28px 20px;border-bottom:1px solid var(--rim-dim);display:flex;flex-direction:column;align-items:center;text-align:center}
+.login-key{width:52px;height:52px;background:var(--gold);border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.login-key svg{color:#0A1018}
+.login-title{font-family:'Libre Baskerville',serif;font-size:24px;font-weight:700;color:var(--hi);margin-bottom:4px}
+.login-sub{font-size:12.5px;color:var(--mist);line-height:1.5}
+.login-mode-badge{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;background:var(--gold-dim);color:var(--gold)}
+.login-body{padding:24px 28px;display:flex;flex-direction:column;gap:14px}
+.login-info{background:var(--shell-2);border:1px solid var(--rim-dim);border-radius:8px;padding:11px 14px;font-size:12.5px;color:var(--mist);line-height:1.55}
+.login-info strong{color:var(--hi)}
+.login-error{background:rgba(217,92,92,.1);border:1px solid rgba(217,92,92,.3);border-radius:7px;padding:9px 13px;font-size:12.5px;color:var(--danger);display:none;align-items:center;gap:7px}
+.login-error.show{display:flex}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:12px;font-weight:500;color:var(--mist)}
+.fg input,.fg select,.fg textarea{background:var(--shell-2);border:1px solid var(--rim);border-radius:7px;padding:10px 12px;color:var(--hi);font-family:inherit;font-size:14px;outline:none;transition:border-color .15s;width:100%}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold)}
+.fg input::placeholder,.fg textarea::placeholder{color:var(--fog)}
+.fg select option{background:var(--shell)}
+.fg input.mono,.fg textarea.mono{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--teal)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:40px}
+.pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fog);cursor:pointer;padding:3px;outline:none;border-radius:3px}
+.pw-eye:hover{color:var(--hi)}
+.fg textarea{resize:vertical;min-height:64px;line-height:1.5}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:7px;border:1px solid transparent;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;outline:none;transition:all .13s;justify-content:center}
+.btn:focus-visible{box-shadow:0 0 0 2px var(--gold)}
+.btn-primary{background:var(--gold);color:#0A1018;border-color:var(--gold);width:100%}
+.btn-primary:hover:not(:disabled){filter:brightness(1.08)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--mist);border-color:var(--rim)}
+.btn-ghost:hover{background:var(--shell);color:var(--hi)}
+.btn-danger-ghost{background:transparent;color:var(--danger);border-color:var(--danger)}
+.btn-danger-ghost:hover{background:rgba(217,92,92,.08)}
+.btn-sm{padding:6px 12px;font-size:12.5px;font-weight:500}
+.spin{animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.remember-wrap{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mist);cursor:pointer}
+.remember-wrap input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer}
+.login-ftr{padding:16px 28px;border-top:1px solid var(--rim-dim);font-size:11px;color:var(--fog);text-align:center;line-height:1.6}
+
+#loadScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--mist)}
+#loadScreen[hidden]{display:none!important}
+.load-dot{width:32px;height:32px;border:2px solid var(--rim);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+
+#appScreen{display:flex;height:100vh;overflow:hidden}
+#appScreen[hidden]{display:none!important}
+
+.sidebar{width:260px;flex-shrink:0;background:var(--shell);border-right:1px solid var(--rim);display:flex;flex-direction:column;height:100vh}
+.sb-brand{padding:16px 14px 12px;border-bottom:1px solid var(--rim-dim);display:flex;align-items:center;gap:10px}
+.sb-key{width:32px;height:32px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-key svg{color:#0A1018}
+.sb-title{font-family:'Libre Baskerville',serif;font-size:15px;font-weight:700;color:var(--hi);line-height:1.1}
+.sb-sub{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--fog);margin-top:1px;font-weight:600}
+.sb-search-wrap{padding:10px 11px;border-bottom:1px solid var(--rim-dim)}
+.sb-search{position:relative}
+.sb-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--fog);pointer-events:none}
+.sb-search input{width:100%;background:var(--shell-2);border:1px solid var(--rim);border-radius:6px;padding:7px 10px 7px 30px;color:var(--hi);font-family:inherit;font-size:12.5px;outline:none;transition:border-color .15s}
+.sb-search input::placeholder{color:var(--fog)}
+.sb-search input:focus{border-color:var(--gold)}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 0}
+.sb-lbl{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:8px 14px 4px;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;border-left:3px solid transparent;color:var(--mist);transition:all .12s;outline:none}
+.sb-item:hover{background:var(--gold-glow);color:var(--hi)}
+.sb-item.active{background:var(--gold-dim);border-left-color:var(--gold);color:var(--hi)}
+.sb-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;letter-spacing:.02em}
+.sb-name{font-size:13px;font-weight:500;flex:1}
+.sb-badge{font-size:10px;background:var(--rim);color:var(--mist);border-radius:10px;padding:1px 7px;font-variant-numeric:tabular-nums}
+.sb-item.active .sb-badge{background:var(--gold-dim);color:var(--gold)}
+.sb-footer{padding:10px 12px;border-top:1px solid var(--rim-dim);display:flex;flex-direction:column;gap:8px}
+.sync-row{display:flex;align-items:center;gap:6px;font-size:11px}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.sync-dot.synced{background:var(--ok)}
+.sync-dot.syncing{background:var(--gold);animation:pulse 1s ease-in-out infinite}
+.sync-dot.offline{background:var(--fog)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-txt{color:var(--fog)}
+.footer-btns{display:flex;gap:6px}
+.footer-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:transparent;border:1px solid var(--rim);border-radius:5px;padding:5px 8px;color:var(--mist);font-size:11px;font-family:inherit;cursor:pointer;transition:all .12s}
+.footer-btn:hover{border-color:var(--gold);color:var(--gold)}
+.footer-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;height:100vh}
+.main-hdr{padding:16px 22px 13px;border-bottom:1px solid var(--rim);display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--ground);position:sticky;top:0;z-index:10}
+.main-title{font-family:'Libre Baskerville',serif;font-size:20px;font-weight:700;color:var(--hi);display:flex;align-items:center;gap:9px}
+.inst-tag{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:4px}
+.main-acts{display:flex;align-items:center;gap:7px}
+.main-body{padding:18px 22px;flex:1}
+
+.ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px;margin-bottom:8px}
+.ov-card{background:var(--shell);border:1px solid var(--rim);border-radius:12px;padding:18px;cursor:pointer;transition:all .15s}
+.ov-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.ov-top{display:flex;align-items:center;gap:11px;margin-bottom:13px}
+.ov-icon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.03em;flex-shrink:0}
+.ov-abbr{font-family:'Libre Baskerville',serif;font-size:17px;font-weight:700;color:var(--hi);line-height:1}
+.ov-full{font-size:11px;color:var(--mist);margin-top:2px;line-height:1.3}
+.ov-stat-n{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:500;color:var(--hi);font-variant-numeric:tabular-nums}
+.ov-stat-l{font-size:10px;color:var(--fog);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.ov-arrow{color:var(--gold);font-size:11.5px;font-weight:600;margin-top:8px;display:flex;align-items:center;gap:3px}
+
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;margin-top:20px}
+.sec-hdr:first-child{margin-top:0}
+.sec-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);font-weight:600;white-space:nowrap}
+.sec-line{flex:1;height:1px;background:var(--rim-dim)}
+
+.cred-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;margin-bottom:18px}
+.cred-card{background:var(--shell);border:1px solid var(--rim);border-radius:9px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.cred-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.cred-top{padding:10px 13px 9px;border-bottom:1px solid var(--rim-dim);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cred-name{font-size:13px;font-weight:600;color:var(--hi);display:flex;align-items:center;gap:6px;min-width:0}
+.cred-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cred-chip{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;flex-shrink:0}
+.cred-btns{display:flex;gap:3px;flex-shrink:0}
+.icon-btn{width:27px;height:27px;background:transparent;border:none;border-radius:5px;color:var(--fog);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;outline:none}
+.icon-btn:hover{background:var(--shell-2);color:var(--hi)}
+.icon-btn.del:hover{background:rgba(217,92,92,.1);color:var(--danger)}
+.cred-fields{padding:10px 13px;display:flex;flex-direction:column;gap:8px}
+.f-lbl{font-size:9px;color:var(--fog);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:2px}
+.f-row{display:flex;align-items:center;gap:6px;background:var(--shell-2);border:1px solid var(--rim-dim);border-radius:5px;padding:6px 9px}
+.f-val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--teal);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums;user-select:text}
+.f-val.masked{filter:blur(5px);transition:filter .2s;user-select:none;cursor:pointer}
+.f-val.masked:hover{filter:blur(0)}
+.f-copy{width:21px;height:21px;border:none;background:transparent;color:var(--fog);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,color .12s;flex-shrink:0}
+.f-row:hover .f-copy{opacity:1}
+.f-copy:hover{color:var(--teal)}
+.f-copy.ok{opacity:1!important;color:var(--ok)}
+.cred-note{padding:7px 13px;border-top:1px solid var(--rim-dim);font-size:11px;color:var(--fog);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.empty{padding:44px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;color:var(--mist)}
+.empty-ring{width:52px;height:52px;border-radius:50%;background:var(--shell);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;color:var(--fog);margin-bottom:13px}
+.empty-h{font-family:'Libre Baskerville',serif;font-size:17px;font-weight:700;color:var(--hi);margin-bottom:5px}
+.empty-p{font-size:13px;max-width:280px;line-height:1.55;color:var(--mist)}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.overlay[hidden]{display:none!important}
+.modal{background:var(--shell);border:1px solid var(--rim);border-radius:14px;width:100%;max-width:470px;max-height:92vh;overflow-y:auto;box-shadow:0 28px 64px rgba(0,0,0,.45)}
+.modal-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--rim-dim);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:'Libre Baskerville',serif;font-size:19px;font-weight:700;color:var(--hi)}
+.modal-body{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.modal-ftr{padding:14px 22px;border-top:1px solid var(--rim-dim);display:flex;justify-content:flex-end;gap:8px}
+
+.dyn-fields{display:flex;flex-direction:column;gap:8px}
+.dyn-field{display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;align-items:center}
+.dyn-field input{min-width:0}
+.dyn-rm{width:28px;height:28px;background:transparent;border:1px solid var(--rim);border-radius:5px;color:var(--fog);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0}
+.dyn-rm:hover{border-color:var(--danger);color:var(--danger);background:rgba(217,92,92,.08)}
+.secret-chk{display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--mist);flex-shrink:0}
+.secret-chk input{width:14px;height:14px;cursor:pointer;accent-color:var(--gold)}
+.add-field-btn{display:flex;align-items:center;gap:6px;background:transparent;border:1px dashed var(--rim);border-radius:6px;padding:7px 12px;color:var(--mist);font-size:12.5px;font-family:inherit;cursor:pointer;transition:all .15s;width:100%;justify-content:center;margin-top:7px}
+.add-field-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+.confirm-box{background:var(--shell);border:1px solid var(--rim);border-radius:12px;padding:26px;max-width:360px;width:100%;text-align:center;box-shadow:0 24px 56px rgba(0,0,0,.5)}
+.confirm-icon{color:var(--danger);display:flex;justify-content:center;margin-bottom:12px}
+.confirm-h{font-family:'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--hi);margin-bottom:6px}
+.confirm-p{font-size:13px;color:var(--mist);line-height:1.5;margin-bottom:18px}
+.confirm-btns{display:flex;gap:8px;justify-content:center}
+
+.toast{position:fixed;bottom:20px;right:20px;background:var(--shell);border:1px solid var(--ok);border-radius:8px;padding:9px 15px;font-size:13px;font-weight:500;color:var(--ok);box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:300;display:flex;align-items:center;gap:7px;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.warn{border-color:var(--warn);color:var(--warn)}
+.chpw-info{background:var(--shell-2);border:1px solid var(--rim-dim);border-radius:7px;padding:10px 13px;font-size:12px;color:var(--mist);line-height:1.55}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--rim);border-radius:3px}
+@media(prefers-reduced-motion:no-preference){.cred-card,.ov-card{animation:fadeUp .18s ease both}@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}}
+@media(max-width:660px){.sidebar{display:none}.cred-grid{grid-template-columns:1fr}.ov-grid{grid-template-columns:1fr}.dyn-field{grid-template-columns:1fr 1fr auto}}
+</style>
+
+<!-- LOADING -->
+<div id="loadScreen">
+  <div class="load-dot"></div>
+  <span style="font-size:13px;color:var(--fog)" id="loadMsg">Conectando bóveda…</span>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen" hidden>
+  <div class="login-card">
+    <div class="login-top">
+      <div class="login-key">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2L13 10M16 5l2 2M13 10l1.5 1.5"/></svg>
+      </div>
+      <div class="login-title">Llave Maestra</div>
+      <div class="login-sub">Bóveda de credenciales institucionales</div>
+      <div class="login-mode-badge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Acceso compartido en red
+      </div>
+    </div>
+    <div class="login-body">
+      <div class="login-info" id="loginInfo">Ingresa la <strong>contraseña maestra</strong> del equipo para acceder a la bóveda.</div>
+      <div class="fg" id="loginConfirmWrap" style="display:none">
+        <label for="loginPasswordConfirm">Confirmar contraseña maestra</label>
+        <div class="pw-wrap">
+          <input type="password" id="loginPasswordConfirm" placeholder="Repetir contraseña" autocomplete="new-password">
+          <button type="button" class="pw-eye" data-target="loginPasswordConfirm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <div class="fg">
+        <label for="loginPassword">Contraseña maestra</label>
+        <div class="pw-wrap">
+          <input type="password" id="loginPassword" placeholder="Contraseña del equipo" autocomplete="current-password">
+          <button type="button" class="pw-eye" data-target="loginPassword"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <div class="login-error" id="loginError">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        <span id="loginErrorMsg">Contraseña incorrecta</span>
+      </div>
+      <label class="remember-wrap"><input type="checkbox" id="rememberSession"> Recordar durante esta sesión</label>
+      <button class="btn btn-primary" id="loginBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <span id="loginBtnTxt">Acceder</span>
+      </button>
+    </div>
+    <div class="login-ftr">AES-256-GCM · Cifrado en el navegador · Sin contraseñas en el servidor</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen" hidden>
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-key"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2L13 10M16 5l2 2M13 10l1.5 1.5"/></svg></div>
+      <div><div class="sb-title">Llave Maestra</div><div class="sb-sub">Bóveda institucional</div></div>
+    </div>
+    <div class="sb-search-wrap">
+      <div class="sb-search">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Buscar…" autocomplete="off">
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-lbl">Vista</div>
+      <div class="sb-item active" data-view="overview" tabindex="0" role="button">
+        <div class="sb-icon" style="background:var(--gold-dim);color:var(--gold)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+        <span class="sb-name">Resumen</span><span class="sb-badge" id="totalBadge">0</span>
+      </div>
+      <div class="sb-lbl" style="margin-top:6px">Instituciones</div>
+      <div class="sb-item" data-view="dgii" tabindex="0" role="button"><div class="sb-icon" style="background:rgba(32,100,204,.18);color:#4A9EF8">DGII</div><span class="sb-name">DGII</span><span class="sb-badge" id="badge-dgii">0</span></div>
+      <div class="sb-item" data-view="tss" tabindex="0" role="button"><div class="sb-icon" style="background:rgba(40,168,100,.15);color:#3DBB7A">TSS</div><span class="sb-name">TSS</span><span class="sb-badge" id="badge-tss">0</span></div>
+      <div class="sb-item" data-view="mintrabajo" tabindex="0" role="button"><div class="sb-icon" style="background:rgba(140,70,200,.15);color:#BE8FEC">MT</div><span class="sb-name">Min. de Trabajo</span><span class="sb-badge" id="badge-mintrabajo">0</span></div>
+      <div class="sb-item" data-view="sirla" tabindex="0" role="button"><div class="sb-icon" style="background:rgba(220,110,30,.15);color:#F0924A">SIRLA</div><span class="sb-name">SIRLA</span><span class="sb-badge" id="badge-sirla">0</span></div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sync-row"><div class="sync-dot offline" id="syncDot"></div><span class="sync-txt" id="syncTxt">Conectando…</span></div>
+      <div class="footer-btns">
+        <button class="footer-btn" id="changePassBtn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Contraseña</button>
+        <button class="footer-btn" id="themeBtn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Tema</button>
+        <button class="footer-btn danger" id="logoutBtn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Salir</button>
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="main-hdr">
+      <div class="main-title" id="mainTitle">Resumen</div>
+      <div class="main-acts">
+        <button class="btn btn-ghost btn-sm" id="addCredBtn" hidden><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nueva credencial</button>
+        <button class="btn btn-primary btn-sm" id="addCredBtnOv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Agregar</button>
+      </div>
+    </div>
+    <div class="main-body" id="mainBody"></div>
+  </main>
+</div>
+
+<!-- MODAL CREDENCIAL -->
+<div class="overlay" id="credModalOverlay" hidden>
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title" id="credModalTitle">Nueva credencial</div><button class="icon-btn" id="credModalClose"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-body">
+      <div class="fg"><label for="mInst">Institución</label>
+        <select id="mInst">
+          <option value="dgii">DGII — Dirección General de Impuestos Internos</option>
+          <option value="tss">TSS — Tesorería de la Seguridad Social</option>
+          <option value="mintrabajo">Ministerio de Trabajo</option>
+          <option value="sirla">SIRLA — Sistema de Reg. Laboral y de Acceso</option>
+        </select>
+      </div>
+      <div class="fg"><label for="mCat">Categoría / Portal</label><select id="mCat"></select></div>
+      <div class="fg"><label for="mName">Nombre del acceso</label><input type="text" id="mName" placeholder="Ej: Cuenta principal, Usuario #2…"></div>
+      <div>
+        <div style="font-size:12px;font-weight:500;color:var(--mist);margin-bottom:7px">Campos <span style="color:var(--fog);font-size:10px">(el candado indica secreto)</span></div>
+        <div class="dyn-fields" id="dynFields"></div>
+        <button class="add-field-btn" id="addFieldBtn" type="button"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Agregar campo</button>
+      </div>
+      <div class="fg"><label for="mNotes">Notas (opcional)</label><textarea id="mNotes" placeholder="Vigencia del token, observaciones…"></textarea></div>
+    </div>
+    <div class="modal-ftr"><button class="btn btn-ghost btn-sm" id="credModalCancel">Cancelar</button><button class="btn btn-primary btn-sm" id="credModalSave"><span id="credSaveTxt">Guardar</span></button></div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="overlay" id="confirmOverlay" hidden>
+  <div class="confirm-box">
+    <div class="confirm-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+    <div class="confirm-h">¿Eliminar credencial?</div>
+    <p class="confirm-p">Esta acción no se puede deshacer. La credencial será eliminada para todos los usuarios.</p>
+    <div class="confirm-btns"><button class="btn btn-ghost btn-sm" id="confirmCancel">Cancelar</button><button class="btn btn-danger-ghost btn-sm" id="confirmDelete">Eliminar</button></div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD -->
+<div class="overlay" id="chpwOverlay" hidden>
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">Cambiar contraseña maestra</div><button class="icon-btn" id="chpwClose"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-body">
+      <p class="chpw-info">Todos los usuarios deberán usar la nueva contraseña desde este momento.</p>
+      <div class="fg"><label for="chpwCurrent">Contraseña actual</label><div class="pw-wrap"><input type="password" id="chpwCurrent" autocomplete="current-password"><button type="button" class="pw-eye" data-target="chpwCurrent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+      <div class="fg"><label for="chpwNew">Nueva contraseña</label><div class="pw-wrap"><input type="password" id="chpwNew" placeholder="Mínimo 8 caracteres" autocomplete="new-password"><button type="button" class="pw-eye" data-target="chpwNew"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+      <div class="fg"><label for="chpwConfirm">Confirmar nueva contraseña</label><div class="pw-wrap"><input type="password" id="chpwConfirm" autocomplete="new-password"><button type="button" class="pw-eye" data-target="chpwConfirm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+      <div class="login-error" id="chpwError"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg><span id="chpwErrMsg">Error</span></div>
+    </div>
+    <div class="modal-ftr"><button class="btn btn-ghost btn-sm" id="chpwCancel">Cancelar</button><button class="btn btn-primary btn-sm" id="chpwSave"><span id="chpwSaveTxt">Cambiar contraseña</span></button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg><span id="toastMsg">Copiado</span></div>
+
+<datalist id="fieldSuggestions">
+  <option value="Usuario"><option value="Contraseña"><option value="RNC"><option value="PIN">
+  <option value="Token"><option value="Número Patronal"><option value="Código de Acceso">
+  <option value="Certificado"><option value="NIF"><option value="URL del Portal">
+</datalist>
+
+<script>
+'use strict';
+const INST = {
+  dgii:       { name:'DGII', full:'Dirección General de Impuestos Internos', color:'#4A9EF8', bg:'rgba(32,100,204,.18)', tag:{bg:'rgba(32,100,204,.18)',color:'#4A9EF8'}, cats:['Portal OGT (Oficina Virtual)','Factura Electrónica (e-CF)','Consulta ITBIS','ITBIS Simplificado','RNC Único','Otro'] },
+  tss:        { name:'TSS', full:'Tesorería de la Seguridad Social', color:'#3DBB7A', bg:'rgba(40,168,100,.15)', tag:{bg:'rgba(40,168,100,.15)',color:'#3DBB7A'}, cats:['Portal TSS','Certificado Digital','Afiliación Empleador','Otro'] },
+  mintrabajo: { name:'Ministerio de Trabajo', full:'Ministerio de Trabajo', color:'#BE8FEC', bg:'rgba(140,70,200,.15)', tag:{bg:'rgba(140,70,200,.15)',color:'#BE8FEC'}, cats:['Portal Empleador','SISTTRADO','Inspección Laboral','Conciliación','Otro'] },
+  sirla:      { name:'SIRLA', full:'Sistema de Información de Registro Laboral y de Acceso', color:'#F0924A', bg:'rgba(220,110,30,.15)', tag:{bg:'rgba(220,110,30,.15)',color:'#F0924A'}, cats:['Portal Principal','Registro de Personal','Consultas','Otro'] }
+};
+const DEFAULT_FIELDS = {
+  dgii:       [['RNC','',false],['Usuario','',false],['Contraseña','',true]],
+  tss:        [['Número Patronal','',false],['Usuario','',false],['Contraseña','',true]],
+  mintrabajo: [['Usuario','',false],['Contraseña','',true]],
+  sirla:      [['Usuario','',false],['Contraseña','',true],['Código de Acceso','',true]]
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let masterKey  = null;
+let credentials = [];
+let currentView = 'overview';
+let searchQuery = '';
+let editingId   = null;
+let deleteTargetId = null;
+let pollTimer   = null;
+let lastPollTs  = 0;
+let isSetup     = false;
+
+// ── Crypto ───────────────────────────────────────────────────────────────────
+const CRYPTO = {
+  ITERATIONS: 200000,
+  SENTINEL: 'LLAVE-MAESTRA-BÓVEDA-V1',
+  b64enc(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); },
+  b64dec(s)  { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
+  genSalt()  { return this.b64enc(crypto.getRandomValues(new Uint8Array(32))); },
+  genIV()    { return crypto.getRandomValues(new Uint8Array(12)); },
+  async deriveKey(password, saltB64) {
+    const raw = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name:'PBKDF2', salt:this.b64dec(saltB64), iterations:this.ITERATIONS, hash:'SHA-256' },
+      raw, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+    );
+  },
+  async encrypt(obj, key) {
+    const iv = this.genIV();
+    const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
+    return { iv: this.b64enc(iv.buffer), ct: this.b64enc(ct) };
+  },
+  async decrypt(ivB64, ctB64, key) {
+    const buf = await crypto.subtle.decrypt({ name:'AES-GCM', iv:this.b64dec(ivB64) }, key, this.b64dec(ctB64));
+    return JSON.parse(new TextDecoder().decode(buf));
+  },
+  async makeVerifier(key)   { return this.encrypt(this.SENTINEL, key); },
+  async checkVerifier(v, key) {
+    try { return (await this.decrypt(v.iv, v.ct, key)) === this.SENTINEL; } catch { return false; }
+  }
+};
+
+// ── API calls ────────────────────────────────────────────────────────────────
+const API = {
+  async get(path)       { const r = await fetch('/api'+path); return r.json(); },
+  async post(path, data){ const r = await fetch('/api'+path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); return r.json(); },
+  async put(path, data) { const r = await fetch('/api'+path, { method:'PUT',  headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) }); return r.json(); },
+  async del(path)       { const r = await fetch('/api'+path, { method:'DELETE' }); return r.json(); },
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function uid()  { return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escA(s){ return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+let toastTimer = null;
+function toast(msg, warn=false) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  el.classList.toggle('warn', warn);
+  el.classList.remove('show');
+  requestAnimationFrame(() => el.classList.add('show'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+function setSyncState(state, text) {
+  document.getElementById('syncDot').className = 'sync-dot '+state;
+  document.getElementById('syncTxt').textContent = text;
+}
+
+const SS_KEY = 'lm-session-pw';
+function saveSessionPw(pw){ try { sessionStorage.setItem(SS_KEY, pw); } catch{} }
+function loadSessionPw()  { try { return sessionStorage.getItem(SS_KEY); } catch { return null; } }
+function clearSessionPw() { try { sessionStorage.removeItem(SS_KEY); } catch{} }
+
+function restoreTheme() {
+  try { const t=localStorage.getItem('lm-theme'); if(t) document.documentElement.setAttribute('data-theme',t); } catch{}
+}
+function toggleTheme() {
+  const r=document.documentElement, cur=r.getAttribute('data-theme'), sys=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  r.setAttribute('data-theme', cur ? (cur==='dark'?'light':'dark') : (sys?'light':'dark'));
+  try { localStorage.setItem('lm-theme', r.getAttribute('data-theme')); } catch{}
+}
+
+// ── Polling ──────────────────────────────────────────────────────────────────
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(pollChanges, 8000);
+}
+function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
+
+async function pollChanges() {
+  try {
+    const data = await API.get('/poll?since='+lastPollTs);
+    if (data.credentials && data.credentials.length > 0) {
+      let changed = false;
+      for (const raw of data.credentials) {
+        try {
+          const plain = await CRYPTO.decrypt(raw.iv, raw.ct, masterKey);
+          const cred  = { id:raw.id, institution:raw.institution, category:raw.category, ...plain };
+          const idx   = credentials.findIndex(c => c.id === raw.id);
+          if (idx === -1) { credentials.push(cred); changed = true; }
+          else { credentials[idx] = cred; changed = true; }
+        } catch {}
+      }
+      if (changed) render();
+    }
+    if (data.serverTime) lastPollTs = data.serverTime;
+    setSyncState('synced', 'Sincronizado');
+  } catch { setSyncState('offline', 'Sin conexión'); }
+}
+
+// ── Login / Auth ─────────────────────────────────────────────────────────────
+async function handleLogin(pw) {
+  const btn = document.getElementById('loginBtn');
+  const txt = document.getElementById('loginBtnTxt');
+  btn.disabled = true; txt.innerHTML = '<span class="spin">⟳</span> Verificando…';
+  document.getElementById('loginError').classList.remove('show');
+  try {
+    const conf = await API.get('/config');
+    if (!conf.exists) { showLoginError('Configuración no encontrada. Recarga la página.'); return; }
+    const key = await CRYPTO.deriveKey(pw, conf.salt);
+    const ok  = await CRYPTO.checkVerifier({ iv:conf.verIv, ct:conf.verCt }, key);
+    if (!ok) { showLoginError('Contraseña incorrecta. Inténtalo de nuevo.'); return; }
+    masterKey = key;
+    if (document.getElementById('rememberSession').checked) saveSessionPw(pw);
+    await loadAllCredentials();
+    showApp();
+  } catch(e) {
+    showLoginError('Error al conectar: '+(e.message||'sin conexión'));
+  } finally {
+    btn.disabled = false;
+    txt.textContent = isSetup ? 'Crear bóveda' : 'Acceder';
+  }
+}
+
+async function handleSetup(pw, cf) {
+  if (pw !== cf)     { showLoginError('Las contraseñas no coinciden.'); return; }
+  if (pw.length < 8) { showLoginError('La contraseña debe tener al menos 8 caracteres.'); return; }
+  const btn = document.getElementById('loginBtn');
+  const txt = document.getElementById('loginBtnTxt');
+  btn.disabled = true; txt.innerHTML = '<span class="spin">⟳</span> Creando bóveda…';
+  document.getElementById('loginError').classList.remove('show');
+  try {
+    const salt = CRYPTO.genSalt();
+    const key  = await CRYPTO.deriveKey(pw, salt);
+    const ver  = await CRYPTO.makeVerifier(key);
+    await API.post('/config', { salt, verIv:ver.iv, verCt:ver.ct });
+    masterKey = key;
+    if (document.getElementById('rememberSession').checked) saveSessionPw(pw);
+    showApp();
+    toast('Bóveda creada correctamente');
+  } catch(e) {
+    showLoginError('Error al crear la bóveda: '+(e.message||'desconocido'));
+  } finally {
+    btn.disabled = false; txt.textContent = 'Crear bóveda';
+  }
+}
+
+function showLoginError(msg) {
+  document.getElementById('loginErrorMsg').textContent = msg;
+  document.getElementById('loginError').classList.add('show');
+}
+
+async function loadAllCredentials() {
+  setSyncState('syncing', 'Cargando…');
+  const rows = await API.get('/credentials');
+  credentials = [];
+  for (const raw of rows) {
+    try {
+      const plain = await CRYPTO.decrypt(raw.iv, raw.ct, masterKey);
+      credentials.push({ id:raw.id, institution:raw.institution, category:raw.category, ...plain });
+    } catch {}
+  }
+  lastPollTs = Date.now();
+  setSyncState('synced', 'Sincronizado');
+}
+
+function showApp() {
+  document.getElementById('loginScreen').hidden = true;
+  document.getElementById('loadScreen').hidden  = true;
+  document.getElementById('appScreen').hidden   = false;
+  startPolling();
+  render();
+}
+
+function logout() {
+  stopPolling(); masterKey = null; credentials = [];
+  clearSessionPw();
+  document.getElementById('appScreen').hidden  = true;
+  document.getElementById('loginScreen').hidden = false;
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').classList.remove('show');
+}
+
+// ── Change password ───────────────────────────────────────────────────────────
+async function handleChangePassword() {
+  const cur = document.getElementById('chpwCurrent').value;
+  const nw  = document.getElementById('chpwNew').value;
+  const cf  = document.getElementById('chpwConfirm').value;
+  const errEl = document.getElementById('chpwError');
+  function setErr(m){ document.getElementById('chpwErrMsg').textContent=m; errEl.classList.add('show'); }
+  errEl.classList.remove('show');
+  if (!cur)          { setErr('Ingresa la contraseña actual.'); return; }
+  if (nw.length < 8) { setErr('La nueva contraseña debe tener al menos 8 caracteres.'); return; }
+  if (nw !== cf)     { setErr('Las contraseñas nuevas no coinciden.'); return; }
+  const btn = document.getElementById('chpwSave');
+  const txt = document.getElementById('chpwSaveTxt');
+  btn.disabled = true; txt.innerHTML = '<span class="spin">⟳</span> Actualizando…';
+  try {
+    const conf = await API.get('/config');
+    const curKey = await CRYPTO.deriveKey(cur, conf.salt);
+    if (!(await CRYPTO.checkVerifier({ iv:conf.verIv, ct:conf.verCt }, curKey))) { setErr('La contraseña actual es incorrecta.'); return; }
+    const newSalt = CRYPTO.genSalt();
+    const newKey  = await CRYPTO.deriveKey(nw, newSalt);
+    for (const cred of credentials) {
+      const plain = { name:cred.name, fields:cred.fields, notes:cred.notes, updatedAt:cred.updatedAt };
+      const enc   = await CRYPTO.encrypt(plain, newKey);
+      await API.put('/credentials/'+cred.id, { institution:cred.institution, category:cred.category, iv:enc.iv, ct:enc.ct });
+    }
+    const newVer = await CRYPTO.makeVerifier(newKey);
+    await API.post('/config', { salt:newSalt, verIv:newVer.iv, verCt:newVer.ct });
+    masterKey = newKey;
+    if (loadSessionPw()) saveSessionPw(nw);
+    document.getElementById('chpwOverlay').hidden = true;
+    toast('Contraseña actualizada. Informa al equipo.');
+  } catch(e) {
+    setErr('Error: '+(e.message||'desconocido'));
+  } finally {
+    btn.disabled = false; txt.textContent = 'Cambiar contraseña';
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function countFor(inst){ return credentials.filter(c=>c.institution===inst).length; }
+function renderBadges(){
+  document.getElementById('totalBadge').textContent = credentials.length;
+  Object.keys(INST).forEach(k => { document.getElementById('badge-'+k).textContent = countFor(k); });
+}
+function filtered(){
+  if (!searchQuery) return credentials;
+  const q = searchQuery.toLowerCase();
+  return credentials.filter(c =>
+    c.institution.includes(q)||c.category.toLowerCase().includes(q)||c.name.toLowerCase().includes(q)||
+    (c.notes||'').toLowerCase().includes(q)||c.fields.some(f=>f.key.toLowerCase().includes(q)||(!f.secret&&f.value.toLowerCase().includes(q)))
+  );
+}
+function renderOverview(){
+  let html = '<div class="ov-grid">';
+  Object.entries(INST).forEach(([key,inst])=>{
+    const n = countFor(key);
+    html += `<div class="ov-card" data-inst="${key}" tabindex="0" role="button">
+      <div class="ov-top"><div class="ov-icon" style="background:${inst.bg};color:${inst.color}">${inst.name}</div>
+      <div><div class="ov-abbr">${esc(inst.name)}</div><div class="ov-full">${esc(inst.full)}</div></div></div>
+      <div style="margin-bottom:8px"><div class="ov-stat-n">${n}</div><div class="ov-stat-l">Credenciales</div></div>
+      <div class="ov-arrow">Ver accesos <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </div>`;
+  });
+  html += '</div>';
+  if (!credentials.length) html += `<div class="empty"><div class="empty-ring"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2L13 10M16 5l2 2M13 10l1.5 1.5"/></svg></div><div class="empty-h">Bóveda vacía</div><p class="empty-p">Presiona <strong>Agregar</strong> para registrar la primera credencial.</p></div>`;
+  document.getElementById('mainBody').innerHTML = html;
+  document.querySelectorAll('.ov-card').forEach(el=>{
+    el.addEventListener('click',()=>setView(el.dataset.inst));
+    el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')setView(el.dataset.inst);});
+  });
+}
+function renderCredCard(c){
+  const inst = INST[c.institution];
+  let fh='';
+  c.fields.forEach((f,fi)=>{
+    fh+=`<div class="cred-field"><div class="f-lbl">${esc(f.key)}</div>
+    <div class="f-row"><span class="f-val${f.secret?' masked':''}" ${f.secret?'title="Pasar cursor para ver"':''}>${esc(f.value||'—')}</span>
+    <button class="f-copy" data-val="${escA(f.value)}" aria-label="Copiar ${esc(f.key)}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div></div>`;
+  });
+  return `<div class="cred-card" data-id="${c.id}">
+    <div class="cred-top"><div class="cred-name"><span>${esc(c.name)}</span><span class="cred-chip" style="background:${inst.tag.bg};color:${inst.color}">${esc(c.category.split(' ')[0])}</span></div>
+    <div class="cred-btns"><button class="icon-btn edit-btn" data-id="${c.id}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+    <button class="icon-btn del delete-btn" data-id="${c.id}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button></div></div>
+    <div class="cred-fields">${fh}</div>
+    ${c.notes?`<div class="cred-note">📎 ${esc(c.notes)}</div>`:''}
+  </div>`;
+}
+function renderInstitution(instKey){
+  const inst = INST[instKey];
+  const list = filtered().filter(c=>c.institution===instKey);
+  if (!list.length){
+    document.getElementById('mainBody').innerHTML=`<div class="empty"><div class="empty-ring"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="empty-h">Sin credenciales — ${esc(inst.name)}</div><p class="empty-p">Presiona "Nueva credencial" para agregar el primer acceso a ${esc(inst.full)}.</p></div>`;
+    return;
+  }
+  const byCat = {};
+  list.forEach(c=>{ if(!byCat[c.category])byCat[c.category]=[]; byCat[c.category].push(c); });
+  let html='';
+  Object.entries(byCat).forEach(([cat,cards])=>{
+    html+=`<div class="sec-hdr"><span class="sec-lbl">${esc(cat)}</span><div class="sec-line"></div></div><div class="cred-grid">`;
+    cards.forEach(c=>{ html+=renderCredCard(c); });
+    html+='</div>';
+  });
+  document.getElementById('mainBody').innerHTML = html;
+  bindCardEvents();
+}
+function bindCardEvents(){
+  document.querySelectorAll('.edit-btn').forEach(b=>b.addEventListener('click',()=>openEditModal(b.dataset.id)));
+  document.querySelectorAll('.delete-btn').forEach(b=>b.addEventListener('click',()=>{ deleteTargetId=b.dataset.id; document.getElementById('confirmOverlay').hidden=false; }));
+  document.querySelectorAll('.f-copy').forEach(b=>b.addEventListener('click',()=>copyVal(b.dataset.val,b)));
+  document.querySelectorAll('.f-val.masked').forEach(el=>el.addEventListener('click',()=>el.classList.toggle('masked')));
+}
+function render(){
+  renderBadges();
+  const titleEl=document.getElementById('mainTitle');
+  const addBtn=document.getElementById('addCredBtn');
+  const addBtnOv=document.getElementById('addCredBtnOv');
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.toggle('active',el.dataset.view===currentView));
+  if (currentView==='overview'){
+    titleEl.textContent='Resumen'; addBtn.hidden=true; addBtnOv.hidden=false;
+    renderOverview();
+  } else {
+    const inst=INST[currentView];
+    titleEl.innerHTML=`<span class="inst-tag" style="background:${inst.tag.bg};color:${inst.color}">${esc(inst.name)}</span> ${esc(inst.full)}`;
+    addBtn.hidden=false; addBtnOv.hidden=true;
+    renderInstitution(currentView);
+  }
+}
+function setView(v){ currentView=v; render(); }
+
+async function copyVal(val, btn){
+  if(!val||val==='—') return;
+  try {
+    await navigator.clipboard.writeText(val);
+    const orig=btn.innerHTML; btn.classList.add('ok');
+    btn.innerHTML='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    toast('Copiado al portapapeles');
+    setTimeout(()=>{ btn.classList.remove('ok'); btn.innerHTML=orig; }, 1800);
+  } catch { toast('No se pudo copiar', true); }
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function buildCatOptions(inst){ document.getElementById('mCat').innerHTML = INST[inst].cats.map(c=>`<option value="${escA(c)}">${esc(c)}</option>`).join(''); }
+function addDynField(key='',value='',secret=false){
+  const container=document.getElementById('dynFields');
+  const row=document.createElement('div'); row.className='dyn-field';
+  row.innerHTML=`<input type="text" class="fk" placeholder="Campo" value="${escA(key)}" list="fieldSuggestions" autocomplete="off">
+    <div class="pw-wrap"><input type="${secret?'password':'text'}" class="fv mono" placeholder="Valor" value="${escA(value)}" autocomplete="off"><button type="button" class="pw-eye feye"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+    <label class="secret-chk"><input type="checkbox" ${secret?'checked':''}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></label>
+    <button type="button" class="dyn-rm">−</button>`;
+  const valIn=row.querySelector('.fv'), keyIn=row.querySelector('.fk'), chk=row.querySelector('input[type=checkbox]');
+  function syncType(){ valIn.type=chk.checked?'password':'text'; }
+  chk.addEventListener('change',syncType);
+  keyIn.addEventListener('change',()=>{ const k=keyIn.value.toLowerCase(); if(['contraseña','clave','password','token','pin','certificado'].some(s=>k.includes(s))){ chk.checked=true; syncType(); } });
+  row.querySelector('.feye').addEventListener('click',()=>{ valIn.type=valIn.type==='password'?'text':'password'; });
+  row.querySelector('.dyn-rm').addEventListener('click',()=>row.remove());
+  container.appendChild(row);
+}
+function collectFields(){
+  return [...document.querySelectorAll('.dyn-field')].map(r=>({ key:r.querySelector('.fk').value.trim(), value:r.querySelector('.fv').value, secret:r.querySelector('input[type=checkbox]').checked })).filter(f=>f.key);
+}
+function openAddModal(inst){
+  editingId=null;
+  document.getElementById('credModalTitle').textContent='Nueva credencial';
+  document.getElementById('credSaveTxt').textContent='Guardar';
+  const iv=inst&&inst!=='overview'?inst:'dgii';
+  document.getElementById('mInst').value=iv; buildCatOptions(iv);
+  document.getElementById('mName').value=''; document.getElementById('mNotes').value='';
+  document.getElementById('dynFields').innerHTML='';
+  DEFAULT_FIELDS[iv].forEach(([k,v,s])=>addDynField(k,v,s));
+  document.getElementById('credModalOverlay').hidden=false;
+  document.getElementById('mName').focus();
+}
+function openEditModal(id){
+  const c=credentials.find(x=>x.id===id); if(!c) return;
+  editingId=id;
+  document.getElementById('credModalTitle').textContent='Editar credencial';
+  document.getElementById('credSaveTxt').textContent='Actualizar';
+  document.getElementById('mInst').value=c.institution; buildCatOptions(c.institution);
+  document.getElementById('mCat').value=c.category;
+  document.getElementById('mName').value=c.name; document.getElementById('mNotes').value=c.notes||'';
+  document.getElementById('dynFields').innerHTML='';
+  c.fields.forEach(f=>addDynField(f.key,f.value,f.secret));
+  document.getElementById('credModalOverlay').hidden=false;
+  document.getElementById('mName').focus();
+}
+async function saveCredModal(){
+  const inst=document.getElementById('mInst').value, cat=document.getElementById('mCat').value;
+  const name=document.getElementById('mName').value.trim(), notes=document.getElementById('mNotes').value.trim();
+  const fields=collectFields();
+  if(!name){ document.getElementById('mName').focus(); return; }
+  const btn=document.getElementById('credModalSave'), saveTxt=document.getElementById('credSaveTxt');
+  btn.disabled=true; saveTxt.innerHTML='<span class="spin">⟳</span>';
+  try {
+    const id=editingId||uid();
+    const plain={ name, fields, notes, updatedAt:new Date().toISOString() };
+    const enc=await CRYPTO.encrypt(plain, masterKey);
+    await API.put('/credentials/'+id, { institution:inst, category:cat, iv:enc.iv, ct:enc.ct });
+    // Update local state immediately
+    const cred={ id, institution:inst, category:cat, ...plain };
+    const idx=credentials.findIndex(c=>c.id===id);
+    if(idx===-1) credentials.push(cred); else credentials[idx]=cred;
+    document.getElementById('credModalOverlay').hidden=true;
+    if(!editingId&&currentView==='overview') setView(inst);
+    toast(editingId?'Credencial actualizada':'Credencial guardada');
+    render();
+  } catch(e){ toast('Error al guardar: '+(e.message||''), true); }
+  finally { btn.disabled=false; saveTxt.textContent=editingId?'Actualizar':'Guardar'; }
+}
+async function doDelete(){
+  if(!deleteTargetId) return;
+  const btn=document.getElementById('confirmDelete'); btn.disabled=true;
+  try {
+    await API.del('/credentials/'+deleteTargetId);
+    credentials=credentials.filter(c=>c.id!==deleteTargetId);
+    document.getElementById('confirmOverlay').hidden=true;
+    deleteTargetId=null;
+    toast('Credencial eliminada');
+    render();
+  } catch(e){ toast('Error al eliminar: '+(e.message||''), true); }
+  finally { btn.disabled=false; }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+restoreTheme();
+(async function boot(){
+  let conf;
+  try { conf = await API.get('/config'); }
+  catch(e) {
+    document.getElementById('loadMsg').textContent = 'No se puede conectar al servidor';
+    return;
+  }
+  isSetup = !conf.exists;
+  // Try auto-login
+  const savedPw = loadSessionPw();
+  if (savedPw && !isSetup) {
+    document.getElementById('loadMsg').textContent = 'Restaurando sesión…';
+    try {
+      const key = await CRYPTO.deriveKey(savedPw, conf.salt);
+      if (await CRYPTO.checkVerifier({ iv:conf.verIv, ct:conf.verCt }, key)) {
+        masterKey = key;
+        await loadAllCredentials();
+        document.getElementById('loadScreen').hidden = true;
+        showApp(); return;
+      }
+    } catch { clearSessionPw(); }
+  }
+  document.getElementById('loadScreen').hidden = true;
+  document.getElementById('loginScreen').hidden = false;
+  if (isSetup) {
+    document.getElementById('loginInfo').innerHTML = '<strong>Primera vez:</strong> establece la <strong>contraseña maestra</strong> del equipo.';
+    document.getElementById('loginBtnTxt').textContent = 'Crear bóveda';
+    document.getElementById('loginConfirmWrap').style.cssText = 'display:flex;flex-direction:column;gap:5px';
+    document.getElementById('loginPassword').setAttribute('autocomplete','new-password');
+    document.getElementById('loginPassword').placeholder = 'Nueva contraseña (mín. 8 caracteres)';
+  }
+  document.getElementById('loginBtn').addEventListener('click', async()=>{
+    const pw=document.getElementById('loginPassword').value;
+    if(!pw){ showLoginError('Ingresa la contraseña.'); return; }
+    if(isSetup) await handleSetup(pw, document.getElementById('loginPasswordConfirm').value);
+    else await handleLogin(pw);
+  });
+  ['loginPassword','loginPasswordConfirm'].forEach(id=>{ document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('loginBtn').click(); }); });
+  document.querySelectorAll('.pw-eye[data-target]').forEach(btn=>{ btn.addEventListener('click',()=>{ const inp=document.getElementById(btn.dataset.target); if(inp) inp.type=inp.type==='password'?'text':'password'; }); });
+})();
+
+// ── App listeners ─────────────────────────────────────────────────────────────
+document.getElementById('addCredBtn').addEventListener('click',()=>openAddModal(currentView));
+document.getElementById('addCredBtnOv').addEventListener('click',()=>openAddModal(currentView));
+document.getElementById('searchInput').addEventListener('input',e=>{ searchQuery=e.target.value.trim(); render(); });
+document.querySelectorAll('.sb-item').forEach(el=>{ el.addEventListener('click',()=>setView(el.dataset.view)); el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ')setView(el.dataset.view); }); });
+document.getElementById('mInst').addEventListener('change',e=>{ buildCatOptions(e.target.value); document.getElementById('dynFields').innerHTML=''; DEFAULT_FIELDS[e.target.value].forEach(([k,v,s])=>addDynField(k,v,s)); });
+document.getElementById('addFieldBtn').addEventListener('click',()=>addDynField());
+document.getElementById('credModalClose').addEventListener('click',()=>{ document.getElementById('credModalOverlay').hidden=true; });
+document.getElementById('credModalCancel').addEventListener('click',()=>{ document.getElementById('credModalOverlay').hidden=true; });
+document.getElementById('credModalSave').addEventListener('click',saveCredModal);
+document.getElementById('credModalOverlay').addEventListener('click',e=>{ if(e.target===document.getElementById('credModalOverlay')) document.getElementById('credModalOverlay').hidden=true; });
+document.getElementById('confirmCancel').addEventListener('click',()=>{ document.getElementById('confirmOverlay').hidden=true; deleteTargetId=null; });
+document.getElementById('confirmDelete').addEventListener('click',doDelete);
+document.getElementById('confirmOverlay').addEventListener('click',e=>{ if(e.target===document.getElementById('confirmOverlay')){ document.getElementById('confirmOverlay').hidden=true; deleteTargetId=null; } });
+document.getElementById('logoutBtn').addEventListener('click',logout);
+document.getElementById('themeBtn').addEventListener('click',toggleTheme);
+document.getElementById('changePassBtn').addEventListener('click',()=>{ document.getElementById('chpwCurrent').value=''; document.getElementById('chpwNew').value=''; document.getElementById('chpwConfirm').value=''; document.getElementById('chpwError').classList.remove('show'); document.getElementById('chpwOverlay').hidden=false; });
+document.getElementById('chpwClose').addEventListener('click',()=>{ document.getElementById('chpwOverlay').hidden=true; });
+document.getElementById('chpwCancel').addEventListener('click',()=>{ document.getElementById('chpwOverlay').hidden=true; });
+document.getElementById('chpwSave').addEventListener('click',handleChangePassword);
+document.getElementById('chpwOverlay').addEventListener('click',e=>{ if(e.target===document.getElementById('chpwOverlay')) document.getElementById('chpwOverlay').hidden=true; });
+document.querySelectorAll('.pw-eye[data-target]').forEach(btn=>{ btn.addEventListener('click',()=>{ const inp=document.getElementById(btn.dataset.target); if(inp) inp.type=inp.type==='password'?'text':'password'; }); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ['chpwOverlay','confirmOverlay','credModalOverlay'].forEach(id=>{ const el=document.getElementById(id); if(!el.hidden) el.hidden=true; }); } if((e.ctrlKey||e.metaKey)&&e.key==='f'&&!document.getElementById('appScreen').hidden){ e.preventDefault(); document.getElementById('searchInput').focus(); } });
+</script>
