@@ -1,32 +1,44 @@
-const { sql, ensureSchema } = require('../../lib/db');
-const { authenticate, hashPassword, randomHex } = require('../../lib/auth');
+const supabase = require('../../lib/supabase');
+const { authenticate } = require('../../lib/auth');
 
 module.exports = async (req, res) => {
-  const session = authenticate(req);
+  const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
 
   const { id } = req.query;
   try {
-    await ensureSchema();
-
     if (req.method === 'PUT') {
-      const { username, password, role, portals, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
-      if (username) await sql`UPDATE users SET username = ${username.toLowerCase().trim()} WHERE id = ${id}`;
-      if (role)     await sql`UPDATE users SET role = ${role} WHERE id = ${id}`;
-      if (portals)  await sql`UPDATE users SET allowed_portals = ${JSON.stringify(portals)} WHERE id = ${id}`;
-      if (vaultKeyIv && vaultKeyCt) await sql`UPDATE users SET vault_key_iv = ${vaultKeyIv}, vault_key_ct = ${vaultKeyCt}, user_key_salt = ${userSalt||''} WHERE id = ${id}`;
+      const { password, role, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+
       if (password) {
-        const passwordSalt = randomHex(16);
-        const passwordHash = await hashPassword(password, passwordSalt);
-        await sql`UPDATE users SET password_hash = ${passwordHash}, password_salt = ${passwordSalt} WHERE id = ${id}`;
+        const { error } = await supabase.auth.admin.updateUserById(id, { password });
+        if (error) return res.status(400).json({ error: error.message });
       }
+
+      const update = {};
+      if (role !== undefined) update.role = role;
+      if (portals_direct !== undefined) update.portals_direct = portals_direct;
+      if (access_cami !== undefined) update.access_cami = access_cami;
+      if (access_nala !== undefined) update.access_nala = access_nala;
+      if (userSalt && vaultKeyIv && vaultKeyCt) {
+        update.user_key_salt = userSalt;
+        update.vault_key_iv = vaultKeyIv;
+        update.vault_key_ct = vaultKeyCt;
+      }
+
+      if (Object.keys(update).length > 0) {
+        const { error } = await supabase.from('direct_profiles').update(update).eq('id', id);
+        if (error) return res.status(500).json({ error: error.message });
+      }
+
       return res.json({ ok: true });
     }
 
     if (req.method === 'DELETE') {
       if (session.userId === id) return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
-      await sql`DELETE FROM users WHERE id = ${id}`;
+      const { error } = await supabase.auth.admin.deleteUser(id);
+      if (error) return res.status(400).json({ error: error.message });
       return res.json({ ok: true });
     }
 
