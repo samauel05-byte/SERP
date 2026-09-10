@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAMI · Control y Análisis de Movimientos e Impuestos</title>
+<meta name="theme-color" content="#10213D">
+<meta property="og:title" content="CAMI · Control y Análisis de Movimientos e Impuestos">
+<meta property="og:image" content="https://analisis-itbis.vercel.app/assets/cami-logo-512.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Token system ── */
+:root {
+  /* Brand */
+  --blue:#3B5BDB; --blue-lt:#EEF2FF; --blue-dk:#2C44B0;
+  --violet:#7C3AED; --violet-lt:#F5F3FF;
+  --teal:#0D9488;  --teal-lt:#F0FDFA;
+  --green:#059669; --green-lt:#ECFDF5;
+  --amber:#D97706; --amber-lt:#FFFBEB;
+  --red:#DC2626;   --red-lt:#FEF2F2;
+  --sky:#0284C7;   --sky-lt:#F0F9FF;
+  /* Neutrals */
+  --bg:#F5F7FB;
+  --surface:#FFFFFF;
+  --surface-2:#F7F9FE;
+  --border:#DDE4F0;
+  --text:#0E1B36;
+  --muted:#637898;
+  /* Sidebar */
+  --sid-bg:#0E1B36;
+  --sid-text:#8FA4C4;
+  --sid-text-bright:#C9D8EF;
+  --sid-active-from:#3B5BDB;
+  --sid-active-to:#2C44B0;
+  /* Shadows */
+  --shadow:0 1px 12px rgba(14,27,54,.07);
+  --shadow-md:0 4px 24px rgba(14,27,54,.1);
+  --radius:12px;
+  /* Type */
+  --f-display:'Inter',system-ui,sans-serif;
+  --f-body:'Inter',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --blue:#6185F5; --blue-lt:#1A2350; --blue-dk:#7C9BFF;
+  --violet:#A78BFA; --violet-lt:#1F1440;
+  --teal:#2DD4BF;  --teal-lt:#062820;
+  --green:#34D399; --green-lt:#032117;
+  --amber:#FBBF24; --amber-lt:#2A1A00;
+  --red:#F87171;   --red-lt:#2A0808;
+  --sky:#38BDF8;   --sky-lt:#021C2A;
+  --bg:#080F1E;
+  --surface:#0E1B36;
+  --surface-2:#111E3A;
+  --border:#1C2E50;
+  --text:#C9D8EF;
+  --muted:#5A7499;
+  --sid-bg:#060D1C;
+  --sid-text:#4E6B8C;
+  --sid-text-bright:#8FA4C4;
+  --shadow:0 1px 12px rgba(0,0,0,.4);
+  --shadow-md:0 4px 24px rgba(0,0,0,.5);
+}}
+:root[data-theme="dark"]{
+  --blue:#6185F5; --blue-lt:#1A2350; --blue-dk:#7C9BFF;
+  --violet:#A78BFA; --violet-lt:#1F1440;
+  --teal:#2DD4BF;  --teal-lt:#062820;
+  --green:#34D399; --green-lt:#032117;
+  --amber:#FBBF24; --amber-lt:#2A1A00;
+  --red:#F87171;   --red-lt:#2A0808;
+  --sky:#38BDF8;   --sky-lt:#021C2A;
+  --bg:#080F1E;
+  --surface:#0E1B36;
+  --surface-2:#111E3A;
+  --border:#1C2E50;
+  --text:#C9D8EF;
+  --muted:#5A7499;
+  --sid-bg:#060D1C;
+  --sid-text:#4E6B8C;
+  --sid-text-bright:#8FA4C4;
+  --shadow:0 1px 12px rgba(0,0,0,.4);
+  --shadow-md:0 4px 24px rgba(0,0,0,.5);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+[hidden]{display:none!important;}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;}
+
+/* ── Shell ── */
+.shell{display:grid;grid-template-columns:244px 1fr;min-height:100vh;}
+
+/* ── Sidebar ── */
+.sidebar{
+  background:#10213D;
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  box-shadow:4px 0 24px rgba(0,0,0,.18);
+}
+.sid-logo{
+  min-height:84px;padding:18px 18px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;gap:12px;
+  background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(14,165,233,.025));
+}
+.sid-logo-icon{
+  width:48px;height:48px;border-radius:13px;
+  background:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.9rem;font-weight:800;color:#fff;font-family:var(--f-display);
+  flex-shrink:0;letter-spacing:-.5px;
+  box-shadow:0 6px 18px rgba(8,145,178,.24),0 2px 8px rgba(59,91,219,.3);
+  position:relative;overflow:hidden;
+}
+.sid-logo-icon img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit;position:relative;z-index:1;}
+.sid-logo-icon::after{content:'';position:absolute;inset:-45%;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.38) 50%,transparent 65%);transform:translateX(-75%) rotate(10deg);animation:logoShine 5.5s ease-in-out infinite;}
+.sid-logo-text{min-width:0;display:flex;flex-direction:column;justify-content:center;}
+.sid-logo-mark{font-family:var(--f-display);font-weight:850;font-size:1rem;color:#fff;letter-spacing:-.2px;line-height:1.1;}
+.sid-logo-sub{max-width:154px;font-size:.65rem;line-height:1.35;color:#91A7C5;margin-top:4px;letter-spacing:.12px;text-wrap:balance;}
+
+.nav-section{padding:16px 10px 8px;}
+.nav-label{font-size:.58rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--sid-text);padding:0 10px;margin-bottom:8px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;cursor:pointer;
+  font-size:.8rem;font-weight:500;color:var(--sid-text);
+  transition:background .15s,color .15s;margin-bottom:3px;user-select:none;
+  position:relative;
+}
+.nav-item:hover{background:rgba(255,255,255,.07);color:var(--sid-text-bright);transform:translateX(3px);}
+.nav-item.active{
+  background:#315BE8;
+  color:#fff;font-weight:600;
+  box-shadow:0 3px 14px rgba(59,91,219,.4);
+}
+.nav-item .ni-icon{
+  width:28px;height:28px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;flex-shrink:0;
+  background:rgba(255,255,255,.07);
+  transition:background .15s;
+}
+.nav-item.active .ni-icon{background:rgba(255,255,255,.18);}
+.nav-badge{
+  margin-left:auto;min-width:22px;height:22px;border-radius:11px;
+  font-size:.6rem;font-weight:700;display:flex;align-items:center;justify-content:center;
+  padding:0 6px;background:rgba(255,255,255,.08);color:var(--sid-text);
+  transition:background .2s,color .2s;
+}
+.nav-badge.ok{background:#059669;color:#fff;}
+
+.sid-divider{height:1px;background:rgba(255,255,255,.06);margin:6px 14px;}
+.currency-box{margin:8px 14px 12px;padding:11px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.045);}
+.currency-lbl{display:block;font-size:.56rem;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--sid-text);margin-bottom:6px;}
+.currency-select{width:100%;border:1px solid rgba(255,255,255,.14);border-radius:7px;background:#162B4D;color:#fff;padding:7px 9px;font:600 .72rem var(--f-body);outline:none;cursor:pointer;}
+.currency-select:focus{border-color:#6185F5;box-shadow:0 0 0 3px rgba(97,133,245,.18);}
+.currency-note{display:block;color:var(--sid-text);font-size:.55rem;line-height:1.35;margin-top:5px;}
+
+.sid-bottom{
+  margin-top:auto;padding:14px 18px;
+  font-size:.64rem;color:var(--sid-text);
+  border-top:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;gap:8px;
+}
+.sid-bottom-dot{width:6px;height:6px;border-radius:50%;background:#059669;flex-shrink:0;}
+
+/* ── Main ── */
+.main{display:flex;flex-direction:column;min-width:0;}
+.module{display:none;flex-direction:column;flex:1;}
+.module.active{display:flex;animation:moduleIn .42s cubic-bezier(.22,1,.36,1) both;}
+
+/* ── Topbar ── */
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:14px 28px;
+  display:flex;align-items:center;gap:14px;
+  flex-shrink:0;
+  box-shadow:0 3px 18px rgba(14,27,54,.08);
+  border-top:4px solid var(--blue);
+}
+.tb-stripe{
+  width:4px;height:36px;border-radius:3px;flex-shrink:0;
+  background:linear-gradient(180deg,var(--blue),var(--violet));
+}
+.tb-left{}
+.tb-title{font-family:var(--f-display);font-weight:800;font-size:1.05rem;color:var(--text);letter-spacing:-.4px;line-height:1.2;}
+.tb-sub{font-size:.73rem;color:var(--muted);margin-top:1px;}
+.tb-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.tb-file{
+  font-size:.74rem;color:var(--blue);
+  background:var(--blue-lt);border:1px solid rgba(59,91,219,.2);
+  border-radius:6px;padding:4px 10px;
+  max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-weight:500;
+}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 16px;border-radius:8px;border:none;
+  font-family:var(--f-body);font-size:.8rem;font-weight:600;
+  cursor:pointer;letter-spacing:-.1px;
+  transition:filter .15s,transform .1s,box-shadow .15s;
+}
+.btn:hover{filter:brightness(1.08);}
+.btn:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(14,27,54,.16);}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(59,91,219,.3);}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border);}
+.btn-ghost:hover{background:var(--surface-2);filter:none;}
+.btn-xl{background:#217346;color:#fff;box-shadow:0 2px 8px rgba(33,115,70,.3);}
+.btn-pdf{background:var(--red);color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.3);}
+
+/* ── Upload zone ── */
+.upload-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 24px;}
+.dropzone{
+  position:relative;width:100%;max-width:540px;
+  background:var(--surface);
+  border:2px dashed var(--border);border-radius:20px;
+  padding:48px 36px;text-align:center;cursor:pointer;overflow:hidden;
+  border-top:6px solid var(--blue);
+  transition:border-color .25s ease,background .25s ease,box-shadow .25s ease,transform .25s ease;
+}
+.dropzone:hover,.dropzone.drag-over{
+  border-color:var(--blue);
+  background:var(--blue-lt);
+  box-shadow:0 0 0 4px rgba(59,91,219,.08);
+  transform:translateY(-3px);
+}
+.dropzone:focus-visible{outline:3px solid var(--blue);outline-offset:3px;}
+.dropzone input{display:none;}
+.drop-inner{position:relative;z-index:1;}
+.drop-icon-wrap{
+  width:64px;height:64px;border-radius:14px;
+  background:var(--blue);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+  box-shadow:0 6px 20px rgba(59,91,219,.35);
+  transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s ease;
+}
+.dropzone:hover .drop-icon-wrap,.dropzone.drag-over .drop-icon-wrap{transform:translateY(-4px) scale(1.05);box-shadow:0 12px 28px rgba(59,91,219,.3);}
+.drop-icon{font-size:2rem;display:block;}
+.drop-title{font-family:var(--f-display);font-weight:800;font-size:1.15rem;color:var(--text);margin-bottom:8px;letter-spacing:-.3px;}
+.drop-sub{font-size:.79rem;color:var(--muted);margin-bottom:26px;line-height:1.6;}
+.drop-sub strong{color:var(--text);}
+.drop-tags{display:flex;gap:6px;justify-content:center;margin-bottom:22px;flex-wrap:wrap;}
+.drop-tag{
+  font-size:.66rem;font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:5px;padding:3px 8px;color:var(--muted);
+}
+
+/* ── Dashboard ── */
+.dash{padding:24px 28px 72px;overflow-y:auto;}
+.section-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;margin-top:4px;}
+.section-hd+.section-hd,.slabel+.section-hd{margin-top:16px;}
+.sh-bar{width:3px;height:16px;border-radius:2px;background:linear-gradient(180deg,var(--blue),var(--violet));flex-shrink:0;}
+.sh-lbl{font-size:.68rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);}
+.slabel{font-size:.68rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.slabel::before{content:'';display:block;width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,var(--blue),var(--violet));flex-shrink:0;}
+
+/* ── KPI ── */
+.kpi-row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));margin-bottom:22px;}
+.kpi{
+  background:var(--surface);
+  border-radius:var(--radius);
+  padding:16px 18px 14px;
+  box-shadow:var(--shadow);
+  border:1px solid var(--border);
+  border-top:5px solid var(--blue);
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-width:0;
+}
+.kpi::after{
+  content:'';position:absolute;top:-20px;right:-20px;
+  width:80px;height:80px;border-radius:50%;
+  background:currentColor;opacity:.04;
+  pointer-events:none;
+}
+.kpi.g{border-top-color:var(--green);background:var(--green-lt);}
+.kpi.a{border-top-color:var(--amber);background:var(--amber-lt);}
+.kpi.r{border-top-color:var(--red);background:var(--red-lt);}
+.kpi.c{border-top-color:var(--sky);background:var(--sky-lt);}
+.kpi.v{border-top-color:var(--violet);background:var(--violet-lt);}
+.kpi.t{border-top-color:var(--teal);background:var(--teal-lt);}
+.kpi.m{border-top-color:var(--muted);background:var(--surface-2);}
+.kpi-lbl{font-size:.64rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;text-align:center;width:100%;}
+.kpi-val{font-family:var(--f-display);font-size:clamp(.92rem,1.5vw,1.25rem);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;letter-spacing:-.015em;max-width:100%;display:inline-flex;align-items:baseline;justify-content:center;width:max-content;}
+.kpi-val.compact{font-size:clamp(.78rem,1.25vw,1.05rem);letter-spacing:-.035em;}
+.kpi-val.xcompact{font-size:clamp(.7rem,1.05vw,.9rem);letter-spacing:-.045em;}
+.kpi.g .kpi-val{color:var(--green);}
+.kpi.r .kpi-val{color:var(--red);}
+.kpi.a .kpi-val{color:var(--amber);}
+.kpi.c .kpi-val{color:var(--sky);}
+.kpi.v .kpi-val{color:var(--violet);}
+.kpi.t .kpi-val{color:var(--teal);}
+.kpi-sub{font-size:.67rem;color:var(--muted);margin-top:4px;text-align:center;}
+
+/* ── Retention cards ── */
+.ret-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;}
+.ret-card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:16px;
+  border:1px solid var(--border);
+}
+.ret-badge{
+  width:56px;height:56px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.ret-badge.blue{background:var(--blue-lt);}
+.ret-badge.red{background:var(--red-lt);}
+.ret-pct{font-family:var(--f-display);font-size:1.35rem;font-weight:800;line-height:1;}
+.ret-badge.blue .ret-pct{color:var(--blue);}
+.ret-badge.red  .ret-pct{color:var(--red);}
+.ret-info{text-align:center;flex:1;min-width:0;}
+.ret-lbl{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px;}
+.ret-val{font-family:var(--f-display);font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.ret-cnt{font-size:.7rem;color:var(--muted);margin-top:2px;}
+
+/* ── Card processor reports ── */
+.card-reports{padding:24px 28px 0;}
+.processor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.processor-card{background:var(--surface);border:1px solid var(--border);border-top:5px solid #1769AA;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
+.processor-card.azul{border-top-color:#00A6D6;}
+.processor-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.processor-name{font-size:.88rem;font-weight:800;color:var(--text);}
+.processor-file{font-size:.68rem;color:var(--muted);max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;}
+.processor-upload{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-2);border:1px dashed var(--border);border-radius:9px;padding:12px;}
+.processor-upload input{display:none;}
+.processor-hint{font-size:.7rem;color:var(--muted);line-height:1.45;}
+.processor-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.processor-metric{background:var(--surface-2);border-radius:8px;padding:10px 11px;border-left:3px solid var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-width:0;}
+.processor-card.azul .processor-metric{border-left-color:#00A6D6;}
+.processor-metric span{display:block;font-size:.59rem;font-weight:700;letter-spacing:.35px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;text-align:center;}
+.processor-metric strong{display:block;font-size:clamp(.76rem,1.2vw,.9rem);color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em;max-width:100%;}
+.processor-total{background:var(--surface);border:1px solid var(--border);border-top:5px solid var(--teal);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);margin-bottom:22px;}
+
+/* ── Table ── */
+.table-wrap{
+  background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  overflow-x:auto;max-height:400px;overflow-y:auto;margin-bottom:8px;
+}
+table{width:100%;border-collapse:collapse;font-size:.77rem;font-variant-numeric:tabular-nums;}
+thead th{
+  position:sticky;top:0;
+  background:var(--blue);color:#fff;
+  padding:10px 14px;text-align:left;
+  font-weight:600;white-space:nowrap;font-size:.7rem;letter-spacing:.4px;z-index:2;
+}
+thead th:first-child{border-radius:0;}
+tbody td{
+  padding:8px 14px;border-bottom:1px solid var(--border);
+  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--text);
+}
+tbody tr:nth-child(even){background:var(--surface-2);}
+tbody tr:hover{background:var(--blue-lt);}
+.tnote{font-size:.7rem;color:var(--muted);text-align:right;padding:6px 0;}
+
+/* ── IT-1 module ── */
+.it1-body{padding:24px 28px 72px;max-width:860px;}
+
+.prereq-card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:22px;box-shadow:var(--shadow);border:1px solid var(--border);
+  margin-bottom:18px;
+}
+.prereq-item{display:flex;align-items:center;gap:14px;padding:10px 0;}
+.prereq-item+.prereq-item{border-top:1px solid var(--border);}
+.prereq-dot{
+  width:36px;height:36px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;flex-shrink:0;letter-spacing:-.3px;
+}
+.prereq-dot.ok{background:var(--green);color:#fff;box-shadow:0 2px 8px rgba(5,150,105,.3);}
+.prereq-dot.pending{background:var(--surface-2);color:var(--muted);border:2px dashed var(--border);}
+.prereq-text{}
+.prereq-name{font-weight:600;font-size:.88rem;color:var(--text);}
+.prereq-hint{font-size:.72rem;color:var(--muted);margin-top:2px;}
+
+.manual-card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:22px;box-shadow:var(--shadow);border:1px solid var(--border);
+  margin-bottom:18px;
+}
+.manual-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px;}
+.field-grp{display:flex;flex-direction:column;gap:6px;}
+.field-lbl{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+.field-help{font-size:.65rem;color:var(--muted);line-height:1.35;}
+.field-inp{
+  background:var(--surface-2);border:1.5px solid var(--border);
+  border-radius:8px;padding:10px 14px;
+  font-family:var(--f-body);font-size:.9rem;color:var(--text);
+  font-variant-numeric:tabular-nums;width:100%;
+  transition:border-color .15s,box-shadow .15s;
+}
+.field-inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,91,219,.12);}
+
+.alert{
+  border-radius:10px;padding:14px 18px;font-size:.83rem;font-weight:500;
+  margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;
+}
+.alert.warn{background:var(--amber-lt);color:#92400E;border:1px solid rgba(217,119,6,.25);}
+.alert.ok{background:var(--green-lt);color:#065F46;border:1px solid rgba(5,150,105,.25);}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .alert.warn{background:#1F0F00;color:#FBBF24;}
+  :root:not([data-theme="light"]) .alert.ok{background:#002B1A;color:#34D399;}
+}
+:root[data-theme="dark"] .alert.warn{background:#1F0F00 !important;color:#FBBF24 !important;}
+:root[data-theme="dark"] .alert.ok{background:#002B1A !important;color:#34D399 !important;}
+
+.cuadre-card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:24px;box-shadow:var(--shadow-md);border:1px solid var(--border);
+}
+.cuadre-hd{
+  display:flex;align-items:center;gap:12px;margin-bottom:18px;
+  padding-bottom:14px;border-bottom:2px solid var(--border);
+}
+.cuadre-hd-icon{
+  width:40px;height:40px;border-radius:11px;
+  background:linear-gradient(135deg,var(--blue),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;flex-shrink:0;
+  box-shadow:0 3px 10px rgba(59,91,219,.3);
+}
+.cuadre-hd-title{font-family:var(--f-display);font-weight:800;font-size:1rem;color:var(--text);}
+.cuadre-hd-sub{font-size:.72rem;color:var(--muted);margin-top:1px;}
+.cuadre-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 0;border-bottom:1px solid var(--border);font-size:.88rem;
+}
+.cuadre-row:last-child{border-bottom:none;}
+.cuadre-lbl{color:var(--text);}
+.cuadre-sign{
+  font-size:.7rem;color:var(--muted);margin-right:5px;font-weight:700;
+  width:14px;text-align:center;display:inline-block;
+}
+.cuadre-amt{font-family:var(--f-display);font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cuadre-group-title{margin-top:18px;padding:8px 10px;border-radius:7px;background:var(--surface-2);color:var(--muted);font-size:.65rem;font-weight:800;letter-spacing:.65px;text-transform:uppercase;border-left:4px solid var(--blue);}
+.cuadre-group-title:first-child{margin-top:0;}
+.cuadre-row.muted .cuadre-lbl,.cuadre-row.muted .cuadre-amt{color:var(--muted);}
+.cuadre-source{font-size:.64rem;color:var(--muted);font-weight:500;margin-left:6px;}
+.cuadre-sep{height:2px;background:var(--border);border-radius:2px;margin:14px 0 10px;}
+.cuadre-total{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-radius:10px;
+  background:var(--surface-2);border:1px solid var(--border);
+}
+.cuadre-total-lbl{font-family:var(--f-display);font-weight:800;font-size:.9rem;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
+.cuadre-total-val{font-family:var(--f-display);font-weight:800;font-size:1.7rem;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cuadre-total-val.pagar{color:var(--red);}
+.cuadre-total-val.favor{color:var(--green);}
+
+/* ── Coming soon modules ── */
+.coming-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 24px;}
+.coming-card{width:100%;max-width:560px;background:var(--surface);border:1px solid var(--border);border-top:6px solid var(--amber);border-radius:16px;padding:48px 36px;text-align:center;box-shadow:var(--shadow-md);}
+.coming-code{display:inline-flex;align-items:center;justify-content:center;min-width:76px;height:52px;padding:0 18px;border-radius:12px;background:var(--amber-lt);color:var(--amber);font-size:1.15rem;font-weight:800;margin-bottom:18px;}
+.coming-title{font-size:1.45rem;font-weight:800;color:var(--text);margin-bottom:8px;}
+.coming-text{font-size:.85rem;color:var(--muted);line-height:1.65;max-width:410px;margin:0 auto;}
+
+/* ── Loader / Toast ── */
+#loader{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(8,15,30,.7);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  gap:16px;color:#fff;font-weight:500;backdrop-filter:blur(6px);
+}
+.loader-box{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;padding:28px 40px;display:flex;flex-direction:column;
+  align-items:center;gap:14px;
+}
+.spinner{
+  width:44px;height:8px;border-radius:8px;
+  background:linear-gradient(90deg,#38BDF8 0 33%,#7C3AED 33% 66%,#34D399 66%);
+  background-size:220% 100%;animation:loaderFlow 1.15s linear infinite;
+}
+.loader-txt{font-size:.85rem;color:rgba(255,255,255,.75);}
+
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:600;
+  background:var(--sid-bg);color:#fff;
+  padding:12px 20px;border-radius:10px;font-size:.83rem;font-weight:500;
+  max-width:300px;box-shadow:0 6px 28px rgba(0,0,0,.35);
+  transform:translateY(72px);opacity:0;
+  transition:all .32s cubic-bezier(.34,1.56,.64,1);
+  border:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;gap:8px;
+}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.err{background:var(--red);}
+
+/* ── Professional module color and motion system ── */
+#mod-606,#mod-607,#mod-it1{background:var(--bg);}
+#mod-606 .topbar{border-top-color:#0284C7;}
+#mod-607 .topbar{border-top-color:#7C3AED;}
+#mod-it1 .topbar{border-top-color:#059669;}
+#mod-607 .dropzone{border-top-color:#7C3AED;}
+#mod-606 thead th{background:#075985;}
+#mod-607 thead th{background:#5B21B6;}
+#mod-606 .slabel::before{background:#0284C7;}
+#mod-607 .slabel::before{background:#7C3AED;}
+#mod-it1 .slabel::before{background:#059669;}
+.sid-logo-icon{border:1px solid rgba(255,255,255,.28);}
+.drop-icon{font-family:var(--f-display);font-size:1rem;font-weight:800;color:#fff;letter-spacing:.4px;}
+.btn{border:1px solid rgba(255,255,255,.16);}
+.ret-card:first-child{border-top:4px solid var(--blue);}
+.ret-card:last-child{border-top:4px solid var(--red);}
+.manual-card{border-top:5px solid var(--teal);}
+.prereq-card{border-top:5px solid var(--violet);}
+.cuadre-card{border-top:6px solid var(--green);}
+
+/* ── Accounting workspace ── */
+body{background:var(--bg);}
+.sidebar{background:linear-gradient(180deg,#0B1D32 0%,#102A46 100%);box-shadow:3px 0 18px rgba(5,20,38,.2);}
+.nav-section{padding-top:18px;}
+.nav-label{color:#7189A8;font-size:.56rem;letter-spacing:1.45px;}
+.nav-item{border:1px solid transparent;border-radius:7px;}
+.nav-item:hover{transform:none;border-color:rgba(255,255,255,.07);}
+.nav-item.active{background:#1D4ED8;border-color:rgba(147,197,253,.28);box-shadow:inset 3px 0 #67E8F9,0 4px 14px rgba(0,0,0,.2);}
+.currency-box{border-radius:7px;background:rgba(3,16,31,.26);}
+.topbar{min-height:82px;padding:14px 30px;border-top-width:3px;box-shadow:0 2px 10px rgba(15,35,58,.06);}
+.tb-left::before{content:'CONTABILIDAD FISCAL  /  PERÍODO DE TRABAJO';display:block;font-size:.52rem;font-weight:800;letter-spacing:1.15px;color:var(--blue);margin-bottom:4px;}
+.tb-title{font-size:1.08rem;letter-spacing:-.25px;}
+.tb-sub{font-size:.7rem;}
+.dash,.it1-body{padding-top:28px;}
+.slabel{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:8px 0 10px;color:var(--muted);font-size:.62rem;}
+.slabel::before{height:12px;width:2px;}
+.kpi-row{gap:9px;margin-bottom:25px;}
+.kpi{border-radius:7px;padding:14px 15px 13px;border-top-width:3px;box-shadow:0 1px 4px rgba(14,27,54,.055);background:var(--surface)!important;min-height:104px;}
+.kpi::after{display:none;}
+.kpi-lbl{font-size:.59rem;letter-spacing:.7px;margin-bottom:7px;}
+.kpi-val{font-family:var(--f-body);font-weight:750;font-size:clamp(.9rem,1.35vw,1.17rem);font-variant-numeric:tabular-nums lining-nums;}
+.kpi-sub{font-size:.61rem;line-height:1.35;}
+.processor-card,.processor-total,.ret-card,.manual-card,.prereq-card,.cuadre-card{border-radius:8px;box-shadow:0 1px 5px rgba(14,27,54,.065);}
+.processor-card,.processor-total{border-top-width:3px;}
+.processor-upload{border-radius:6px;background:var(--surface-2);}
+.processor-metric{border-radius:5px;background:var(--surface-2);padding:11px;border-left-width:2px;}
+.processor-metric strong{font-variant-numeric:tabular-nums lining-nums;}
+.table-wrap{border-radius:7px;box-shadow:0 1px 5px rgba(14,27,54,.06);max-height:460px;}
+table{font-size:.75rem;}
+thead th{background:#173B5E!important;border-right:1px solid rgba(255,255,255,.12);font-size:.64rem;text-transform:uppercase;letter-spacing:.55px;padding:11px 13px;}
+tbody td{padding:9px 13px;border-right:1px solid var(--border);font-variant-numeric:tabular-nums lining-nums;}
+tbody tr:nth-child(even){background:var(--surface-2);}
+.manual-card{border-top-width:3px;}
+.manual-grid{gap:14px;}
+.field-inp{border-radius:5px;background:var(--surface-2);padding:9px 11px;}
+.field-lbl{font-size:.61rem;letter-spacing:.65px;}
+.cuadre-card{border-top-width:4px;}
+.cuadre-group-title{border-radius:4px;background:var(--surface-2);border-left-width:3px;}
+.cuadre-row{padding:10px 8px;}
+.cuadre-amt{font-family:var(--f-body);font-variant-numeric:tabular-nums lining-nums;}
+.btn{border-radius:5px;text-transform:none;}
+.dropzone{border-radius:10px;border-top-width:3px;padding:42px 36px;}
+.drop-icon-wrap{border-radius:8px;}
+.kpi:hover,.processor-card:hover,.processor-total:hover,.ret-card:hover,.manual-card:hover,.prereq-card:hover,.cuadre-card:hover{transform:translateY(-2px);box-shadow:0 7px 20px rgba(14,27,54,.09);}
+
+.kpi,.processor-card,.processor-total,.ret-card,.manual-card,.prereq-card,.cuadre-card,.coming-card{
+  transition:transform .24s cubic-bezier(.22,1,.36,1),box-shadow .24s ease,border-color .24s ease;
+}
+.kpi:hover,.processor-card:hover,.processor-total:hover,.ret-card:hover,.manual-card:hover,.prereq-card:hover,.cuadre-card:hover{
+  transform:translateY(-4px);box-shadow:0 12px 30px rgba(14,27,54,.12);
+}
+.module.active .kpi,.module.active .processor-card,.module.active .processor-total,.module.active .ret-card,.module.active .manual-card,.module.active .prereq-card,.module.active .cuadre-card{
+  animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;
+}
+.module.active .kpi:nth-child(2),.module.active .processor-card:nth-child(2){animation-delay:.05s;}
+.module.active .kpi:nth-child(3){animation-delay:.1s;}
+.module.active .kpi:nth-child(4){animation-delay:.15s;}
+.module.active .kpi:nth-child(5){animation-delay:.2s;}
+.module.active .kpi:nth-child(6){animation-delay:.25s;}
+.sid-bottom-dot{animation:statusPulse 2.4s ease-in-out infinite;}
+
+@keyframes moduleIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes loaderFlow{to{background-position:-220% 0}}
+@keyframes logoShine{0%,68%,100%{transform:translateX(-75%) rotate(10deg)}82%{transform:translateX(75%) rotate(10deg)}}
+@keyframes statusPulse{0%,100%{box-shadow:0 0 0 0 rgba(5,150,105,.35)}50%{box-shadow:0 0 0 6px rgba(5,150,105,0)}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important;}
+}
+
+/* ── Mobile ── */
+@media (max-width:720px){
+  .shell{display:block;min-height:100vh;}
+  .sidebar{position:static;height:auto;display:block;box-shadow:0 2px 12px rgba(0,0,0,.2);}
+  .sid-logo{min-height:56px;border-bottom:1px solid rgba(255,255,255,.08);padding:10px 14px;width:100%;}
+  .sid-logo-icon{width:36px;height:36px;border-radius:9px;}
+  .sid-logo-sub{display:none;}
+  .nav-section{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px;width:100%;overflow:visible;}
+  .nav-label{display:none;}
+  .nav-item{font-size:.68rem;padding:8px 6px;white-space:normal;justify-content:center;text-align:center;margin:0;gap:5px;}
+  .nav-item .ni-icon{display:none;}
+  .nav-badge{display:none;}
+  .sid-divider,.sid-bottom{display:none;}
+  .currency-box{display:flex;align-items:center;gap:8px;margin:0 8px 8px;padding:7px 8px;}
+  .currency-lbl{margin:0;white-space:nowrap;}
+  .currency-select{width:auto;min-width:142px;padding:5px 7px;}
+  .currency-note{margin:0;}
+  .ret-grid{grid-template-columns:1fr;}
+  .card-reports{padding:18px 14px 0;}
+  .processor-grid{grid-template-columns:1fr;}
+  .manual-grid{grid-template-columns:1fr;}
+  .topbar{padding:12px 14px;min-height:76px;}
+  .tb-stripe{height:32px;}
+  .tb-title{font-size:.96rem;}
+  .tb-sub{font-size:.68rem;}
+  .tb-right{gap:5px;}
+  .btn{padding:7px 10px;font-size:.72rem;}
+  .upload-stage{padding:28px 14px;align-items:flex-start;}
+  .dropzone{padding:36px 20px;border-radius:14px;}
+  .drop-icon-wrap{width:56px;height:56px;margin-bottom:16px;}
+  .coming-stage{padding:28px 14px;align-items:flex-start;}
+  .coming-card{padding:38px 22px;}
+  .dash,.it1-body{padding:16px 14px 60px;}
+}
+
+@media (max-width:460px){
+  .sid-logo-mark{font-size:.84rem;}
+  .topbar{align-items:flex-start;}
+  .topbar .tb-right{flex-wrap:wrap;justify-content:flex-end;}
+  .tb-file{max-width:130px;}
+  .kpi-row{grid-template-columns:1fr 1fr;gap:9px;}
+  .processor-kpis{grid-template-columns:1fr 1fr;}
+  .kpi{padding:13px 12px;}
+  .kpi-val{font-size:clamp(.82rem,3.4vw,1rem);}
+  .processor-metric strong{font-size:clamp(.72rem,3vw,.86rem);}
+  .kpi-val.compact,.kpi-val.xcompact{font-size:clamp(.68rem,3vw,.84rem);}
+}
+
+@media (max-width:360px){
+  .kpi-row{grid-template-columns:1fr;}
+}
+
+/* ── Print ── */
+@media print{
+  .sidebar{display:none!important;}
+  .topbar .tb-right{display:none!important;}
+  .shell{display:block;}
+  .module{display:block!important;}
+  #mod-606,#mod-607,#mod-ir2{display:none!important;}
+  #mod-it1{display:block!important;}
+  body{background:#fff!important;color:#000!important;}
+  .cuadre-card,.prereq-card,.manual-card{box-shadow:none!important;border:1px solid #ddd!important;}
+}
+</style>
+
+<div class="shell">
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sid-logo">
+    <div class="sid-logo-icon"><img src="assets/favicon-64.png" alt="Logo de CAMI" width="42" height="42"></div>
+    <div class="sid-logo-text">
+      <div class="sid-logo-mark">CAMI</div>
+      <div class="sid-logo-sub">Plataforma contable y tributaria</div>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Registros fiscales</div>
+    <div class="nav-item active" data-nav="606">
+      <div class="ni-icon">606</div>
+      <span>606 — Compras</span>
+      <span class="nav-badge" id="badge-606">○</span>
+    </div>
+    <div class="nav-item" data-nav="607">
+      <div class="ni-icon">607</div>
+      <span>607 — Ventas</span>
+      <span class="nav-badge" id="badge-607">○</span>
+    </div>
+    <div class="sid-divider"></div>
+    <div class="nav-label" style="margin-top:12px;">Declaraciones</div>
+    <div class="nav-item" data-nav="it1">
+      <div class="ni-icon">IT1</div>
+      <span>IT-1 Declaración</span>
+      <span class="nav-badge" id="badge-it1">○</span>
+    </div>
+    <div class="nav-item" data-nav="ir2">
+      <div class="ni-icon">IR2</div>
+      <span>IR-2 Declaración</span>
+      <span class="nav-badge" id="badge-ir2">○</span>
+    </div>
+  </div>
+
+  <div class="currency-box">
+    <label class="currency-lbl" for="currency-select">Moneda del reporte</label>
+    <select class="currency-select" id="currency-select">
+      <option value="DOP">Peso dominicano · RD$</option>
+      <option value="USD">Dólar estadounidense · US$</option>
+      <option value="EUR">Euro · €</option>
+    </select>
+    <small class="currency-note">Cambia el símbolo; no convierte los montos.</small>
+  </div>
+
+  <div class="sid-bottom">
+    <div class="sid-bottom-dot"></div>
+    Entorno contable activo
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<main class="main">
+
+<!-- ════ 606 MODULE ════ -->
+<div id="mod-606" class="module active">
+  <div class="topbar">
+    <div class="tb-stripe" style="background:linear-gradient(180deg,#3B5BDB,#0EA5E9);"></div>
+    <div class="tb-left">
+      <div class="tb-title">606 — Resumen de Compras</div>
+      <div class="tb-sub">Gastos, ITBIS facturado, retenciones y crédito fiscal</div>
+    </div>
+    <div class="tb-right">
+      <span class="tb-file" id="tf-606" hidden></span>
+      <button class="btn btn-xl" id="btn-xls-606" hidden>Exportar Excel</button>
+      <button class="btn btn-ghost" id="btn-rst-606" hidden>Limpiar</button>
+    </div>
+  </div>
+
+  <div class="upload-stage" id="up-606">
+    <div class="dropzone" id="dz-606" tabindex="0" role="button" aria-label="Cargar archivo 606">
+      <div class="drop-inner">
+        <div class="drop-icon-wrap"><span class="drop-icon">606</span></div>
+        <div class="drop-title">Arrastra el archivo 606 aquí</div>
+        <div class="drop-sub">Suelta el archivo de compras del período<br><strong>PDF · CSV · XLSX · XLS · XLSM · XLSB</strong></div>
+        <div class="drop-tags">
+          <span class="drop-tag">DGII Plantilla</span>
+          <span class="drop-tag">Excel Propio</span>
+          <span class="drop-tag">CSV Exportado</span>
+        </div>
+        <input type="file" id="fi-606" accept=".pdf,.csv,.xlsx,.xls,.xlsm,.xlsb,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <button class="btn btn-primary" id="bs-606">Seleccionar archivo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash" id="da-606" hidden>
+    <div class="slabel">Totales del período</div>
+    <div class="kpi-row" id="kpis-606"></div>
+
+    <div class="slabel">ITBIS — Desglose</div>
+    <div class="kpi-row" id="kpis-itbis-606"></div>
+
+    <div class="slabel">ITBIS Retenido a Proveedores</div>
+    <div class="ret-grid" id="ret-606"></div>
+
+    <div class="slabel">Vista previa de datos</div>
+    <div class="table-wrap"><table><thead id="th-606"></thead><tbody id="tb-606"></tbody></table></div>
+    <p class="tnote" id="tn-606"></p>
+  </div>
+</div>
+
+<!-- ════ 607 MODULE ════ -->
+<div id="mod-607" class="module">
+  <div class="topbar">
+    <div class="tb-stripe" style="background:linear-gradient(180deg,#7C3AED,#06B6D4);"></div>
+    <div class="tb-left">
+      <div class="tb-title">607 — Resumen de Ventas</div>
+      <div class="tb-sub">Ingresos facturados, tasa de ITBIS y retenciones de clientes</div>
+    </div>
+    <div class="tb-right">
+      <span class="tb-file" id="tf-607" hidden></span>
+      <button class="btn btn-xl" id="btn-xls-607" hidden>Exportar Excel</button>
+      <button class="btn btn-ghost" id="btn-rst-607" hidden>Limpiar</button>
+    </div>
+  </div>
+
+  <div class="upload-stage" id="up-607">
+    <div class="dropzone" id="dz-607" tabindex="0" role="button" aria-label="Cargar archivo 607">
+      <div class="drop-inner">
+        <div class="drop-icon-wrap" style="background:linear-gradient(135deg,#7C3AED,#06B6D4);"><span class="drop-icon">607</span></div>
+        <div class="drop-title">Arrastra el archivo 607 aquí</div>
+        <div class="drop-sub">Suelta el archivo de ventas del período<br><strong>PDF · CSV · XLSX · XLS · XLSM · XLSB</strong></div>
+        <div class="drop-tags">
+          <span class="drop-tag">DGII Plantilla</span>
+          <span class="drop-tag">Excel Propio</span>
+          <span class="drop-tag">CSV Exportado</span>
+        </div>
+        <input type="file" id="fi-607" accept=".pdf,.csv,.xlsx,.xls,.xlsm,.xlsb,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <button class="btn btn-primary" id="bs-607" style="background:var(--violet);box-shadow:0 2px 8px rgba(124,58,237,.3);">Seleccionar archivo</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="card-reports" aria-labelledby="card-reports-title">
+    <div class="slabel" id="card-reports-title">Reportes de ventas con tarjeta</div>
+    <div class="processor-grid">
+      <article class="processor-card">
+        <div class="processor-head">
+          <div class="processor-name">CardNET</div>
+          <div class="processor-file" id="cardnet-file">Pendiente</div>
+        </div>
+        <div class="processor-upload">
+          <div class="processor-hint">Carga el reporte de transacciones o retenciones.</div>
+          <input type="file" id="fi-cardnet" accept=".pdf,.csv,.xlsx,.xls,.xlsm,.xlsb,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <button class="btn btn-primary" id="bs-cardnet">Cargar CardNET</button>
+        </div>
+        <div class="processor-kpis" id="kpis-cardnet">
+          <div class="processor-metric"><span>Facturas</span><strong>—</strong></div>
+          <div class="processor-metric"><span>Monto procesado</span><strong>—</strong></div>
+          <div class="processor-metric"><span>Retenido por tarjeta</span><strong>—</strong></div>
+          <div class="processor-metric"><span>ITBIS reportado</span><strong>—</strong></div>
+        </div>
+      </article>
+      <article class="processor-card azul">
+        <div class="processor-head">
+          <div class="processor-name">Azul</div>
+          <div class="processor-file" id="azul-file">Pendiente</div>
+        </div>
+        <div class="processor-upload">
+          <div class="processor-hint">Carga el reporte de transacciones o retenciones.</div>
+          <input type="file" id="fi-azul" accept=".pdf,.csv,.xlsx,.xls,.xlsm,.xlsb,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <button class="btn btn-primary" id="bs-azul" style="background:#007FA8;">Cargar Azul</button>
+        </div>
+        <div class="processor-kpis" id="kpis-azul">
+          <div class="processor-metric"><span>Facturas</span><strong>—</strong></div>
+          <div class="processor-metric"><span>Monto procesado</span><strong>—</strong></div>
+          <div class="processor-metric"><span>Retenido por tarjeta</span><strong>—</strong></div>
+          <div class="processor-metric"><span>ITBIS reportado</span><strong>—</strong></div>
+        </div>
+      </article>
+    </div>
+    <div class="processor-total" id="card-total" hidden>
+      <div class="slabel">Consolidado CardNET + Azul</div>
+      <div class="kpi-row" id="kpis-card-total" style="margin-bottom:0;"></div>
+    </div>
+  </section>
+
+  <div class="dash" id="da-607" hidden>
+    <div class="slabel">Totales del período</div>
+    <div class="kpi-row" id="kpis-607"></div>
+
+    <div class="manual-card" style="margin-bottom:24px;border-top-color:var(--violet);">
+      <div class="slabel" style="margin-bottom:6px;">Ventas adicionales no incluidas en los archivos</div>
+      <div class="field-help">Registra aquí solamente cobros que no estén ya incluidos en el 607, CardNET o Azul. Cada forma de pago tiene su propio campo.</div>
+      <div class="manual-grid">
+        <div class="field-grp">
+          <label class="field-lbl" for="in-b02-count">Cantidad de facturas B02/E32 adicionales</label>
+          <input class="field-inp sales-manual-input" id="in-b02-count" type="number" min="0" step="1" placeholder="0" value="0">
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-b02-taxable">Base gravada adicional</label>
+          <input class="field-inp sales-manual-input" id="in-b02-taxable" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-b02-exempt">Ventas exentas adicionales</label>
+          <input class="field-inp sales-manual-input" id="in-b02-exempt" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-b02-itbis">ITBIS de ventas adicionales</label>
+          <input class="field-inp sales-manual-input" id="in-b02-itbis" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-sale-cash">Cobrado en efectivo (ITBIS incluido)</label>
+          <input class="field-inp sales-manual-input" id="in-sale-cash" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-sale-transfer">Cheque / transferencia / depósito (ITBIS incluido)</label>
+          <input class="field-inp sales-manual-input" id="in-sale-transfer" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-sale-credit">Venta a crédito (ITBIS incluido)</label>
+          <input class="field-inp sales-manual-input" id="in-sale-credit" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-sale-other">Otros medios de pago (ITBIS incluido)</label>
+          <input class="field-inp sales-manual-input" id="in-sale-other" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+      </div>
+      <div class="alert warn" id="sales-manual-alert" hidden style="margin-top:14px;"></div>
+    </div>
+
+    <div class="slabel">Reporte global de ventas — 607 + CardNET + Azul + adicionales</div>
+    <div class="kpi-row" id="kpis-sales-total"></div>
+
+    <div class="slabel">Por tasa de ITBIS</div>
+    <div class="kpi-row" id="kpis-tasa-607"></div>
+
+    <div class="slabel">ITBIS Retenido por Clientes</div>
+    <div class="ret-grid" id="ret-607"></div>
+
+    <div class="slabel">ITBIS Retenido por Tarjeta</div>
+    <div class="kpi-row" id="ret-card-607"></div>
+
+    <div class="slabel">Vista previa de datos</div>
+    <div class="table-wrap" id="tw-607"><table><thead id="th-607"></thead><tbody id="tb-607"></tbody></table></div>
+    <p class="tnote" id="tn-607"></p>
+  </div>
+</div>
+
+<!-- ════ IT-1 MODULE ════ -->
+<div id="mod-it1" class="module">
+  <div class="topbar">
+    <div class="tb-stripe" style="background:linear-gradient(180deg,#059669,#0D9488);"></div>
+    <div class="tb-left">
+      <div class="tb-title">IT-1 — Declaración ITBIS</div>
+      <div class="tb-sub">Cuadre automático para presentar a la DGII</div>
+    </div>
+    <div class="tb-right">
+      <button class="btn btn-primary" id="btn-it1-dgii" hidden>Descargar formato DGII</button>
+      <button class="btn btn-pdf" onclick="window.print()">Imprimir / PDF</button>
+    </div>
+  </div>
+
+  <div class="it1-body">
+    <div class="manual-card">
+      <div class="slabel" style="margin-bottom:6px;">Datos del contribuyente</div>
+      <div class="manual-grid">
+        <div class="field-grp"><label class="field-lbl" for="in-rnc">RNC / Cédula</label><input class="field-inp" id="in-rnc" autocomplete="off" placeholder="131000000"></div>
+        <div class="field-grp"><label class="field-lbl" for="in-razon">Razón social / Nombre</label><input class="field-inp" id="in-razon" autocomplete="organization" placeholder="Nombre del contribuyente"></div>
+        <div class="field-grp"><label class="field-lbl" for="in-periodo">Período</label><input class="field-inp" id="in-periodo" type="month"></div>
+        <div class="field-grp"><label class="field-lbl" for="in-tipo-declaracion">Formulario</label><select class="field-inp" id="in-tipo-declaracion"><option value="IT-1">IT-1 mensual</option><option value="IR-2">IR-2 anual</option></select></div>
+      </div>
+      <div class="field-help" style="margin-top:10px;">RNC, razón social y período se colocarán automáticamente en el Anexo A y en el IT-1 oficial.</div>
+    </div>
+
+    <div class="prereq-card">
+      <div class="slabel" style="margin-bottom:10px;">Estado de módulos</div>
+      <div class="prereq-item">
+        <div class="prereq-dot pending" id="pi-606">606</div>
+        <div class="prereq-text">
+          <div class="prereq-name" id="pn-606">606 — Compras: pendiente</div>
+          <div class="prereq-hint">Carga el archivo de compras en el módulo 606</div>
+        </div>
+      </div>
+      <div class="prereq-item">
+        <div class="prereq-dot pending" id="pi-607">607</div>
+        <div class="prereq-text">
+          <div class="prereq-name" id="pn-607">607 — Ventas: pendiente</div>
+          <div class="prereq-hint">Carga el archivo de ventas en el módulo 607</div>
+        </div>
+      </div>
+      <div class="prereq-item">
+        <div class="prereq-dot pending" id="pi-cards">CARD</div>
+        <div class="prereq-text">
+          <div class="prereq-name" id="pn-cards">Tarjetas — CardNET/Azul: pendiente</div>
+          <div class="prereq-hint">Se usan para validar la forma de pago y aplicar la retención de tarjetas.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="manual-card">
+      <div class="slabel" style="margin-bottom:6px;">Datos adicionales (manuales)</div>
+      <div class="manual-grid">
+        <div class="field-grp">
+          <label class="field-lbl" for="in-saldo">Saldo a favor anterior (DGII)</label>
+          <input class="field-inp" id="in-saldo" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+          <div class="field-help">Saldo disponible del período anterior.</div>
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-importaciones">ITBIS pagado en importaciones</label>
+          <input class="field-inp" id="in-importaciones" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+          <div class="field-help">Importe deducible proveniente del Anexo A.</div>
+        </div>
+        <div class="field-grp">
+          <label class="field-lbl" for="in-abonos">Abonos / pagos a cuenta</label>
+          <input class="field-inp" id="in-abonos" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+          <div class="field-help">Otros pagos computables realizados previamente.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="it1-alert" hidden></div>
+
+    <div class="cuadre-card" id="it1-cuadre" hidden>
+      <div class="cuadre-hd">
+        <div class="cuadre-hd-icon"><span class="drop-icon">IT1</span></div>
+        <div>
+          <div class="cuadre-hd-title">Cuadre IT-1</div>
+          <div class="cuadre-hd-sub">Cálculo basado en 606, 607, resumen de consumo y retenciones CardNET/Azul</div>
+        </div>
+      </div>
+      <div id="cuadre-body"></div>
+      <div class="cuadre-sep"></div>
+      <div class="cuadre-total">
+        <div class="cuadre-total-lbl" id="ct-lbl">RESULTADO</div>
+        <div class="cuadre-total-val" id="ct-val">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ IR-2 MODULE ════ -->
+<div id="mod-ir2" class="module">
+  <div class="topbar" style="border-top-color:var(--amber);">
+    <div class="tb-stripe" style="background:var(--amber);"></div>
+    <div class="tb-left">
+      <div class="tb-title">IR-2 — Declaración Jurada Anual</div>
+      <div class="tb-sub">Análisis anual de renta para sociedades · tasa general 27%</div>
+    </div>
+    <div class="tb-right">
+      <span class="tb-file" id="tf-ir2" hidden></span>
+      <button class="btn btn-xl" id="btn-xls-ir2" hidden>Exportar borrador IR-2</button>
+      <button class="btn btn-ghost" id="btn-rst-ir2" hidden>Limpiar</button>
+    </div>
+  </div>
+
+  <div class="it1-body">
+    <div class="manual-card">
+      <div class="slabel" style="margin-bottom:6px;">Datos de la sociedad y ejercicio fiscal</div>
+      <div class="manual-grid">
+        <div class="field-grp"><label class="field-lbl" for="ir2-rnc">RNC</label><input class="field-inp" id="ir2-rnc" placeholder="131000000"></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-razon">Razón social</label><input class="field-inp" id="ir2-razon" placeholder="Nombre de la sociedad"></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-inicio">Inicio del ejercicio</label><input class="field-inp" id="ir2-inicio" type="date"></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-fin">Cierre del ejercicio</label><input class="field-inp" id="ir2-fin" type="date"></div>
+      </div>
+      <div class="field-help" style="margin-top:10px;">El IR-2 es anual. CAMI valida que el ejercicio no exceda doce meses y calcula la fecha límite estimada a 120 días del cierre.</div>
+    </div>
+
+    <div class="upload-stage" id="up-ir2" style="padding:0;min-height:0;">
+      <div class="dropzone" id="dz-ir2" tabindex="0" role="button" aria-label="Cargar balance de comprobación anual">
+        <div class="drop-inner">
+          <div class="drop-icon-wrap" style="background:linear-gradient(135deg,#D97706,#F59E0B);"><span class="drop-icon">IR2</span></div>
+          <div class="drop-title">Carga el balance de comprobación anual</div>
+          <div class="drop-sub">Debe incluir cuenta, descripción y saldo o débitos/créditos<br><strong>CSV · XLSX · XLS · XLSM · XLSB</strong></div>
+          <div class="drop-tags"><span class="drop-tag">Balance anual</span><span class="drop-tag">Catálogo contable</span><span class="drop-tag">Excel propio</span></div>
+          <input type="file" id="fi-ir2" accept=".csv,.xlsx,.xls,.xlsm,.xlsb,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <button class="btn btn-primary" id="bs-ir2" style="background:#D97706;">Seleccionar balance</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="manual-card">
+      <div class="slabel" style="margin-bottom:6px;">Ajustes fiscales y créditos</div>
+      <div class="manual-grid">
+        <div class="field-grp"><label class="field-lbl" for="ir2-adiciones">Adiciones fiscales</label><input class="field-inp ir2-input" id="ir2-adiciones" type="number" min="0" step="0.01" value="0"><div class="field-help">Gastos no admitidos y otras partidas que aumentan la renta.</div></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-deducciones">Deducciones fiscales</label><input class="field-inp ir2-input" id="ir2-deducciones" type="number" min="0" step="0.01" value="0"><div class="field-help">Partidas autorizadas que reducen la renta.</div></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-perdidas">Pérdidas fiscales compensables</label><input class="field-inp ir2-input" id="ir2-perdidas" type="number" min="0" step="0.01" value="0"><div class="field-help">Solo pérdidas autorizadas y pendientes de compensar.</div></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-anticipos">Anticipos pagados</label><input class="field-inp ir2-input" id="ir2-anticipos" type="number" min="0" step="0.01" value="0"></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-retenciones">Retenciones de ISR</label><input class="field-inp ir2-input" id="ir2-retenciones" type="number" min="0" step="0.01" value="0"></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-saldo">Saldo a favor anterior</label><input class="field-inp ir2-input" id="ir2-saldo" type="number" min="0" step="0.01" value="0"></div>
+        <div class="field-grp"><label class="field-lbl" for="ir2-activos">Crédito por impuesto a los activos</label><input class="field-inp ir2-input" id="ir2-activos" type="number" min="0" step="0.01" value="0"></div>
+      </div>
+    </div>
+
+    <div id="ir2-alert"><div class="alert warn"><strong>Datos requeridos:</strong> carga el balance de comprobación anual para iniciar el IR-2.</div></div>
+
+    <div id="ir2-results" hidden>
+      <div class="slabel">Estados financieros resumidos</div>
+      <div class="kpi-row" id="kpis-ir2-financial"></div>
+      <div class="slabel">Determinación de la renta imponible</div>
+      <div class="cuadre-card">
+        <div id="ir2-calc"></div>
+        <div class="cuadre-sep"></div>
+        <div class="cuadre-total"><div class="cuadre-total-lbl" id="ir2-result-label">RESULTADO IR-2</div><div class="cuadre-total-val" id="ir2-result-value">—</div></div>
+      </div>
+      <div class="slabel">Cuentas que requieren revisión</div>
+      <div class="table-wrap"><table><thead id="th-ir2"></thead><tbody id="tb-ir2"></tbody></table></div>
+      <p class="tnote" id="tn-ir2"></p>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<div id="loader" hidden>
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <div class="loader-txt">Procesando archivo…</div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/papaparse.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script>
+'use strict';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';
+
+const AL606 = {
+  rnc:              ['rnc','cedula','rncocedula','rnc_o_cedula','identificacion','rnc_cedula','rncoproveedor','proveedor_rnc'],
+  ncf:              ['ncf','e_ncf','ncf_e_ncf','ncf_o_e_ncf','comprobante','numero_comprobante','numero_de_comprobante','numero_comprobante_fiscal','numero_de_comprobante_fiscal','numero_ncf','numerodecomprobante','no_comprobante','nfc'],
+  fecha:            ['fecha','date','fecha_comprobante','fechadecomprobante','fecha_factura','fechafactura','fechapago','fecha_pago'],
+  tipo_comprobante: ['tipo_bienes_y_servicios_comprados','tipobienesyservicioscomprados','tipo','tipo_comprobante','tipodecomprobante','tipo_ncf','tipocomprobante','tipo_bienes_servicios','tipobienesservicios'],
+  monto_servicios:  ['monto_facturado_en_servicios','monto_servicios','servicios','montoenservicios','facturado_servicios','monto_serv','montoservicio','monto_facturado_servicios'],
+  monto_bienes:     ['monto_facturado_en_bienes','monto_bienes','bienes','montoenbienes','facturado_bienes','monto_bien','montoenbien','monto_facturado_bienes'],
+  monto_total:      ['total_monto_facturado','monto_total','total','montototal','montofacturado','importe_total','valor_total','monto_facturado','facturado_total','totalfacturado'],
+  itbis_facturado:  ['itbis_facturado','itbis','itbisfacturado','monto_itbis','impuesto','itbisfact'],
+  itbis_retenido:   ['itbis_retenido','itbisretenido','retencion_itbis','itbis_ret','itbisretencion'],
+  itbis_adelantado: ['itbis_por_adelantar','itbis_adelantado','itbisporadelantar','credito_itbis','itbiscreditofiscal','itbis_credito','por_adelantar'],
+  itbis_costo:      ['itbis_llevado_al_costo','itbis_costo','itbisllevadoalcosto','itbis_al_costo','costo_itbis'],
+  pct_retencion:    ['porcentaje_retencion','pct_retencion','porc_retencion','retencion_pct','porcentajeretencion'],
+};
+
+const AL607 = {
+  rnc:              ['rnc','cedula','rncocedula','rnc_o_cedula','identificacion','rnc_cedula','rncocliente','cliente_rnc'],
+  ncf:              ['ncf','e_ncf','ncf_e_ncf','ncf_o_e_ncf','comprobante','numero_comprobante','numero_de_comprobante','numero_comprobante_fiscal','numero_de_comprobante_fiscal','numero_ncf','numerodecomprobante','no_comprobante','nfc'],
+  fecha:            ['fecha','date','fecha_comprobante','fechadecomprobante','fecha_factura','fechafactura','fechacobro','fecha_cobro'],
+  tipo_comprobante: ['tipo_bienes_y_servicios_vendidos','tipobienesyserviciosvendidos','tipo','tipo_comprobante','tipodecomprobante','tipo_ncf','tipocomprobante','tipo_ingreso','tipoingreso'],
+  monto_servicios:  ['monto_facturado_en_servicios','monto_servicios','servicios','montoenservicios','facturado_servicios','monto_serv'],
+  monto_bienes:     ['monto_facturado_en_bienes','monto_bienes','bienes','montoenbienes','facturado_bienes','monto_bien'],
+  monto_total:      ['total_monto_facturado','monto_total','total','montototal','montofacturado','importe_total','valor_total','monto_facturado','facturado_total','totalfacturado'],
+  monto_gravado:    ['monto_gravado','gravado','valor_gravado','importe_gravado','montogravado'],
+  monto_exento:     ['monto_exento','exento','valor_exento','importe_exento','montoexento','no_gravado','montonogravado'],
+  itbis_facturado:  ['itbis_facturado','itbis','itbisfacturado','monto_itbis','impuesto','itbisfact'],
+  itbis_retenido:   ['itbis_retenido','itbisretenido','retencion_itbis','itbis_ret','itbis_retenido_terceros','itbis_ret_terceros'],
+  tasa_itbis:       ['tasa_itbis','tasa','porcentaje_itbis','pct_itbis','tasa_impuesto','tasaimpuesto','tasa_gravamen'],
+  construccion:     ['construccion','es_construccion','tipo_operacion','operacion_construccion'],
+  pago_efectivo:    ['monto_facturado_en_efectivo','monto_efectivo','efectivo','venta_efectivo','pagado_efectivo'],
+  pago_cheque:      ['monto_facturado_en_cheque_transferencia_deposito','monto_facturado_en_cheques_transferencias_depositos','cheque_transferencia_deposito','cheques_transferencias_depositos','cheque_transferencia','transferencia','deposito','monto_transferencia'],
+  pago_tarjeta:     ['monto_facturado_en_tarjeta_debito_credito','monto_facturado_por_tarjetas_debito_credito','tarjeta_debito_credito','tarjeta_credito_debito','monto_tarjeta','pago_tarjeta','tarjeta'],
+  pago_credito:     ['monto_facturado_a_credito','venta_a_credito','a_credito','monto_credito'],
+  pago_bonos:       ['monto_facturado_en_bonos_o_certificados_de_regalo','monto_facturado_en_bonos_o_certificados_de_regalos','bonos_certificados_regalo','bonos','certificados_regalo'],
+  pago_permuta:     ['monto_facturado_en_permutas','permutas','permuta'],
+  pago_otras:       ['monto_facturado_en_otras_formas_de_venta','monto_facturado_en_otras_formas_de_ventas','otras_formas_de_venta','otras_formas','otros_medios_pago'],
+};
+
+const ALCARD = {
+  factura:          ['factura','numero_factura','no_factura','nro_factura','ncf','comprobante','referencia','numero_referencia','no_referencia','transaccion','numero_transaccion','no_transaccion','autorizacion','codigo_autorizacion'],
+  cantidad:         ['cantidad_movimientos','total_movimientos','numero_movimientos','cantidad_facturas','cantidad_transacciones','numero_facturas','numero_transacciones','cant_transacciones','total_transacciones','conteo'],
+  monto:            ['monto','monto_total','monto_transaccion','monto_venta','total','total_venta','importe','importe_total','valor_transaccion','valor_venta','monto_bruto','venta_bruta','consumo'],
+  retenido:         ['itbis_retenido','retencion_itbis','monto_retenido','retencion','retencion_tarjeta','retencion_ley_253_12','itbis_retenido_ley_253_12','retencion_2_por_ciento','retencion_2'],
+  itbis_reportado:  ['itbis_reportado','itbis','monto_itbis','impuesto','itbis_transaccion','itbis_facturado','total_itbis'],
+};
+
+const ALIR2 = {
+  cuenta:['cuenta','codigo_cuenta','codigo','no_cuenta','numero_cuenta','account','account_code'],
+  descripcion:['descripcion','nombre_cuenta','cuenta_contable','detalle','concepto','account_name','nombre'],
+  clasificacion:['clasificacion','tipo_cuenta','grupo','categoria','rubro','naturaleza','account_type'],
+  debito:['debito','debitos','movimiento_debito','saldo_deudor','debe','debit'],
+  credito:['credito','creditos','movimiento_credito','saldo_acreedor','haber','credit'],
+  saldo:['saldo','saldo_final','balance','balance_final','monto','importe','ending_balance'],
+};
+
+const $  = id => document.getElementById(id);
+const CURRENCIES={DOP:{symbol:'RD$',locale:'es-DO'},USD:{symbol:'US$',locale:'en-US'},EUR:{symbol:'€',locale:'es-ES'}};
+let DISPLAY_CURRENCY=localStorage.getItem('cami-currency')||'DOP';
+if(!CURRENCIES[DISPLAY_CURRENCY]) DISPLAY_CURRENCY='DOP';
+const fmtM = n => CURRENCIES[DISPLAY_CURRENCY].symbol+'\u00A0'+new Intl.NumberFormat(CURRENCIES[DISPLAY_CURRENCY].locale,{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+const fmtI = n => new Intl.NumberFormat('en-US').format(Math.round(n||0));
+const r2  = n => Math.round((n||0)*100)/100;
+
+function showToast(msg, type) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type === 'err' ? ' err' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = ''; }, 3800);
+}
+
+function normKey(s) {
+  return String(s).trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[\s\-\/\\.]+/g,'_')
+    .replace(/[^a-z0-9_]/g,'');
+}
+
+function detectCols(headers, aliases) {
+  const norm = {};
+  headers.forEach(h => { norm[normKey(h)] = h; });
+  const map = {};
+  for (const [canon, alts] of Object.entries(aliases)) {
+    for (const a of alts) {
+      if (norm[normKey(a)]) { map[canon] = norm[normKey(a)]; break; }
+    }
+  }
+  return map;
+}
+
+function cleanNum(val) {
+  if (val == null || val === '') return 0;
+  let s = String(val).replace(/RD\$|DOP|US\$|USD|EUR|€|\$/gi,'').replace(/\s/g,'').trim();
+  const neg = /^\(.*\)$/.test(s) || s.startsWith('-');
+  s = s.replace(/[()]/g, '').replace(/^-/, '');
+  // Detect decimal separator: whichever of , or . appears last is the decimal
+  const lc = s.lastIndexOf(','), lp = s.lastIndexOf('.');
+  if (lc > lp) {
+    s = s.replace(/\./g, '').replace(',', '.');  // European: 1.234,56 → 1234.56
+  } else {
+    s = s.replace(/,/g, '');                     // Anglo: 1,234.56 → 1234.56
+  }
+  const n = parseFloat(s);
+  if (isNaN(n)) return 0;
+  return neg ? -Math.abs(n) : n;
+}
+
+function sum(arr, key) { return arr.reduce((s,r) => s + (r[key]||0), 0); }
+
+function detectNCFCode(ncfValue,typeValue) {
+  const allowed='01|02|03|04|12|14|15|16|31|32|33|34|44|45|46';
+  const values=[ncfValue,typeValue].filter(v=>v!=null&&String(v).trim()!=='');
+  for(const value of values){
+    const compact=String(value).toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const prefixed=compact.match(new RegExp(`(?:B|E)(${allowed})`));
+    if(prefixed)return prefixed[1];
+  }
+  for(const value of values){
+    const raw=String(value).toUpperCase(),normalized=normKey(raw);
+    const standalone=raw.match(new RegExp(`(?:^|[^0-9])(${allowed})(?:[^0-9]|$)`));
+    if(standalone)return standalone[1];
+    if(/credito_fiscal/.test(normalized))return '01';
+    if(/consumo/.test(normalized))return '02';
+    if(/nota_debito/.test(normalized))return '03';
+    if(/nota_credito/.test(normalized))return '04';
+    if(/otras?_operaciones/.test(normalized))return 'OTROS';
+    if(/^0?[1-4]$/.test(raw.trim()))return raw.trim().padStart(2,'0');
+  }
+  return '';
+}
+
+function parseSheet(ws) {
+  const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:false });
+  let bestRow = -1, bestScore = 0;
+  for (let i = 0; i < Math.min(20, raw.length); i++) {
+    const cells = raw[i].map(c => String(c).trim()).filter(Boolean);
+    const score = cells.length;
+    const hasText = cells.some(c => /[A-Za-zÀ-ɏ]/.test(c));
+    if (score > bestScore && hasText) { bestScore = score; bestRow = i; }
+  }
+  if (bestRow < 0) bestRow = 0;
+  const headers = raw[bestRow].map((h, i) =>
+    (h && String(h).trim()) ? String(h).trim() : 'col_' + i
+  );
+  const dataRows = raw.slice(bestRow + 1).filter(row =>
+    row.some(c => c !== '' && c != null)
+  );
+  return { headers, dataRows, rowCount: dataRows.length };
+}
+
+function readExcel(buf, sheetHint) {
+  let wb;
+  try { wb = XLSX.read(new Uint8Array(buf), { type:'array', raw:false }); }
+  catch(e) { throw new Error('No se pudo leer el archivo Excel. Verifica que no esté dañado o protegido.'); }
+  const hinted = sheetHint
+    ? wb.SheetNames.filter(n => n.toLowerCase().includes(sheetHint.toLowerCase()))
+    : [];
+  const rest = wb.SheetNames.filter(n => !hinted.includes(n));
+  const ordered = [...hinted, ...rest];
+  let bestSheet = ordered[0], bestCount = -1;
+  for (const name of ordered) {
+    const { rowCount } = parseSheet(wb.Sheets[name]);
+    if (rowCount > bestCount) { bestCount = rowCount; bestSheet = name; }
+    if (hinted.includes(name) && rowCount >= 5) break;
+  }
+  const { headers, dataRows } = parseSheet(wb.Sheets[bestSheet]);
+  return dataRows.map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { const v = row[i]; obj[h] = (v !== undefined && v !== '') ? v : null; });
+    return obj;
+  });
+}
+
+function readCSV(text) {
+  return (Papa.parse(text, { header:true, skipEmptyLines:true, dynamicTyping:false }).data) || [];
+}
+
+function groupPDFItems(items) {
+  const lines=[];
+  [...items].filter(i=>String(i.str||'').trim()).sort((a,b)=>b.transform[5]-a.transform[5]||a.transform[4]-b.transform[4]).forEach(item=>{
+    const y=item.transform[5],x=item.transform[4],text=String(item.str).trim();
+    let line=lines.find(l=>Math.abs(l.y-y)<=3);
+    if (!line){line={y,cells:[]};lines.push(line);}
+    const last=line.cells[line.cells.length-1],width=Number(item.width)||0;
+    if (last&&x-(last.x+last.width)<=12) {
+      last.text+=' '+text;last.width=Math.max(last.width,x+width-last.x);
+    } else line.cells.push({x,width,text});
+  });
+  return lines.sort((a,b)=>b.y-a.y).map(l=>({cells:l.cells.sort((a,b)=>a.x-b.x)}));
+}
+
+function pdfLinesToRows(lines) {
+  const allAliases=[...Object.values(AL606),...Object.values(AL607),...Object.values(ALCARD)].flat();
+  const known=new Set(allAliases.map(normKey));
+  let headerIndex=-1,headerScore=-1;
+  lines.forEach((line,i)=>{
+    const score=line.cells.reduce((n,c)=>n+(known.has(normKey(c.text))?1:0),0);
+    if(score>headerScore||(score===headerScore&&line.cells.length>(lines[headerIndex]?.cells.length||0))){headerIndex=i;headerScore=score;}
+  });
+
+  const summary={};
+  lines.forEach(line=>{
+    if(line.cells.length<2)return;
+    const last=line.cells[line.cells.length-1],raw=last.text.replace(/[RD$%\s]/gi,'');
+    if(!/^[\d.,()\-]+$/.test(raw))return;
+    const label=line.cells.slice(0,-1).map(c=>c.text).join(' ').trim();
+    if(label)summary[label]=last.text;
+  });
+  const summaryMap=detectCols(Object.keys(summary),ALCARD);
+  if(Object.keys(summaryMap).length>=2)return [summary];
+
+  if(headerIndex<0||!lines[headerIndex]?.cells.length)throw new Error('No se pudo identificar la tabla dentro del PDF.');
+  const headerCells=lines[headerIndex].cells;
+  const headers=headerCells.map((c,i)=>c.text||`col_${i}`);
+  const objects=[];
+  lines.slice(headerIndex+1).forEach(line=>{
+    const obj={};headers.forEach(h=>{obj[h]=null;});
+    line.cells.forEach(cell=>{
+      let best=0,distance=Infinity;
+      headerCells.forEach((h,i)=>{const d=Math.abs(cell.x-h.x);if(d<distance){distance=d;best=i;}});
+      obj[headers[best]]=obj[headers[best]]==null?cell.text:`${obj[headers[best]]} ${cell.text}`;
+    });
+    if(Object.values(obj).some(v=>v!=null&&String(v).trim()!==''))objects.push(obj);
+  });
+  return objects;
+}
+
+function lastNumericPDFCell(line,{integer=false}={}) {
+  for(let i=line.cells.length-1;i>=0;i--){
+    const text=String(line.cells[i].text||'').trim();
+    if(!text||text.includes('%')||!/[0-9]/.test(text))continue;
+    const raw=text.replace(/[RD$\s]/gi,'');
+    if(!/^[\d.,()\-]+$/.test(raw))continue;
+    const value=Math.abs(cleanNum(text));
+    if(Number.isFinite(value)&&(!integer||Number.isInteger(value)))return value;
+  }
+  return null;
+}
+
+function numericValueInsidePDFLine(line,{integer=false}={}) {
+  const text=line.cells.map(c=>String(c.text||'')).join(' ').replace(/\d+(?:[.,]\d+)?\s*%/g,' ');
+  const tokens=text.match(/(?:RD\$?|\$)?\s*\(?\d[\d,.]*\)?/gi)||[];
+  for(let i=tokens.length-1;i>=0;i--){
+    const token=tokens[i].trim(),value=Math.abs(cleanNum(token));
+    if(!Number.isFinite(value)||value===0||(integer&&!Number.isInteger(value)))continue;
+    if(!integer&&!/[.,]|RD|\$/i.test(token))continue;
+    return value;
+  }
+  return null;
+}
+
+function bestPDFSummaryValue(lines,patterns,{integer=false,exclude=[]}={}) {
+  for(const pattern of patterns){
+    const values=[];
+    lines.forEach(line=>{
+      const label=normKey(line.cells.map(c=>c.text).join(' '));
+      if(!pattern.test(label)||exclude.some(rx=>rx.test(label)))return;
+      let value=lastNumericPDFCell(line,{integer});
+      if(value==null)value=numericValueInsidePDFLine(line,{integer});
+      if(value==null){
+        const index=lines.indexOf(line);
+        for(let offset=1;offset<=2&&value==null;offset++){
+          const nearby=lines[index+offset];
+          if(nearby)value=lastNumericPDFCell(nearby,{integer})??numericValueInsidePDFLine(nearby,{integer});
+        }
+      }
+      if(value!=null)values.push(value);
+    });
+    if(values.length)return Math.max(...values);
+  }
+  return null;
+}
+
+function countPDFMovements(lines) {
+  const unique=new Set();
+  lines.forEach(line=>{
+    const text=line.cells.map(c=>c.text).join(' ').replace(/\s+/g,' ').trim();
+    const normalized=normKey(text);
+    if(!text||/(total|subtotal|resumen|balance|pagina|fecha.*monto|movimiento.*monto|transaccion.*monto)/.test(normalized))return;
+    const hasDate=/\b(?:0?[1-9]|[12]\d|3[01])[\/\-](?:0?[1-9]|1[0-2])[\/\-](?:20)?\d{2}\b/.test(text);
+    if(!hasDate)return;
+    const reference=(text.match(/\b[A-Z0-9]{6,20}\b/gi)||[]).filter(t=>!/^20\d{2}$/.test(t)).pop();
+    const amounts=(text.match(/(?:RD\$?|\$)?\s*\(?\d[\d,.]*\)?/gi)||[]).length;
+    if(amounts>=2)unique.add(reference?reference.toUpperCase():normalized);
+  });
+  return unique.size;
+}
+
+function cardPDFToRows(lines,provider) {
+  const isCardNET=/cardnet/i.test(String(provider||''));
+  const isAzul=/azul/i.test(String(provider||''));
+  const countPatterns=[
+    /(?:cantidad|total|numero)(?:_de)?_movimientos(?:_procesados)?/,
+    /(?:^|_)cant(?:idad)?(?:_de)?_(?:mov|movimientos)(?:_|$)/,
+    /(?:^|_)(?:total_mov|no_de_movimientos)(?:_|$)/,
+    /movimientos_(?:procesados|presentados|realizados)/,
+    /(?:cantidad|total|numero)(?:_de)?_transacciones/,
+    /(?:cant|total|numero)(?:_de)?_registros/,
+    /transacciones_(?:procesadas|presentadas|realizadas)/,
+    /(?:cantidad|total|numero)(?:_de)?_facturas/,
+  ];
+  const cardNETPeriodTotal=isCardNET?bestPDFSummaryValue(lines,[/cantidad_de_ventas/],{integer:true,exclude:[/rechazad|declinad|anulad|cancelad|devolucion|subtotal/]}):null;
+  if(isCardNET&&cardNETPeriodTotal==null)throw new Error('No se encontró la fila “Cantidad de Ventas” con su “Total Período” en el reporte CardNET.');
+  const azulSalesCount=isAzul?bestPDFSummaryValue(lines,[/^ventas(?:_|$)/],{integer:true,exclude:[/rechazad|declinad|anulad|cancelad|devolucion|subtotal|monto|importe/]}):null;
+  if(isAzul&&azulSalesCount==null)throw new Error('No se encontró la fila “Ventas” con su columna “Cantidad” en el reporte Azul.');
+  const summaryCount=isCardNET?cardNETPeriodTotal:isAzul?azulSalesCount:bestPDFSummaryValue(lines,countPatterns,{integer:true,exclude:[/rechazad|declinad|anulad|cancelad|devolucion|subtotal/]});
+  const movementCount=countPDFMovements(lines);
+  const facturas=summaryCount||movementCount;
+  if(!facturas)throw new Error(`No se pudo determinar la cantidad de movimientos del reporte de ${provider}.`);
+  const monto=bestPDFSummaryValue(lines,[/monto_total_(?:procesado|transacciones|ventas)/,/total_(?:procesado|transacciones|ventas|depositado)/,/monto_bruto/,/importe_total/],{exclude:[/reten|itbis|subtotal/]})||0;
+  const retenido=bestPDFSummaryValue(lines,[/itbis_retenido/,/monto_retenido/,/retencion_(?:itbis_)?(?:del_)?2/,/retencion_ley_253_12/,/retencion_aplicada/,/total_retenciones/,/retencion/],{exclude:[/subtotal|cantidad/]})||0;
+  const itbis=bestPDFSummaryValue(lines,[/itbis_reportado/,/total_itbis/,/monto_itbis/],{exclude:[/reten/]})||0;
+  return [{
+    cantidad_movimientos:facturas,monto_total:monto,itbis_retenido:retenido,itbis_reportado:itbis,
+    __pdf_report:true,__metodo_conteo:isCardNET?'Cantidad de Ventas → Total Período':isAzul?'Ventas → Cantidad':summaryCount?'total de control del PDF':'movimientos únicos detectados',
+    __movimientos_detectados:movementCount,
+  }];
+}
+
+async function readPDF(buf,sheetHint) {
+  try {
+    const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    const lines=[];
+    for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){
+      const page=await pdf.getPage(pageNumber),content=await page.getTextContent();
+      lines.push(...groupPDFItems(content.items));
+    }
+    const rows=/cardnet|azul/i.test(String(sheetHint||''))?cardPDFToRows(lines,sheetHint):pdfLinesToRows(lines);
+    if(!rows.length)throw new Error('El PDF no contiene registros reconocibles.');
+    return rows;
+  } catch(e) {
+    if(e.message&&/tabla|registros|PDF/.test(e.message))throw e;
+    throw new Error('No se pudo leer el PDF. Verifica que contenga texto seleccionable y no sea una imagen escaneada o un documento protegido.');
+  }
+}
+
+const EXCEL_EXTENSIONS = new Set(['xlsx','xls','xlsm','xlsb']);
+const CSV_MIME_TYPES = new Set(['text/csv','application/csv','text/comma-separated-values']);
+const EXCEL_MIME_TYPES = new Set([
+  'application/vnd.ms-excel',
+  'application/vnd.ms-excel.sheet.binary.macroenabled.12',
+  'application/vnd.ms-excel.sheet.macroenabled.12',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/octet-stream',
+]);
+
+function fileExtension(file) {
+  const name=String(file?.name||'').trim();
+  const dot=name.lastIndexOf('.');
+  return dot>=0 ? name.slice(dot+1).trim().toLowerCase() : '';
+}
+
+function fileKind(file) {
+  const ext=fileExtension(file),mime=String(file?.type||'').toLowerCase();
+  if (ext==='pdf'||mime==='application/pdf') return 'pdf';
+  if (ext==='csv'||CSV_MIME_TYPES.has(mime)) return 'csv';
+  if (EXCEL_EXTENSIONS.has(ext)||EXCEL_MIME_TYPES.has(mime)) return 'excel';
+  return null;
+}
+
+function loadFile(file, sheetHint) {
+  return new Promise((ok, fail) => {
+    const kind = fileKind(file);
+    const rd  = new FileReader();
+    rd.onerror = () => fail(new Error('Error leyendo el archivo'));
+    if (kind==='excel'||kind==='pdf') {
+      rd.onload = async e => { try { ok(kind==='pdf'?await readPDF(e.target.result,sheetHint):readExcel(e.target.result,sheetHint)); } catch(err) { fail(err); } };
+      rd.readAsArrayBuffer(file);
+    } else {
+      rd.onload = e => { try { ok(readCSV(e.target.result)); } catch(err) { fail(err); } };
+      rd.readAsText(file, 'UTF-8');
+    }
+  });
+}
+
+function process606(rows) {
+  if (!rows.length) throw new Error('Archivo vacío.');
+  const headers = Object.keys(rows[0]);
+  const cm = detectCols(headers, AL606);
+  const keyField = cm.monto_total || cm.monto_servicios || cm.monto_bienes || cm.itbis_facturado || cm.ncf;
+  const validRows = keyField
+    ? rows.filter(r => r[keyField] != null && String(r[keyField]).trim() !== '' && String(r[keyField]).trim() !== '0')
+    : rows;
+  const data = validRows.map(r => {
+    const p = {...r};
+    const ncfCode=detectNCFCode(cm.ncf?r[cm.ncf]:'',cm.tipo_comprobante?r[cm.tipo_comprobante]:'');
+    const fiscalSign=ncfCode==='04'||ncfCode==='34'?-1:1;
+    p._serv  = cm.monto_servicios  ? cleanNum(r[cm.monto_servicios])  : 0;
+    p._bien  = cm.monto_bienes     ? cleanNum(r[cm.monto_bienes])     : 0;
+    p._total = cm.monto_total      ? cleanNum(r[cm.monto_total])      : p._serv + p._bien;
+    p._serv=Math.abs(p._serv)*fiscalSign;p._bien=Math.abs(p._bien)*fiscalSign;p._total=Math.abs(p._total)*fiscalSign;
+    p._itbis = cm.itbis_facturado  ? Math.abs(cleanNum(r[cm.itbis_facturado]))*fiscalSign  : 0;
+    p._ret   = cm.itbis_retenido   ? Math.abs(cleanNum(r[cm.itbis_retenido]))*fiscalSign   : 0;
+    p._adel  = cm.itbis_adelantado ? Math.abs(cleanNum(r[cm.itbis_adelantado]))*fiscalSign : 0;
+    p._costo = cm.itbis_costo      ? Math.abs(cleanNum(r[cm.itbis_costo]))*fiscalSign      : 0;
+    if (!cm.itbis_adelantado && !cm.itbis_costo && p._itbis > 0) { p._adel = p._itbis; p._costo = 0; }
+    if (cm.pct_retencion) { p._pct = cleanNum(r[cm.pct_retencion]); }
+    else if (p._ret > 0 && p._itbis > 0) {
+      const ratio = p._ret / p._itbis;
+      p._pct = Math.abs(ratio - 1.0) < 0.08 ? 100 : Math.abs(ratio - 0.30) < 0.08 ? 30 : r2(ratio*100);
+    } else { p._pct = 0; }
+    return p;
+  });
+  const totServ=r2(sum(data,'_serv')),totBien=r2(sum(data,'_bien')),totTotal=r2(sum(data,'_total'));
+  const totItbis=r2(sum(data,'_itbis')),totAdel=r2(sum(data,'_adel')),totCosto=r2(sum(data,'_costo')),totRet=r2(sum(data,'_ret'));
+  const credServ=r2(data.reduce((n,r)=>n+(r._serv+r._bien>0?r._adel*r._serv/(r._serv+r._bien):0),0));
+  const credBien=r2(totAdel-credServ);
+  const ret30rows=data.filter(r=>Math.abs(r._pct-30)<8),ret100rows=data.filter(r=>Math.abs(r._pct-100)<8);
+  const ret30={monto:r2(sum(ret30rows,'_ret')),count:ret30rows.length},ret100={monto:r2(sum(ret100rows,'_ret')),count:ret100rows.length};
+  const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
+  return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
+}
+
+function process607(rows) {
+  if (!rows.length) throw new Error('Archivo vacío.');
+  const headers = Object.keys(rows[0]);
+  const cm = detectCols(headers, AL607);
+  const keyField = cm.monto_total || cm.monto_servicios || cm.monto_bienes || cm.itbis_facturado || cm.ncf;
+  const validRows = keyField
+    ? rows.filter(r => r[keyField] != null && String(r[keyField]).trim() !== '' && String(r[keyField]).trim() !== '0')
+    : rows;
+  const data = validRows.map(r => {
+    const p = {...r};
+    p._ncfRaw=cm.ncf?String(r[cm.ncf]||'').toUpperCase().replace(/[^A-Z0-9]/g,''):'';
+    p._ncfCode=detectNCFCode(cm.ncf?r[cm.ncf]:'',cm.tipo_comprobante?r[cm.tipo_comprobante]:'');
+    p._fiscalSign=p._ncfCode==='04'||p._ncfCode==='34'?-1:1;
+    p._serv  = cm.monto_servicios ? cleanNum(r[cm.monto_servicios]) : 0;
+    p._bien  = cm.monto_bienes    ? cleanNum(r[cm.monto_bienes])    : 0;
+    p._total = cm.monto_total     ? cleanNum(r[cm.monto_total])     : p._serv + p._bien;
+    p._itbis = cm.itbis_facturado ? Math.abs(cleanNum(r[cm.itbis_facturado])) : 0;
+    p._ret   = cm.itbis_retenido  ? Math.abs(cleanNum(r[cm.itbis_retenido]))  : 0;
+    p._payCash=cm.pago_efectivo?Math.abs(cleanNum(r[cm.pago_efectivo])):0;
+    p._payTransfer=cm.pago_cheque?Math.abs(cleanNum(r[cm.pago_cheque])):0;
+    p._payCard=cm.pago_tarjeta?Math.abs(cleanNum(r[cm.pago_tarjeta])):0;
+    p._payCredit=cm.pago_credito?Math.abs(cleanNum(r[cm.pago_credito])):0;
+    p._payBonds=cm.pago_bonos?Math.abs(cleanNum(r[cm.pago_bonos])):0;
+    p._paySwap=cm.pago_permuta?Math.abs(cleanNum(r[cm.pago_permuta])):0;
+    p._payOther=cm.pago_otras?Math.abs(cleanNum(r[cm.pago_otras])):0;
+    if(p._fiscalSign<0){
+      p._serv=-Math.abs(p._serv);p._bien=-Math.abs(p._bien);p._total=-Math.abs(p._total);
+      p._itbis=-Math.abs(p._itbis);p._ret=-Math.abs(p._ret);
+      p._payCash=p._payTransfer=p._payCard=p._payCredit=p._payBonds=p._paySwap=p._payOther=0;
+    }
+    const standardRates=[18,16,10,9,8];
+    const declaredRate=cm.tasa_itbis?cleanNum(r[cm.tasa_itbis]):0;
+    if(cm.monto_gravado){
+      p._gravado=Math.abs(cleanNum(r[cm.monto_gravado]))*p._fiscalSign;
+      p._tasa=declaredRate||(p._gravado>0?r2(p._itbis/p._gravado*100):0);
+    }else if(p._total>0&&p._itbis>0){
+      const bases=[Math.abs(p._total),Math.max(Math.abs(p._total)-p._itbis,0)].filter(n=>n>0);
+      let best={base:bases[0],rate:declaredRate||0,error:Infinity};
+      bases.forEach(base=>{
+        const rawRate=p._itbis/base*100;
+        const rate=declaredRate||standardRates.reduce((selected,candidate)=>Math.abs(rawRate-candidate)<Math.abs(rawRate-selected)?candidate:selected);
+        const error=Math.abs(rawRate-rate);
+        if(error<best.error)best={base,rate,error};
+      });
+      p._gravado=r2(best.base*p._fiscalSign);p._tasa=best.error<3?best.rate:r2(Math.abs(p._itbis)/best.base*100);
+    }else{p._gravado=0;p._tasa=declaredRate||0;}
+    p._exento=cm.monto_exento?Math.abs(cleanNum(r[cm.monto_exento]))*p._fiscalSign:(p._itbis!==0?0:Math.abs(p._total)*p._fiscalSign);
+    if (cm.construccion) { const v=String(r[cm.construccion]||'').toLowerCase(); p._constr=v==='si'||v==='sí'||v==='1'||v==='true'||v==='construccion'; }
+    else { p._constr=p._tasa===10; }
+    return p;
+  });
+  const totTotal=r2(sum(data,'_total')),totGrav=r2(sum(data,'_gravado')),totExento=r2(sum(data,'_exento'));
+  const totItbis=r2(sum(data,'_itbis')),totRet=r2(sum(data,'_ret'));
+  const tasa18=data.filter(r=>r._tasa===18),tasa16=data.filter(r=>r._tasa===16),tasa10=data.filter(r=>r._tasa===10),tasa9=data.filter(r=>r._tasa===9),tasa8=data.filter(r=>r._tasa===8);
+  const tasa0=data.filter(r=>r._tasa===0||(!r._tasa&&r._itbis===0));
+  const byTasa={
+    t18:{monto:r2(sum(tasa18,'_gravado')),itbis:r2(sum(tasa18,'_itbis')),count:tasa18.length},
+    t16:{monto:r2(sum(tasa16,'_gravado')),itbis:r2(sum(tasa16,'_itbis')),count:tasa16.length},
+    t10:{monto:r2(sum(tasa10,'_gravado')),itbis:r2(sum(tasa10,'_itbis')),count:tasa10.length},
+    t9: {monto:r2(sum(tasa9,'_gravado')),itbis:r2(sum(tasa9,'_itbis')),count:tasa9.length},
+    t8: {monto:r2(sum(tasa8,'_gravado')),itbis:r2(sum(tasa8,'_itbis')),count:tasa8.length},
+    t0: {monto:r2(sum(tasa0,'_total')),itbis:0,count:tasa0.length},
+  };
+  const ret30rows=data.filter(r=>r._itbis>0&&r._ret>0&&Math.abs(r._ret/r._itbis-0.30)<0.08);
+  const ret100rows=data.filter(r=>r._itbis>0&&r._ret>0&&Math.abs(r._ret/r._itbis-1.0)<0.08);
+  const ret30={monto:r2(sum(ret30rows,'_ret')),count:ret30rows.length},ret100={monto:r2(sum(ret100rows,'_ret')),count:ret100rows.length};
+  const paymentColumns={cash:!!cm.pago_efectivo,transfer:!!cm.pago_cheque,card:!!cm.pago_tarjeta,credit:!!cm.pago_credito,bonds:!!cm.pago_bonos,swap:!!cm.pago_permuta,other:!!cm.pago_otras};
+  const paymentSummary={cash:r2(sum(data,'_payCash')),transfer:r2(sum(data,'_payTransfer')),card:r2(sum(data,'_payCard')),credit:r2(sum(data,'_payCredit')),bonds:r2(sum(data,'_payBonds')),swap:r2(sum(data,'_paySwap')),other:r2(sum(data,'_payOther')),columns:paymentColumns};
+  const ncfGroups={credito:{count:0,monto:0},consumo:{count:0,monto:0,cardMonto:0},debito:{count:0,monto:0},notaCredito:{count:0,monto:0},unico:{count:0,monto:0},especial:{count:0,monto:0},gobierno:{count:0,monto:0},exportacion:{count:0,monto:0},otros:{count:0,monto:0},sinClasificar:{count:0,monto:0}};
+  data.forEach((r,index)=>{
+    const code=r._ncfCode;
+    const key=code==='01'||code==='31'?'credito':code==='02'||code==='32'?'consumo':code==='03'||code==='33'?'debito':code==='04'||code==='34'?'notaCredito':code==='12'?'unico':code==='14'||code==='44'?'especial':code==='15'||code==='45'?'gobierno':code==='16'||code==='46'?'exportacion':code==='OTROS'?'otros':'sinClasificar';
+    const netOperation=r2(Math.abs(r._gravado||0)+Math.abs(r._exento||0));
+    ncfGroups[key].count+=1;ncfGroups[key].monto=r2(ncfGroups[key].monto+netOperation);
+    if(key==='consumo'&&r._payCard>0){
+      const cardRatio=r._total>0?Math.min(r._payCard/r._total,1):1;
+      ncfGroups.consumo.cardMonto=r2(ncfGroups.consumo.cardMonto+netOperation*cardRatio);
+    }
+  });
+  const ncfSeen=new Map();
+  data.forEach(r=>{if(r._ncfRaw)ncfSeen.set(r._ncfRaw,(ncfSeen.get(r._ncfRaw)||0)+1);});
+  const invalidNCF=data.filter(r=>!r._ncfRaw||!(/^(?:B\d{10}|E\d{12})$/.test(r._ncfRaw))).length;
+  const duplicateNCF=[...ncfSeen.values()].filter(n=>n>1).reduce((n,count)=>n+count-1,0);
+  const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
+  return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
+}
+
+function processCardReport(rows, provider) {
+  if (!rows.length) throw new Error(`El reporte de ${provider} está vacío.`);
+  const headers=Object.keys(rows[0]),cm=detectCols(headers,ALCARD);
+  if (!cm.factura&&!cm.cantidad&&!cm.monto&&!cm.retenido&&!cm.itbis_reportado) {
+    throw new Error(`No se reconocieron las columnas del reporte de ${provider}.`);
+  }
+  const useful=rows.filter(r => Object.values(r).some(v => v!=null&&String(v).trim()!==''));
+  const pdfSummary=useful.find(r=>r.__pdf_report);
+  let facturas;
+  if (pdfSummary&&cm.cantidad) facturas=Math.round(Math.abs(cleanNum(pdfSummary[cm.cantidad])));
+  else if (cm.cantidad) facturas=Math.round(useful.reduce((n,r)=>n+Math.abs(cleanNum(r[cm.cantidad])),0));
+  else if (cm.factura) facturas=new Set(useful.map(r=>String(r[cm.factura]||'').trim()).filter(Boolean)).size;
+  else facturas=useful.length;
+  const total = key => key ? r2(pdfSummary?Math.abs(cleanNum(pdfSummary[key])):useful.reduce((n,r)=>n+Math.abs(cleanNum(r[key])),0)) : 0;
+  const montoReporte=total(cm.monto);
+  let retenido=total(cm.retenido),retencionCalculada=false;
+  const retencionAcreditable=retenido;
+  if(!retenido&&montoReporte>0){retenido=r2(montoReporte*0.02);retencionCalculada=true;}
+  const totalSujetoRetencion=r2(retenido/0.02);
+  const montoProcesado=totalSujetoRetencion||montoReporte;
+  const itbisReporte=total(cm.itbis_reportado);
+  const baseGravable=montoProcesado;
+  const itbisTarjeta=r2(montoProcesado*.18);
+  const itbisEstimado=true;
+  return {
+    provider,
+    facturas,
+    monto:montoProcesado,
+    retenido,
+    retencionAcreditable,
+    itbis:itbisReporte,
+    totalSujetoRetencion,
+    baseGravable,
+    itbisTarjeta,
+    retencionCalculada,
+    itbisEstimado,
+    metodoConteo:pdfSummary?.__metodo_conteo||'registros del archivo',
+    registros:useful.length,
+    columns:headers,
+  };
+}
+
+function classifyIR2Account(codeValue,descriptionValue,typeValue) {
+  const code=String(codeValue||'').trim(),text=normKey(`${typeValue||''} ${descriptionValue||''}`);
+  if(/costo|cost_of_sales|coste|compras_para_venta|mercancia_vendida/.test(text))return 'costos';
+  if(/gasto|expense|nomina|sueldo|alquiler|depreciacion|combustible|honorario|mantenimiento/.test(text))return 'gastos';
+  if(/ingreso|venta|revenue|otros_ingresos|ganancia/.test(text))return 'ingresos';
+  if(/pasivo|liabilit|cuenta_por_pagar|proveedor|prestamo|impuesto_por_pagar|retencion_por_pagar/.test(text))return 'pasivos';
+  if(/patrimonio|capital|equity|resultado_acumulado|utilidad_retenida|reserva_legal/.test(text))return 'patrimonio';
+  if(/activo|asset|caja|banco|cuenta_por_cobrar|inventario|propiedad|mobiliario|equipo|vehiculo/.test(text))return 'activos';
+  const first=code.replace(/\D/g,'').charAt(0);
+  return first==='1'?'activos':first==='2'?'pasivos':first==='3'?'patrimonio':first==='4'?'ingresos':first==='5'?'costos':first==='6'?'gastos':'';
+}
+
+function processIR2(rows) {
+  if(!rows.length)throw new Error('El balance de comprobación está vacío.');
+  const headers=Object.keys(rows[0]),cm=detectCols(headers,ALIR2);
+  if(!cm.descripcion&&!cm.cuenta)throw new Error('No se reconocieron las columnas de cuenta o descripción.');
+  if(!cm.saldo&&!cm.debito&&!cm.credito)throw new Error('El balance debe incluir saldo o columnas de débito y crédito.');
+  const data=rows.filter(r=>Object.values(r).some(v=>v!=null&&String(v).trim()!=='')).map(r=>{
+    const cuenta=cm.cuenta?String(r[cm.cuenta]??'').trim():'',descripcion=cm.descripcion?String(r[cm.descripcion]??'').trim():cuenta;
+    const debito=cm.debito?Math.abs(cleanNum(r[cm.debito])):0,credito=cm.credito?Math.abs(cleanNum(r[cm.credito])):0;
+    const saldo=cm.saldo?cleanNum(r[cm.saldo]):r2(debito-credito);
+    const categoria=classifyIR2Account(cuenta,descripcion,cm.clasificacion?r[cm.clasificacion]:'');
+    const natural=categoria==='ingresos'||categoria==='pasivos'||categoria==='patrimonio'?credito-debito:debito-credito;
+    const monto=r2(Math.abs(cm.saldo?saldo:natural));
+    return {cuenta,descripcion,categoria,debito,credito,saldo,monto};
+  }).filter(r=>r.monto!==0&&!(/^total(?:_|\s)/i.test(normKey(r.descripcion))&&!r.cuenta));
+  const total=cat=>r2(data.filter(r=>r.categoria===cat).reduce((n,r)=>n+r.monto,0));
+  const unclassified=data.filter(r=>!r.categoria);
+  const debitos=r2(data.reduce((n,r)=>n+r.debito,0)),creditos=r2(data.reduce((n,r)=>n+r.credito,0));
+  const summary={
+    registros:data.length,ingresos:total('ingresos'),costos:total('costos'),gastos:total('gastos'),
+    activos:total('activos'),pasivos:total('pasivos'),patrimonio:total('patrimonio'),
+    utilidad:r2(total('ingresos')-total('costos')-total('gastos')),debitos,creditos,
+    diferenciaBalance:r2(debitos-creditos),diferenciaEcuacion:r2(total('activos')-total('pasivos')-total('patrimonio')-(total('ingresos')-total('costos')-total('gastos'))),
+    sinClasificar:unclassified.length,montoSinClasificar:r2(unclassified.reduce((n,r)=>n+r.monto,0)),hasMovements:!!(cm.debito&&cm.credito),
+  };
+  return {summary,rows,accounts:data,unclassified,columns:headers};
+}
+
+function kpiCard(lbl, val, cls='', sub='') {
+  const value=String(val),size=value.length>19?' xcompact':value.length>14?' compact':'';
+  return `<div class="kpi ${cls}"><div class="kpi-lbl">${lbl}</div><div class="kpi-val${size}" title="${value}">${value}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
+}
+
+function renderTable(thId, tbId, tnId, columns, rows, total) {
+  const thead=$(thId),tbody=$(tbId);
+  const hRow=document.createElement('tr');
+  columns.forEach(c=>{const th=document.createElement('th');th.textContent=c;hRow.appendChild(th);});
+  thead.innerHTML='';thead.appendChild(hRow);tbody.innerHTML='';
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    columns.forEach(c=>{const td=document.createElement('td');const v=row[c];td.textContent=v==null?'':v;td.title=v==null?'':String(v);tr.appendChild(td);});
+    tbody.appendChild(tr);
+  });
+  $(tnId).textContent=total>rows.length?`Mostrando ${fmtI(rows.length)} de ${fmtI(total)} registros`:`${fmtI(total)} registro${total!==1?'s':''}`;
+}
+
+function render606(data, filename) {
+  const s=data.summary;
+  $('kpis-606').innerHTML=
+    kpiCard('Registros',fmtI(s.registros),'c')+
+    kpiCard('Total Servicios',fmtM(s.totServ),'v')+
+    kpiCard('Total Bienes',fmtM(s.totBien),'t')+
+    kpiCard('Total Facturado',fmtM(s.totTotal),'g');
+  $('kpis-itbis-606').innerHTML=
+    kpiCard('ITBIS Facturado',fmtM(s.totItbis),'')+
+    kpiCard('ITBIS Crédito Fiscal',fmtM(s.totAdel),'g','Disponible para deducir')+
+    kpiCard('ITBIS al Costo',fmtM(s.totCosto),'a','No recuperable')+
+    kpiCard('ITBIS Retenido',fmtM(s.totRet),'r');
+  $('ret-606').innerHTML=`
+    <div class="ret-card">
+      <div class="ret-badge blue"><div class="ret-pct">30%</div></div>
+      <div class="ret-info"><div class="ret-lbl">Retención del 30%</div><div class="ret-val">${fmtM(s.ret30.monto)}</div><div class="ret-cnt">${fmtI(s.ret30.count)} comprobante${s.ret30.count!==1?'s':''}</div></div>
+    </div>
+    <div class="ret-card">
+      <div class="ret-badge red"><div class="ret-pct">100%</div></div>
+      <div class="ret-info"><div class="ret-lbl">Retención del 100%</div><div class="ret-val">${fmtM(s.ret100.monto)}</div><div class="ret-cnt">${fmtI(s.ret100.count)} comprobante${s.ret100.count!==1?'s':''}</div></div>
+    </div>`;
+  renderTable('th-606','tb-606','tn-606',data.columns,data.preview,data.summary.registros);
+  $('tf-606').textContent=filename; $('tf-606').hidden=false;
+  $('btn-xls-606').hidden=false; $('btn-rst-606').hidden=false;
+  $('up-606').hidden=true; $('da-606').hidden=false;
+  $('badge-606').textContent='✓'; $('badge-606').className='nav-badge ok';
+  updateIT1();
+}
+
+function render607(data, filename) {
+  const s=data.summary,bt=s.byTasa;
+  $('kpis-607').innerHTML=
+    kpiCard('Registros',fmtI(s.registros),'c')+
+    kpiCard('Total Facturado',fmtM(s.totTotal),'g')+
+    kpiCard('Total Gravado',fmtM(s.totGrav),'v')+
+    kpiCard('Total Exento',fmtM(s.totExento),'m')+
+    kpiCard('ITBIS Facturado',fmtM(s.totItbis),'a')+
+    kpiCard('ITBIS Ret. Clientes',fmtM(s.totRet),'r');
+  $('kpis-tasa-607').innerHTML=
+    kpiCard('ITBIS 18%',fmtM(bt.t18.itbis),'',`${fmtM(bt.t18.monto)} gravado · ${fmtI(bt.t18.count)} fact.`)+
+    (bt.t16.count?kpiCard('ITBIS 16%',fmtM(bt.t16.itbis),'a',`${fmtM(bt.t16.monto)} gravado · ${fmtI(bt.t16.count)} fact.`):'')+
+    (bt.t9.count?kpiCard('ITBIS 9%',fmtM(bt.t9.itbis),'a',`${fmtM(bt.t9.monto)} gravado · ${fmtI(bt.t9.count)} fact.`):'')+
+    (bt.t8.count?kpiCard('ITBIS 8%',fmtM(bt.t8.itbis),'a',`${fmtM(bt.t8.monto)} gravado · ${fmtI(bt.t8.count)} fact.`):'')+
+    kpiCard('ITBIS 10% Constr.',fmtM(bt.t10.itbis),'t',`${fmtM(bt.t10.monto)} gravado · ${fmtI(bt.t10.count)} fact.`)+
+    kpiCard('Exentos / No Grav.',fmtM(bt.t0.monto),'m',`${fmtI(bt.t0.count)} comprobante${bt.t0.count!==1?'s':''}`);
+  $('ret-607').innerHTML=`
+    <div class="ret-card">
+      <div class="ret-badge blue"><div class="ret-pct">30%</div></div>
+      <div class="ret-info"><div class="ret-lbl">Clientes retuvieron 30%</div><div class="ret-val">${fmtM(s.ret30.monto)}</div><div class="ret-cnt">${fmtI(s.ret30.count)} comprobante${s.ret30.count!==1?'s':''}</div></div>
+    </div>
+    <div class="ret-card">
+      <div class="ret-badge red"><div class="ret-pct">100%</div></div>
+      <div class="ret-info"><div class="ret-lbl">Clientes retuvieron 100%</div><div class="ret-val">${fmtM(s.ret100.monto)}</div><div class="ret-cnt">${fmtI(s.ret100.count)} comprobante${s.ret100.count!==1?'s':''}</div></div>
+    </div>`;
+  renderTable('th-607','tb-607','tn-607',data.columns,data.preview,data.summary.registros);
+  $('tf-607').textContent=filename; $('tf-607').hidden=false;
+  $('btn-xls-607').hidden=false; $('btn-rst-607').hidden=false;
+  $('up-607').hidden=true; $('da-607').hidden=false;
+  $('badge-607').textContent='✓'; $('badge-607').className='nav-badge ok';
+  renderSalesConsolidated();
+  updateIT1();
+}
+
+function renderCardReport(provider, data, filename) {
+  const id=provider.toLowerCase();
+  $(`${id}-file`).textContent=filename;
+  $(`kpis-${id}`).innerHTML=`
+    <div class="processor-metric"><span>Movimientos</span><strong>${fmtI(data.facturas)}</strong></div>
+    <div class="processor-metric"><span>${data.retencionAcreditable>0?'Monto sujeto según retención 2%':'Monto procesado'}</span><strong>${fmtM(data.monto)}</strong></div>
+    <div class="processor-metric"><span>${data.retencionCalculada?'Retención calculada (2%)':'Retenido por tarjeta'}</span><strong>${fmtM(data.retenido)}</strong></div>
+    <div class="processor-metric"><span>ITBIS calculado sobre monto sujeto (18%)</span><strong>${fmtM(data.itbisTarjeta)}</strong></div>
+    <div class="processor-metric"><span>Total cobrado con ITBIS</span><strong>${fmtM(r2(data.monto+data.itbisTarjeta))}</strong></div>
+    <div class="processor-metric"><span>ITBIS del reporte</span><strong>${fmtM(data.itbis)}</strong></div>`;
+  $(`${id}-file`).title=`Conteo: ${data.metodoConteo}`;
+  renderCardTotal();
+}
+
+function renderCardTotal() {
+  const reports=Object.values(CARD_STATE).filter(Boolean);
+  $('card-total').hidden=reports.length===0;
+  if (!reports.length) {$('ret-card-607').innerHTML=kpiCard('Pendiente','Carga CardNET o Azul','m','Aquí se separará de la retención de clientes.');renderSalesConsolidated();return;}
+  const total=key=>r2(reports.reduce((n,r)=>n+(r[key]||0),0));
+  $('kpis-card-total').innerHTML=
+    kpiCard('Movimientos',fmtI(total('facturas')),'c')+
+    kpiCard('Monto procesado',fmtM(total('monto')),'g')+
+    kpiCard('Retenido por tarjeta',fmtM(total('retenido')),'r')+
+    kpiCard('Monto sujeto al cálculo',fmtM(total('baseGravable')),'v','Obtenido desde la retención del 2%')+
+    kpiCard('ITBIS calculado al 18%',fmtM(total('itbisTarjeta')),'a','Monto sujeto × 18%')+
+    kpiCard('Total cobrado con ITBIS',fmtM(r2(total('monto')+total('itbisTarjeta'))),'g','Base procesada + ITBIS')+
+    kpiCard('ITBIS del reporte',fmtM(total('itbis')),'t');
+  $('ret-card-607').innerHTML=
+    kpiCard('Retención por tarjeta (2%)',fmtM(total('retenido')),'r')+
+    kpiCard('Total sujeto a retención',fmtM(total('totalSujetoRetencion')),'g','Retención ÷ 2%')+
+    kpiCard('Monto sujeto al cálculo',fmtM(total('baseGravable')),'v','Retención ÷ 2%')+
+    kpiCard('ITBIS calculado al 18%',fmtM(total('itbisTarjeta')),'a','Monto sujeto × 18%; no se extrae dividiendo entre 1.18');
+  renderSalesConsolidated();
+}
+
+function renderSalesConsolidated() {
+  const target=$('kpis-sales-total'),s7=STATE?.['607']?.summary;
+  if(!target)return;
+  if(!s7){target.innerHTML=kpiCard('Pendiente','Carga el reporte 607','m','Luego se sumarán CardNET y Azul.');return;}
+  const consumer=getConsumerSummary();
+  const reports=Object.values(CARD_STATE).filter(Boolean);
+  const cardRetention=r2(reports.reduce((n,r)=>n+(r.retencionAcreditable||0),0));
+  const card=getCardConsolidation(s7);
+  const cardnetBase=r2(CARD_STATE.cardnet?.totalSujetoRetencion||CARD_STATE.cardnet?.monto||0);
+  const azulBase=r2(CARD_STATE.azul?.totalSujetoRetencion||CARD_STATE.azul?.monto||0);
+  const cardnet=r2(cardnetBase+(CARD_STATE.cardnet?.itbisTarjeta||0));
+  const azul=r2(azulBase+(CARD_STATE.azul?.itbisTarjeta||0));
+  const fiscal607=get607GrossTotal(s7),fiscalTotal=r2(fiscal607+consumer.gross+card.additionalGross);
+  const manualPayments=r2(consumer.cash+consumer.transfer+consumer.credit+consumer.other);
+  const manualDifference=r2(consumer.gross-manualPayments);
+  const manualAlert=$('sales-manual-alert');
+  if(manualAlert){
+    manualAlert.hidden=Math.abs(manualDifference)<=.01;
+    manualAlert.innerHTML=manualAlert.hidden?'':`<strong>Revisa las ventas adicionales:</strong> las formas de pago difieren del total facturado por ${fmtM(Math.abs(manualDifference))}.`;
+  }
+  target.innerHTML=
+    kpiCard('Ventas brutas según 607',fmtM(fiscal607),'g')+
+    kpiCard('Cobrado por CardNET',fmtM(cardnet),'c','Base + ITBIS')+
+    kpiCard('Cobrado por Azul',fmtM(azul),'t','Base + ITBIS')+
+    kpiCard('Tarjetas ya incluidas en 607',fmtM(card.overlapGross),'m','Se descuentan para evitar duplicidad')+
+    kpiCard('Tarjetas adicionales',fmtM(card.additionalGross),'v','Parte no identificada dentro del 607')+
+    kpiCard('Ventas adicionales manuales',fmtM(consumer.gross),'a',`${fmtI(consumer.count)} factura(s) B02/E32`)+
+    kpiCard('VENTAS GLOBALES',fmtM(fiscalTotal),'g','607 + tarjetas únicas + ventas adicionales')+
+    kpiCard('Efectivo global',fmtM(r2((s7.paymentSummary?.cash||0)+consumer.cash)),'c')+
+    kpiCard('Tarjetas globales',fmtM(r2((s7.paymentSummary?.card||0)+card.additionalGross)),'v','Sin contar operaciones dos veces')+
+    kpiCard('ITBIS global de ventas',fmtM(r2(s7.totItbis+consumer.itbis+card.additionalItbis)),'a')+
+    kpiCard('Retenido por clientes',fmtM(s7.totRet),'m')+
+    kpiCard('Retención computable reportada',fmtM(cardRetention),'r','Solo valor leído del reporte; no estimaciones');
+}
+
+function calculateIT1({debito,credito,importaciones,retenciones,saldo,abonos}) {
+  return r2(debito-credito-importaciones-retenciones-saldo-abonos);
+}
+
+function get607GrossTotal(s7) {
+  const base=r2((s7.totGrav||0)+(s7.totExento||0));
+  const grossFromBase=r2(base+(s7.totItbis||0));
+  return Math.abs((s7.totTotal||0)-grossFromBase)<=Math.abs((s7.totTotal||0)-base)?r2(s7.totTotal):grossFromBase;
+}
+
+function getConsumerSummary() {
+  const read=id=>Math.max(parseFloat($(id)?.value)||0,0);
+  const count=Math.round(read('in-b02-count'));
+  const taxable=r2(read('in-b02-taxable')),exempt=r2(read('in-b02-exempt')),itbis=r2(read('in-b02-itbis'));
+  const cash=r2(read('in-sale-cash')),transfer=r2(read('in-sale-transfer')),credit=r2(read('in-sale-credit')),other=r2(read('in-sale-other'));
+  return {count,taxable,exempt,itbis,cash,transfer,credit,other,net:r2(taxable+exempt),gross:r2(taxable+exempt+itbis)};
+}
+
+function getCardConsolidation(s7) {
+  const reports=Object.values(CARD_STATE).filter(Boolean);
+  const reportGross=r2(reports.reduce((n,r)=>n+(r.totalSujetoRetencion||r.monto||0),0));
+  const reportBase=r2(reports.reduce((n,r)=>n+(r.baseGravable||0),0));
+  const reportItbis=r2(reports.reduce((n,r)=>n+(r.itbisTarjeta||0),0));
+  const reportPaymentGross=r2(reportGross+reportItbis);
+  const card607=r2(s7.paymentSummary?.card||0);
+  const overlapConfirmed=true;
+  const overlapGross=r2(Math.min(card607,reportPaymentGross));
+  const additionalGross=r2(Math.max(reportPaymentGross-overlapGross,0));
+  const additionalRatio=reportPaymentGross>0?additionalGross/reportPaymentGross:0;
+  const additionalBase=r2(reportBase*additionalRatio);
+  const additionalItbis=r2(reportItbis*additionalRatio);
+  const reportCount=reports.reduce((n,r)=>n+(r.facturas||0),0);
+  const additionalCount=Math.round(reportCount*additionalRatio);
+  const gross607=get607GrossTotal(s7);
+  return {reportGross,reportBase,reportItbis,reportPaymentGross,reportCount,card607,overlapConfirmed,overlapGross,additionalGross,additionalBase,additionalItbis,additionalCount,gross607,uniqueGross:r2(card607+additionalGross),consolidatedTotal:r2(gross607+additionalGross)};
+}
+
+function getIT1SalesBreakdown(s7) {
+  const source=s7.paymentSummary||{cash:0,transfer:0,card:0,credit:0,bonds:0,swap:0,other:0,columns:{}};
+  const payments={cash:source.cash||0,transfer:source.transfer||0,card:source.card||0,credit:source.credit||0,bonds:source.bonds||0,swap:source.swap||0,other:source.other||0};
+  const hasExplicit=Object.values(source.columns||{}).some(Boolean);
+  const card=getCardConsolidation(s7),consumer=getConsumerSummary();
+  const fiscalGross=r2(get607GrossTotal(s7)+consumer.gross+card.additionalGross);
+  payments.cash=r2(payments.cash+consumer.cash);
+  payments.transfer=r2(payments.transfer+consumer.transfer);
+  payments.credit=r2(payments.credit+consumer.credit);
+  payments.other=r2(payments.other+consumer.other);
+  payments.card=r2(payments.card+card.additionalGross);
+  let classified=r2(Object.values(payments).reduce((n,v)=>n+v,0));
+  const remainder=r2(fiscalGross-classified);
+  if(remainder>0){
+    if(!hasExplicit) payments.cash=r2(payments.cash+remainder);
+    else payments.other=r2(payments.other+remainder);
+  }
+  classified=r2(Object.values(payments).reduce((n,v)=>n+v,0));
+  return {payments,total:fiscalGross,reportedCard:card.reportGross,overlap:card.overlapGross,discrepancy:r2(fiscalGross-classified),source:'607 + CardNET/Azul sin duplicidad + ventas adicionales'};
+}
+
+function getIT1NCFBreakdown(s7) {
+  const groups={};
+  Object.entries(s7.ncfGroups).forEach(([key,value])=>{groups[key]={...value};});
+  const consumer=getConsumerSummary();
+  const card=getCardConsolidation(s7);
+  if(consumer.net>0||consumer.count>0||card.additionalBase>0){
+    groups.consumo.monto=r2(groups.consumo.monto+consumer.net+card.additionalBase);
+    groups.consumo.count+=consumer.count+card.additionalCount;
+  }
+  return {groups,consumer,card};
+}
+
+function cuadreRows(rows){
+  return rows.map(r=>`<div class="cuadre-row${r.muted?' muted':''}"><span class="cuadre-lbl">${r.lbl}${r.source?`<span class="cuadre-source">${r.source}</span>`:''}</span><span><span class="cuadre-sign">${r.sign||''}</span><span class="cuadre-amt">${fmtM(r.amt)}</span></span></div>`).join('');
+}
+
+function updateIT1() {
+  const has606=!!STATE['606'],has607=!!STATE['607'];
+  const cardCount=Object.values(CARD_STATE).filter(Boolean).length;
+  $('btn-it1-dgii').hidden=!(has606&&has607);
+  $('pi-606').className=`prereq-dot ${has606?'ok':'pending'}`;
+  $('pn-606').textContent=has606?'606 — Compras: cargado ✓':'606 — Compras: pendiente';
+  $('pi-607').className=`prereq-dot ${has607?'ok':'pending'}`;
+  $('pn-607').textContent=has607?'607 — Ventas: cargado ✓':'607 — Ventas: pendiente';
+  $('pi-cards').className=`prereq-dot ${cardCount?'ok':'pending'}`;
+  $('pn-cards').textContent=cardCount?`Tarjetas — ${cardCount===2?'CardNET y Azul':'1 reporte'} cargado ✓`:'Tarjetas — CardNET/Azul: pendiente';
+  if (has606&&has607){$('badge-it1').textContent='✓';$('badge-it1').className='nav-badge ok';}
+  else{$('badge-it1').textContent='○';$('badge-it1').className='nav-badge';}
+  const alertEl=$('it1-alert'),cuadreEl=$('it1-cuadre');
+  if (!has606||!has607){
+    alertEl.hidden=false;
+    alertEl.innerHTML=`<div class="alert warn"><strong>Datos requeridos:</strong> carga el archivo 606 (Compras) y el 607 (Ventas) para generar el cuadre IT-1.</div>`;
+    cuadreEl.hidden=true;return;
+  }
+  const s6=STATE['606'].summary,s7=STATE['607'].summary,sales=getIT1SalesBreakdown(s7),card=getCardConsolidation(s7),consumer=getConsumerSummary();
+  const saldo=parseFloat($('in-saldo').value)||0;
+  const importaciones=parseFloat($('in-importaciones').value)||0;
+  const abonos=parseFloat($('in-abonos').value)||0;
+  const cardRet=r2(Object.values(CARD_STATE).filter(Boolean).reduce((n,r)=>n+(r.retencionAcreditable||0),0));
+  const debito=r2(s7.totItbis+consumer.itbis+card.additionalItbis),credito=s6.totAdel,itbisRetVentas=r2(s7.totRet+cardRet);
+  const resultado=calculateIT1({debito,credito,importaciones,retenciones:itbisRetVentas,saldo,abonos});
+  if(DISPLAY_CURRENCY!=='DOP'){
+    alertEl.hidden=false;
+    alertEl.innerHTML=`<div class="alert warn"><strong>Moneda no válida para el IT-1:</strong> convierte y carga los valores en pesos dominicanos (DOP). Cambiar el símbolo no convierte importes.</div>`;
+  }else if(s7.ncfGroups.sinClasificar.count>0){
+    alertEl.hidden=false;
+    alertEl.innerHTML=`<div class="alert warn"><strong>Revisión requerida:</strong> ${fmtI(s7.ncfGroups.sinClasificar.count)} comprobante(s) no tienen un NCF o tipo reconocible. No se enviarán a “otros”; corrige el 607 antes de exportar.</div>`;
+  }else if((s7.audit?.invalidNCF||0)>0||(s7.audit?.duplicateNCF||0)>0){
+    alertEl.hidden=false;
+    alertEl.innerHTML=`<div class="alert warn"><strong>Control de NCF:</strong> ${fmtI(s7.audit?.invalidNCF||0)} NCF faltante(s) o mal formado(s) y ${fmtI(s7.audit?.duplicateNCF||0)} duplicado(s). Corrige el 607 antes de exportar.</div>`;
+  }else if(Math.abs(sales.discrepancy)>.01){
+    alertEl.hidden=false;
+    alertEl.innerHTML=`<div class="alert warn"><strong>Revisión requerida:</strong> las formas de pago no coinciden con las ventas brutas por ${fmtM(Math.abs(sales.discrepancy))}. Corrige el 607 antes de exportar.</div>`;
+  }else if (saldo===0&&credito+importaciones+itbisRetVentas+abonos>=debito){
+    alertEl.hidden=false;
+    alertEl.innerHTML=`<div class="alert warn">Hay un posible <strong>saldo a favor</strong>. Verifica el saldo anterior en la DGII e ingrésalo.</div>`;
+  }else{alertEl.hidden=true;}
+  const taxRows=[
+    {lbl:'ITBIS de ventas',always:true, sign:'+',amt:debito},
+    {lbl:'ITBIS Crédito (compras)',          always:false,sign:'−',amt:credito},
+    {lbl:'ITBIS Retenido por clientes (607)',always:false,sign:'−',amt:s7.totRet},
+    {lbl:'ITBIS Retenido por tarjetas',always:false,sign:'−',amt:cardRet},
+    {lbl:'ITBIS Pagado en Importaciones',  always:false,sign:'−',amt:importaciones},
+    {lbl:'Saldo a Favor Anterior (DGII)',   always:false,sign:'−',amt:saldo},
+    {lbl:'Otros Pagos / Abonos a Cuenta',  always:false,sign:'−',amt:abonos},
+  ].filter(r=>r.always||r.amt!==0);
+  const ncfData=getIT1NCFBreakdown(s7),ncf=ncfData.groups;
+  const ncfRows=[
+    {lbl:'B01 / E31 — Crédito fiscal',amt:ncf.credito.monto},
+    {lbl:'B02 / E32 — Consumo',amt:ncf.consumo.monto,source:(ncfData.consumer.net>0||ncfData.card.additionalBase>0)?'607 + tarjetas únicas + ventas adicionales':''},
+    {lbl:'Notas de débito',amt:ncf.debito.monto},
+    {lbl:'Notas de crédito',sign:'−',amt:ncf.notaCredito.monto},
+    {lbl:'Otros comprobantes',amt:r2(ncf.unico.monto+ncf.especial.monto+ncf.gobierno.monto+ncf.exportacion.monto+ncf.otros.monto)},
+  ];
+  if(ncf.sinClasificar.count)ncfRows.push({lbl:`Sin clasificar (${fmtI(ncf.sinClasificar.count)})`,amt:ncf.sinClasificar.monto,muted:true});
+  const p=sales.payments;
+  const paymentRows=[
+    {lbl:'Efectivo',amt:p.cash},{lbl:'Cheque / transferencia / depósito',amt:p.transfer},
+    {lbl:'Tarjeta débito / crédito',amt:p.card,source:sales.source},{lbl:'Venta a crédito',amt:p.credit},
+    {lbl:'Bonos o certificados',amt:p.bonds},{lbl:'Permutas',amt:p.swap},{lbl:'Otras formas de venta',amt:p.other},
+  ];
+  if(Math.abs(sales.discrepancy)>.01) paymentRows.push({lbl:'Diferencia entre ventas brutas y formas de pago',amt:sales.discrepancy,muted:true});
+  $('cuadre-body').innerHTML=`<div class="cuadre-group-title">Ventas por tipo de comprobante</div>${cuadreRows(ncfRows)}<div class="cuadre-group-title">Ventas por forma de pago</div>${cuadreRows(paymentRows)}<div class="cuadre-group-title">Liquidación del ITBIS</div>${cuadreRows(taxRows)}`;
+  const isPagar=resultado>0, isEven=resultado===0;
+  $('ct-lbl').textContent=isEven?'CUADRE EXACTO':isPagar?'ITBIS A PAGAR':'SALDO A FAVOR';
+  $('ct-val').textContent=fmtM(Math.abs(resultado));
+  $('ct-val').className=`cuadre-total-val ${isPagar&&!isEven?'pagar':'favor'}`;
+  cuadreEl.hidden=false;
+  if (s6.totRet>0){
+    const nota=document.createElement('div');nota.className='alert ok';nota.style.marginTop='14px';
+    nota.innerHTML=`<span>Nota:</span> <span>ITBIS Retenido en Compras (606): <strong>${fmtM(s6.totRet)}</strong> — se declara como agente de retención (Form. 11 o Anexo), no en el IT-1.</span>`;
+    const existing=cuadreEl.querySelector('.alert.ok');if(existing)existing.remove();cuadreEl.appendChild(nota);
+  }
+}
+
+const STATE={'606':null,'607':null};
+const CARD_STATE={cardnet:null,azul:null};
+let IR2_STATE=null;
+
+function ir2Input(id){return Math.max(parseFloat($(id)?.value)||0,0);}
+
+function getIR2Calculation(summary=IR2_STATE?.summary) {
+  if(!summary)return null;
+  const adiciones=ir2Input('ir2-adiciones'),deducciones=ir2Input('ir2-deducciones'),perdidas=ir2Input('ir2-perdidas');
+  const anticipos=ir2Input('ir2-anticipos'),retenciones=ir2Input('ir2-retenciones'),saldo=ir2Input('ir2-saldo'),activos=ir2Input('ir2-activos');
+  const rentaAntesPerdidas=r2(summary.utilidad+adiciones-deducciones);
+  const perdidaAplicada=r2(Math.min(perdidas,Math.max(rentaAntesPerdidas,0)));
+  const rentaImponible=r2(Math.max(rentaAntesPerdidas-perdidaAplicada,0));
+  const impuestoLiquidado=r2(rentaImponible*.27),creditos=r2(anticipos+retenciones+saldo+activos),resultado=r2(impuestoLiquidado-creditos);
+  return {adiciones,deducciones,perdidas,perdidaAplicada,anticipos,retenciones,saldo,activos,rentaAntesPerdidas,rentaImponible,impuestoLiquidado,creditos,resultado};
+}
+
+function ir2Deadline(dateValue){
+  if(!dateValue)return '';
+  const date=new Date(`${dateValue}T12:00:00`);date.setDate(date.getDate()+120);
+  return new Intl.DateTimeFormat('es-DO',{day:'2-digit',month:'2-digit',year:'numeric'}).format(date);
+}
+
+function updateIR2(){
+  if(!IR2_STATE)return;
+  const s=IR2_STATE.summary,c=getIR2Calculation(s),alertEl=$('ir2-alert');
+  $('ir2-results').hidden=false;
+  $('kpis-ir2-financial').innerHTML=
+    kpiCard('Ingresos',fmtM(s.ingresos),'g')+kpiCard('Costos',fmtM(s.costos),'a')+kpiCard('Gastos',fmtM(s.gastos),'r')+
+    kpiCard(s.utilidad>=0?'Utilidad contable':'Pérdida contable',fmtM(Math.abs(s.utilidad)),s.utilidad>=0?'t':'r')+
+    kpiCard('Activos',fmtM(s.activos),'v')+kpiCard('Pasivos',fmtM(s.pasivos),'m')+kpiCard('Patrimonio',fmtM(s.patrimonio),'c');
+  const rows=[
+    {lbl:'Utilidad o pérdida contable',sign:s.utilidad>=0?'+':'−',amt:Math.abs(s.utilidad)},
+    {lbl:'Adiciones fiscales',sign:'+',amt:c.adiciones},{lbl:'Deducciones fiscales',sign:'−',amt:c.deducciones},
+    {lbl:'Pérdidas fiscales aplicadas',sign:'−',amt:c.perdidaAplicada},{lbl:'Renta neta imponible',amt:c.rentaImponible},
+    {lbl:'ISR liquidado · 27%',amt:c.impuestoLiquidado},{lbl:'Anticipos pagados',sign:'−',amt:c.anticipos},
+    {lbl:'Retenciones de ISR',sign:'−',amt:c.retenciones},{lbl:'Saldo a favor anterior',sign:'−',amt:c.saldo},
+    {lbl:'Crédito por impuesto a los activos',sign:'−',amt:c.activos},
+  ];
+  $('ir2-calc').innerHTML=cuadreRows(rows);
+  $('ir2-result-label').textContent=c.resultado>0?'ISR A PAGAR':c.resultado<0?'SALDO A FAVOR':'CUADRE EXACTO';
+  $('ir2-result-value').textContent=fmtM(Math.abs(c.resultado));
+  $('ir2-result-value').className=`cuadre-total-val ${c.resultado>0?'pagar':'favor'}`;
+  const issues=[];
+  if(s.sinClasificar)issues.push(`${fmtI(s.sinClasificar)} cuenta(s) sin clasificar por ${fmtM(s.montoSinClasificar)}`);
+  if(s.hasMovements&&Math.abs(s.diferenciaBalance)>.01)issues.push(`débitos y créditos difieren por ${fmtM(Math.abs(s.diferenciaBalance))}`);
+  if(Math.abs(s.diferenciaEcuacion)>.01)issues.push(`activos no cuadran con pasivos + patrimonio por ${fmtM(Math.abs(s.diferenciaEcuacion))}`);
+  if(DISPLAY_CURRENCY!=='DOP')issues.push('el IR-2 debe prepararse en pesos dominicanos');
+  const rnc=$('ir2-rnc').value.replace(/\D/g,''),inicio=$('ir2-inicio').value,fin=$('ir2-fin').value;
+  if(rnc&&!/^\d{9}$/.test(rnc))issues.push('el RNC debe tener 9 dígitos');
+  if(inicio&&fin&&new Date(inicio)>new Date(fin))issues.push('la fecha inicial es posterior al cierre');
+  if(issues.length){alertEl.innerHTML=`<div class="alert warn"><strong>Revisión obligatoria:</strong> ${issues.join('; ')}. El borrador no está listo para presentar.</div>`;}
+  else alertEl.innerHTML=`<div class="alert ok"><span>Controles básicos aprobados.</span><span>Fecha límite estimada: <strong>${ir2Deadline(fin)||'indique el cierre'}</strong>. Revisa anexos y ajustes con contabilidad antes de presentar.</span></div>`;
+  const cols=['Cuenta','Descripción','Clasificación','Monto'];
+  $('th-ir2').innerHTML='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  const review=IR2_STATE.unclassified.slice(0,100);
+  $('tb-ir2').innerHTML=review.length?review.map(r=>`<tr><td>${xmlEscape(r.cuenta)}</td><td>${xmlEscape(r.descripcion)}</td><td>Sin clasificar</td><td>${fmtM(r.monto)}</td></tr>`).join(''):'<tr><td colspan="4">No hay cuentas pendientes de clasificación.</td></tr>';
+  $('tn-ir2').textContent=review.length?`Mostrando ${review.length} de ${s.sinClasificar} cuentas pendientes.`:'Todas las cuentas fueron clasificadas por CAMI.';
+  $('badge-ir2').textContent=issues.length?'!':'✓';$('badge-ir2').className=`nav-badge ${issues.length?'':'ok'}`;
+}
+
+async function handleIR2File(file){
+  const kind=fileKind(file);
+  if(!kind||kind==='pdf'){showToast('El balance IR-2 debe cargarse en CSV, XLSX, XLS, XLSM o XLSB.','err');return;}
+  if(file.size>20*1024*1024){showToast('El archivo supera el límite de 20 MB.','err');return;}
+  $('loader').hidden=false;
+  try{
+    IR2_STATE=processIR2(await loadFile(file,'balance'));
+    $('up-ir2').hidden=true;$('tf-ir2').hidden=false;$('tf-ir2').textContent=file.name;
+    $('btn-xls-ir2').hidden=false;$('btn-rst-ir2').hidden=false;updateIR2();
+    showToast(`IR-2: ${fmtI(IR2_STATE.summary.registros)} cuentas procesadas.`);
+  }catch(error){showToast(error.message||'No se pudo procesar el balance anual.','err');}
+  finally{$('loader').hidden=true;}
+}
+
+function resetIR2(){
+  IR2_STATE=null;$('up-ir2').hidden=false;$('ir2-results').hidden=true;$('tf-ir2').hidden=true;$('btn-xls-ir2').hidden=true;$('btn-rst-ir2').hidden=true;$('fi-ir2').value='';
+  $('badge-ir2').textContent='○';$('badge-ir2').className='nav-badge';
+  $('ir2-alert').innerHTML='<div class="alert warn"><strong>Datos requeridos:</strong> carga el balance de comprobación anual para iniciar el IR-2.</div>';
+}
+
+function exportIR2Draft(){
+  if(!IR2_STATE)return;
+  updateIR2();
+  const s=IR2_STATE.summary,c=getIR2Calculation(s),rnc=$('ir2-rnc').value.replace(/\D/g,''),razon=$('ir2-razon').value.trim(),inicio=$('ir2-inicio').value,fin=$('ir2-fin').value;
+  if(!/^\d{9}$/.test(rnc)||!razon||!inicio||!fin){showToast('Completa RNC, razón social y fechas del ejercicio.','err');return;}
+  if(DISPLAY_CURRENCY!=='DOP'){showToast('El borrador IR-2 solo se exporta en pesos dominicanos.','err');return;}
+  if(s.sinClasificar||Math.abs(s.diferenciaBalance)>.01||Math.abs(s.diferenciaEcuacion)>.01){showToast('Corrige las cuentas sin clasificar y diferencias del balance antes de exportar.','err');return;}
+  const wb=XLSX.utils.book_new();
+  const summary=[
+    ['CAMI · BORRADOR DE TRABAJO IR-2',''],['No sustituye la presentación en la Oficina Virtual DGII',''],['RNC',rnc],['Razón social',razon],['Ejercicio',`${inicio} al ${fin}`],
+    ['Utilidad / pérdida contable',s.utilidad],['Adiciones fiscales',c.adiciones],['Deducciones fiscales',c.deducciones],['Pérdidas fiscales aplicadas',c.perdidaAplicada],
+    ['Renta neta imponible',c.rentaImponible],['Tasa ISR',.27],['ISR liquidado',c.impuestoLiquidado],['Anticipos',c.anticipos],['Retenciones ISR',c.retenciones],['Saldo anterior',c.saldo],['Crédito impuesto activos',c.activos],['Resultado',c.resultado],
+    ['Fecha límite estimada',ir2Deadline(fin)],['Fuente normativa','https://dgii.gov.do/herramientas/formularios/formularioDeclaraciones/Paginas/ISR.aspx']
+  ];
+  const ss=XLSX.utils.aoa_to_sheet(summary);ss['!cols']=[{wch:38},{wch:26}];
+  ['B6','B7','B8','B9','B10','B12','B13','B14','B15','B16','B17'].forEach(ref=>{if(ss[ref])ss[ref].z='RD$ #,##0.00;[Red](RD$ #,##0.00)';});if(ss.B11)ss.B11.z='0%';
+  XLSX.utils.book_append_sheet(wb,ss,'Resumen IR-2');
+  const accounts=XLSX.utils.json_to_sheet(IR2_STATE.accounts.map(r=>({Cuenta:r.cuenta,Descripcion:r.descripcion,Clasificacion:r.categoria,Debito:r.debito,Credito:r.credito,Saldo:r.saldo,Monto_clasificado:r.monto})));
+  accounts['!cols']=[{wch:18},{wch:42},{wch:18},{wch:16},{wch:16},{wch:16},{wch:18}];XLSX.utils.book_append_sheet(wb,accounts,'Balance clasificado');
+  XLSX.writeFile(wb,`IR-2_Borrador_${fin.slice(0,4)}_${rnc}.xlsx`);showToast('Borrador de trabajo IR-2 exportado.');
+}
+
+function refreshCurrencyDisplay(){
+  if(STATE['606']) render606(STATE['606'],$('tf-606').textContent||'Archivo 606');
+  if(STATE['607']) render607(STATE['607'],$('tf-607').textContent||'Archivo 607');
+  if(CARD_STATE.cardnet) renderCardReport('CardNET',CARD_STATE.cardnet,$('cardnet-file').textContent||'Reporte CardNET');
+  if(CARD_STATE.azul) renderCardReport('Azul',CARD_STATE.azul,$('azul-file').textContent||'Reporte Azul');
+  renderCardTotal();
+  renderSalesConsolidated();
+  updateIT1();
+}
+
+$('currency-select').value=DISPLAY_CURRENCY;
+$('currency-select').addEventListener('change',e=>{
+  DISPLAY_CURRENCY=e.target.value;
+  localStorage.setItem('cami-currency',DISPLAY_CURRENCY);
+  refreshCurrencyDisplay();
+  showToast(`Moneda de presentación: ${CURRENCIES[DISPLAY_CURRENCY].symbol}. Los montos no fueron convertidos.`);
+});
+
+function xmlEscape(value) {
+  return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function setTemplateCell(xml,ref,value,type='number') {
+  const escapedRef=ref.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re=new RegExp(`<c\\b([^>]*\\br="${escapedRef}"[^>]*?)\\s*(?:\\/>|>[\\s\\S]*?<\\/c>)`);
+  const match=xml.match(re);
+  if (!match) throw new Error(`No se encontró la casilla ${ref} en la plantilla DGII.`);
+  const attrs=match[1].replace(/\s+t="[^"]*"/g,'');
+  const content=type==='string'
+    ? `<c${attrs} t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`
+    : `<c${attrs}><v>${Number(value)||0}</v></c>`;
+  return xml.replace(re,content);
+}
+
+function setFormulaCache(xml,ref,value) {
+  const escapedRef=ref.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re=new RegExp(`(<c\\b[^>]*\\br="${escapedRef}"[^>]*>[\\s\\S]*?<f[^>]*>[\\s\\S]*?<\\/f>)(?:<v>[\\s\\S]*?<\\/v>)?([\\s\\S]*?<\\/c>)`);
+  if (!re.test(xml)) throw new Error(`No se encontró la fórmula ${ref} en la plantilla DGII.`);
+  return xml.replace(re,`$1<v>${Number(value)||0}</v>$2`);
+}
+
+function contributorValues() {
+  const period=$('in-periodo').value;
+  return {
+    rnc:$('in-rnc').value.trim(),razon:$('in-razon').value.trim(),
+    periodo:period?`${period.slice(5,7)}/${period.slice(0,4)}`:'',
+    formulario:$('in-tipo-declaracion').value,
+  };
+}
+
+async function exportIT1DGII() {
+  if (!STATE['606']||!STATE['607']) { showToast('Carga primero los reportes 606 y 607.','err');return; }
+  $('loader').hidden=false;
+  try {
+    const response=await fetch('templates/IT-1-DGII-2020.xlsx');
+    if (!response.ok) throw new Error('No se pudo cargar la plantilla oficial DGII.');
+    const zip=await JSZip.loadAsync(await response.arrayBuffer());
+    let anexo=await zip.file('xl/worksheets/sheet1.xml').async('string');
+    let it1=await zip.file('xl/worksheets/sheet2.xml').async('string');
+    const s6=STATE['606'].summary,s7=STATE['607'].summary,bt=s7.byTasa,ncfData=getIT1NCFBreakdown(s7),ncf=ncfData.groups,consumer=ncfData.consumer,auditCard=ncfData.card;
+    const imports=parseFloat($('in-importaciones').value)||0;
+    const saldo=parseFloat($('in-saldo').value)||0;
+    const abonos=parseFloat($('in-abonos').value)||0;
+    const cardRet=r2(Object.values(CARD_STATE).filter(Boolean).reduce((n,r)=>n+(r.retencionAcreditable||0),0));
+    const identity=contributorValues();
+    if(!identity.rnc||!identity.razon||!identity.periodo) throw new Error('Completa RNC, razón social y período antes de exportar.');
+    if(identity.formulario!=='IT-1') throw new Error('El formulario IR-2 estará disponible próximamente. Selecciona IT-1 para exportar.');
+    if(DISPLAY_CURRENCY!=='DOP') throw new Error('El formato IT-1 debe generarse en pesos dominicanos (DOP). El selector de moneda no convierte valores.');
+    if(!/^\d{9}$|^\d{11}$/.test(identity.rnc.replace(/\D/g,''))) throw new Error('El RNC/cédula debe contener 9 u 11 dígitos.');
+    if(ncf.sinClasificar.count>0) throw new Error(`${ncf.sinClasificar.count} comprobante(s) no tienen un NCF o tipo reconocible. Corrige el 607 antes de exportar.`);
+    if((s7.audit?.invalidNCF||0)>0) throw new Error(`${s7.audit.invalidNCF} NCF del 607 están faltantes o tienen una estructura inválida.`);
+    if((s7.audit?.duplicateNCF||0)>0) throw new Error(`${s7.audit.duplicateNCF} NCF del 607 están duplicados. Corrígelos antes de exportar.`);
+    if(consumer.count===0&&consumer.net>0) throw new Error('Indica la cantidad de facturas B02/E32 del resumen de consumo.');
+    if(consumer.count>0&&consumer.net===0) throw new Error('Completa el monto gravado o exento del resumen B02/E32.');
+    if(consumer.taxable>0&&consumer.itbis<=0) throw new Error('La base gravada B02/E32 requiere el ITBIS facturado correspondiente.');
+    if(consumer.taxable>0&&Math.abs(consumer.itbis-r2(consumer.taxable*.18))>.02) throw new Error('El ITBIS del resumen B02/E32 no equivale al 18% de la base gravada. Revisa ambos valores.');
+    if(consumer.gross>0&&Math.abs(consumer.gross-r2(consumer.cash+consumer.transfer+consumer.credit+consumer.other))>.01) throw new Error('Las formas de pago de las ventas adicionales no coinciden con su total facturado.');
+    const generalAnexo={D7:identity.rnc,I7:identity.razon,Q10:identity.periodo};
+    const generalIT1={D7:identity.rnc,I7:identity.razon,P10:identity.periodo};
+    Object.entries(generalAnexo).forEach(([cell,value])=>{anexo=setTemplateCell(anexo,cell,value,'string');});
+    Object.entries(generalIT1).forEach(([cell,value])=>{it1=setTemplateCell(it1,cell,value,'string');});
+    const groupRows=[['credito',15],['consumo',16],['debito',17],['notaCredito',18],['unico',19],['especial',20],['gobierno',21],['exportacion',22],['otros',23]];
+    groupRows.forEach(([key,row])=>{anexo=setTemplateCell(anexo,`T${row}`,ncf[key].count);anexo=setTemplateCell(anexo,`W${row}`,ncf[key].monto);});
+    const sales=getIT1SalesBreakdown(s7),pay=sales.payments;
+    if(Math.abs(sales.discrepancy)>.01) throw new Error('Las formas de pago no concilian con las ventas brutas. Revisa el 607 antes de exportar.');
+    const anexoNumbers={W28:pay.cash,W29:pay.transfer,W30:pay.card,W31:pay.credit,W32:pay.bonds,W33:pay.swap,W34:pay.other,W38:r2(s7.totGrav+s7.totExento+consumer.net+auditCard.additionalBase),W47:cardRet,W49:s7.totRet,O80:s6.credBien,P81:s6.credServ,T80:imports};
+    Object.entries(anexoNumbers).forEach(([cell,value])=>{anexo=setTemplateCell(anexo,cell,value);});
+    const base18=r2((bt.t18?.monto||0)+consumer.taxable+auditCard.additionalBase);
+    const totalExento=r2(s7.totExento+consumer.exempt);
+    const it1Numbers={V16:0,V17:0,V18:totalExento,V19:0,V22:0,V26:base18,V27:bt.t16?.monto||0,V28:bt.t9?.monto||0,V29:bt.t8?.monto||0,V30:0,V45:0,V46:saldo,V48:abonos,V49:0};
+    Object.entries(it1Numbers).forEach(([cell,value])=>{it1=setTemplateCell(it1,cell,value);});
+    const anexoTotal=r2(ncf.credito.monto+ncf.consumo.monto+ncf.debito.monto+ncf.unico.monto+ncf.especial.monto+ncf.gobierno.monto+ncf.exportacion.monto+ncf.otros.monto-ncf.notaCredito.monto);
+    const retenciones=r2(s7.totRet+cardRet),creditoTotal=r2(s6.credBien+s6.credServ+imports);
+    const anexoCaches={W25:anexoTotal,W35:sales.total,W44:anexoTotal,W53:retenciones,O82:s6.credBien,P82:s6.credServ,T82:imports,W82:creditoTotal,O87:s6.credBien,P87:s6.credServ,T87:imports,W87:creditoTotal};
+    Object.entries(anexoCaches).forEach(([cell,value])=>{anexo=setFormulaCache(anexo,cell,value);});
+    const exento=totalExento,gravado=r2(Math.max(anexoTotal-exento,0));
+    const debitoCalculado=r2((s7.totItbis||0)+consumer.itbis+auditCard.additionalItbis);
+    const impuesto=r2(Math.max(debitoCalculado-creditoTotal,0)),saldoPeriodo=r2(Math.max(creditoTotal-debitoCalculado,0));
+    const diferencia=r2(Math.max(impuesto-saldo-retenciones-abonos,0));
+    const nuevoSaldo=r2(Math.max(saldoPeriodo+saldo+retenciones+abonos-impuesto,0));
+    const it1Caches={V14:anexoTotal,V23:exento,V25:gravado,V33:r2(base18*.18),V34:r2((bt.t16?.monto||0)*.16),V35:r2((bt.t9?.monto||0)*.09),V36:r2((bt.t8?.monto||0)*.08),V37:0,V38:debitoCalculado,V39:s6.credBien,V40:s6.credServ,V41:imports,V42:creditoTotal,V43:impuesto,V44:saldoPeriodo,V47:retenciones,V50:diferencia,V51:nuevoSaldo,V54:0,V55:0,V59:diferencia,V96:diferencia};
+    Object.entries(it1Caches).forEach(([cell,value])=>{it1=setFormulaCache(it1,cell,value);});
+    zip.file('xl/worksheets/sheet1.xml',anexo);
+    zip.file('xl/worksheets/sheet2.xml',it1);
+    const workbookPath='xl/workbook.xml';
+    let workbookXml=await zip.file(workbookPath).async('string');
+    workbookXml=workbookXml.replace(/<calcPr\b[^>]*\/>/, '<calcPr calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>');
+    zip.file(workbookPath,workbookXml);
+    const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const link=document.createElement('a');link.href=URL.createObjectURL(blob);
+    link.download=`IT-1_DGII_${identity.periodo.replace('/','-')||'periodo'}.xlsx`;document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(link.href),60000);
+    showToast('Formato oficial IT-1 de la DGII generado correctamente.');
+  } catch(error) { showToast(error.message||'No se pudo generar el IT-1 oficial.','err'); }
+  finally { $('loader').hidden=true; }
+}
+
+function exportXLS(mod) {
+  const d=STATE[mod];if(!d)return;
+  const wb=XLSX.utils.book_new(),s=d.summary;
+  if (mod==='606'){
+    const ss=XLSX.utils.aoa_to_sheet([['Métrica','Valor'],['Registros',s.registros],['Total Servicios',s.totServ],['Total Bienes',s.totBien],['Total Facturado',s.totTotal],['ITBIS Facturado',s.totItbis],['ITBIS Crédito Fiscal',s.totAdel],['ITBIS al Costo',s.totCosto],['ITBIS Retenido',s.totRet],['Ret.30% Monto',s.ret30.monto],['Ret.30% Comprobantes',s.ret30.count],['Ret.100% Monto',s.ret100.monto],['Ret.100% Comprobantes',s.ret100.count]]);
+    ss['!cols']=[{wch:36},{wch:20}];XLSX.utils.book_append_sheet(wb,ss,'Resumen 606');
+  }else{
+    const bt=s.byTasa;
+    const ss=XLSX.utils.aoa_to_sheet([['Métrica','Valor'],['Registros',s.registros],['Total Facturado',s.totTotal],['Total Gravado',s.totGrav],['Total Exento',s.totExento],['ITBIS Facturado',s.totItbis],['ITBIS Ret. Clientes',s.totRet],['18% Base',bt.t18.monto],['18% ITBIS',bt.t18.itbis],['16% Base',bt.t16.monto],['16% ITBIS',bt.t16.itbis],['9% Base',bt.t9.monto],['9% ITBIS',bt.t9.itbis],['8% Base',bt.t8.monto],['8% ITBIS',bt.t8.itbis],['10% Base',bt.t10.monto],['10% ITBIS',bt.t10.itbis],['Exentos',bt.t0.monto],['Ret.30%',s.ret30.monto],['Ret.100%',s.ret100.monto]]);
+    ss['!cols']=[{wch:36},{wch:20}];XLSX.utils.book_append_sheet(wb,ss,'Resumen 607');
+  }
+  const ds=XLSX.utils.json_to_sheet(d.allRows,{header:d.columns});
+  ds['!cols']=d.columns.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,ds,'Datos');
+  XLSX.writeFile(wb,`${mod}_analisis.xlsx`);
+  showToast(`Excel exportado: ${mod}_analisis.xlsx`);
+}
+
+async function handleFile(file, mod) {
+  const ext=fileExtension(file),kind=fileKind(file);
+  if (!kind){showToast(`Formato ${ext?'.'+ext:'sin extensión'} no soportado. Use PDF, CSV, XLSX, XLS, XLSM o XLSB.`,'err');return;}
+  if (file.size>20*1024*1024){showToast('El archivo supera el límite de 20 MB.','err');return;}
+  $('loader').hidden=false;
+  try {
+    const rows=await loadFile(file,mod);
+    if (mod==='606'){STATE['606']=process606(rows);render606(STATE['606'],file.name);}
+    else{STATE['607']=process607(rows);render607(STATE['607'],file.name);}
+  } catch(e) {
+    showToast(e.message||'Error procesando el archivo.','err');
+  } finally {
+    $('loader').hidden=true;
+  }
+}
+
+async function handleCardFile(file, provider) {
+  const ext=fileExtension(file),kind=fileKind(file),id=provider.toLowerCase();
+  if (!kind){showToast(`Formato ${ext?'.'+ext:'sin extensión'} no soportado. Use PDF, CSV, XLSX, XLS, XLSM o XLSB.`,'err');return;}
+  if (file.size>20*1024*1024){showToast('El archivo supera el límite de 20 MB.','err');return;}
+  $('loader').hidden=false;
+  try {
+    const rows=await loadFile(file,provider);
+    CARD_STATE[id]=processCardReport(rows,provider);
+    renderCardReport(provider,CARD_STATE[id],file.name);
+    updateIT1();
+    showToast(`${provider}: ${fmtI(CARD_STATE[id].facturas)} facturas o transacciones procesadas.`);
+  } catch(e) {
+    showToast(e.message||`Error procesando el reporte de ${provider}.`,'err');
+  } finally {
+    $('loader').hidden=true;
+  }
+}
+
+function resetMod(mod) {
+  STATE[mod]=null;
+  if (mod==='606'){$('da-606').hidden=true;$('up-606').hidden=false;$('tf-606').hidden=true;$('btn-xls-606').hidden=true;$('btn-rst-606').hidden=true;$('th-606').innerHTML='';$('tb-606').innerHTML='';$('fi-606').value='';}
+  else{$('da-607').hidden=true;$('up-607').hidden=false;$('tf-607').hidden=true;$('btn-xls-607').hidden=true;$('btn-rst-607').hidden=true;$('th-607').innerHTML='';$('tb-607').innerHTML='';$('fi-607').value='';}
+  $(`badge-${mod}`).textContent='○';$(`badge-${mod}`).className='nav-badge';
+  renderSalesConsolidated();
+  updateIT1();
+}
+
+document.querySelectorAll('.nav-item').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
+    el.classList.add('active');
+    const target=el.dataset.nav;
+    $('mod-'+(target==='it1'?'it1':target)).classList.add('active');
+    if (target==='it1') updateIT1();
+  });
+});
+
+['606','607'].forEach(mod=>{
+  const dz=$(`dz-${mod}`),fi=$(`fi-${mod}`),bs=$(`bs-${mod}`);
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0],mod);});
+  dz.addEventListener('click',()=>fi.click());
+  dz.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fi.click();}});
+  fi.addEventListener('change',()=>{if(fi.files[0])handleFile(fi.files[0],mod);});
+  bs.addEventListener('click',e=>{e.stopPropagation();fi.click();});
+  $(`btn-xls-${mod}`).addEventListener('click',()=>exportXLS(mod));
+  $(`btn-rst-${mod}`).addEventListener('click',()=>resetMod(mod));
+});
+
+[['cardnet','CardNET'],['azul','Azul']].forEach(([id,provider])=>{
+  const fi=$(`fi-${id}`),bs=$(`bs-${id}`);
+  bs.addEventListener('click',()=>fi.click());
+  fi.addEventListener('change',()=>{if(fi.files[0])handleCardFile(fi.files[0],provider);});
+});
+
+{
+  const dz=$('dz-ir2'),fi=$('fi-ir2'),bs=$('bs-ir2');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])handleIR2File(e.dataTransfer.files[0]);});
+  dz.addEventListener('click',()=>fi.click());dz.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fi.click();}});
+  fi.addEventListener('change',()=>{if(fi.files[0])handleIR2File(fi.files[0]);});bs.addEventListener('click',e=>{e.stopPropagation();fi.click();});
+}
+
+document.querySelectorAll('.ir2-input,#ir2-rnc,#ir2-razon,#ir2-inicio,#ir2-fin').forEach(el=>el.addEventListener('input',updateIR2));
+$('btn-xls-ir2').addEventListener('click',exportIR2Draft);$('btn-rst-ir2').addEventListener('click',resetIR2);
+
+['in-saldo','in-importaciones','in-abonos','in-b02-count','in-b02-taxable','in-b02-exempt','in-b02-itbis','in-sale-cash','in-sale-transfer','in-sale-credit','in-sale-other'].forEach(id=>{$(id).addEventListener('input',()=>{updateIT1();renderSalesConsolidated();});});
+$('in-tipo-declaracion').addEventListener('change',e=>{if(e.target.value==='IR-2'){document.querySelector('[data-nav="ir2"]').click();showToast('IR-2 anual: carga el balance de comprobación del ejercicio.');}});
+$('btn-it1-dgii').addEventListener('click',exportIT1DGII);
+renderCardTotal();
+</script>
+</body>
+</html>
