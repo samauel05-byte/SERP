@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
 <style>
 :root {
   --bg:      #0e0b0b;
@@ -460,7 +459,6 @@ const INST = {
 let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
 let activePortal = null;
 let sessionToken = null, currentUser = null, vaultSecret = null;
-let sbClient = null;
 
 /* ── Crypto ── */
 const C = {
@@ -515,44 +513,30 @@ const A = {
 /* ── Boot ── */
 async function boot() {
   show('view-loading');
-  let cfgOk = false;
   try {
-    // Init Supabase client
-    const cfgR = await fetch('/api/supabase-config').then(r=>r.json());
-    if (!cfgR.url || !cfgR.anonKey) throw new Error('Env vars de Supabase no configuradas en Vercel. Agrega SUPABASE_URL y SUPABASE_ANON_KEY y redespliega.');
-    cfgOk = true;
-    sbClient = supabase.createClient(cfgR.url, cfgR.anonKey);
-    sbClient.auth.onAuthStateChange((_e, sess) => { sessionToken = sess?.access_token || null; });
-
-    // Check if any users are configured
     const setupCheck = await fetch('/api/auth/setup').then(r=>r.json()).catch(()=>({hasUsers:false}));
     if (!setupCheck.hasUsers) { show('view-setup'); document.getElementById('setup-username').focus(); return; }
 
-    // Try to restore Supabase session
-    const { data: { session } } = await sbClient.auth.getSession();
-    if (session) {
-      sessionToken = session.access_token;
-      const storedSess = sessionStorage.getItem('dsession');
-      const storedVault = sessionStorage.getItem('dvault');
-      if (storedSess && storedVault) {
-        try {
-          const s = JSON.parse(storedSess);
-          currentUser = {role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, portals:s.portals};
-          const v = JSON.parse(storedVault);
-          vaultSecret = C._u8(v.secret);
-          const { config } = await A.get('/api/config');
-          appConfig = config || {};
-          masterKey = await C.deriveKeyFromBytes(vaultSecret, appConfig.vaultSalt);
-          if (await C.chk(masterKey, appConfig.verifierIv, appConfig.verifierCt)) { await loadHome(); return; }
-        } catch { masterKey=null; vaultSecret=null; }
-      }
+    // Try to restore session from sessionStorage
+    const storedToken = sessionStorage.getItem('dtoken');
+    const storedSess  = sessionStorage.getItem('dsession');
+    const storedVault = sessionStorage.getItem('dvault');
+    if (storedToken && storedSess && storedVault) {
+      try {
+        sessionToken = storedToken;
+        const s = JSON.parse(storedSess);
+        currentUser = {role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, portals:s.portals};
+        const v = JSON.parse(storedVault);
+        vaultSecret = C._u8(v.secret);
+        const { config } = await A.get('/api/config');
+        appConfig = config || {};
+        masterKey = await C.deriveKeyFromBytes(vaultSecret, appConfig.vaultSalt);
+        if (await C.chk(masterKey, appConfig.verifierIv, appConfig.verifierCt)) { await loadHome(); return; }
+      } catch { masterKey=null; vaultSecret=null; sessionToken=null; }
     }
     show('view-login'); document.getElementById('login-username').focus();
   } catch(e) {
-    const msg = (!cfgR?.url || !cfgR?.anonKey)
-      ? 'Configuración de Supabase incompleta — verifica las env vars en Vercel y redespliega'
-      : (e?.message || 'Error al conectar con el servidor');
-    show('view-login'); toast(msg,'err');
+    show('view-login'); toast(e?.message || 'Error al conectar con el servidor', 'err');
   }
 }
 
@@ -579,10 +563,14 @@ async function handleSetup() {
     }).then(r=>r.json());
     if (!res.ok){ err.textContent=res.error||'Error al crear cuenta'; err.hidden=false; return; }
 
-    // Sign in to get JWT
-    const { data: authData, error: signInErr } = await sbClient.auth.signInWithPassword({ email, password: pw });
-    if (signInErr){ err.textContent=signInErr.message||'Error al iniciar sesión'; err.hidden=false; return; }
-    sessionToken = authData.session.access_token;
+    // Sign in server-side to get JWT
+    const signIn = await fetch('/api/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ username, password:pw })
+    }).then(r=>r.json());
+    if (!signIn.ok){ err.textContent=signIn.error||'Error al iniciar sesión'; err.hidden=false; return; }
+    sessionToken = signIn.access_token;
+    sessionStorage.setItem('dtoken', sessionToken);
 
     currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, portals:['dgii','tss','trabajo','sirla'] };
     vaultSecret = vaultSecretBytes;
@@ -603,24 +591,22 @@ async function handleLogin() {
   const pw=document.getElementById('login-pw').value;
   const err=document.getElementById('login-err'); err.hidden=true;
   if (!username||!pw){ err.textContent='Completa todos los campos'; err.hidden=false; return; }
-  const email = username + '@direct.local';
   try {
-    // 1. Sign in via Supabase
-    const { data: authData, error: signInErr } = await sbClient.auth.signInWithPassword({ email, password: pw });
-    if (signInErr){ err.textContent=signInErr.message||'Credenciales incorrectas'; err.hidden=false; return; }
-    sessionToken = authData.session.access_token;
+    // 1. Sign in server-side — returns JWT + vault envelope in one call
+    const res = await fetch('/api/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ username, password:pw })
+    }).then(r=>r.json());
+    if (!res.ok){ err.textContent=res.error||'Credenciales incorrectas'; err.hidden=false; return; }
 
-    // 2. Get vault data from server
-    const res = await A.get('/api/auth/login');
-    if (!res.ok){ err.textContent=res.error||'Error al obtener datos de bóveda'; err.hidden=false; return; }
-
+    sessionToken = res.access_token;
     currentUser = { role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, portals:res.portals };
 
-    // 3. Derive vault key client-side (password still in memory)
+    // 2. Derive vault key client-side (password still in memory)
     const userKey = await C.deriveKey(pw, res.userSalt);
     vaultSecret = await C.decBytes(userKey, res.vaultKeyIv, res.vaultKeyCt);
 
-    // 4. Fetch config + verify vault
+    // 3. Fetch config + verify vault
     const { config } = await A.get('/api/config');
     appConfig = config || {};
     masterKey = await C.deriveKeyFromBytes(vaultSecret, appConfig.vaultSalt);
@@ -628,6 +614,7 @@ async function handleLogin() {
       err.textContent='Error al verificar bóveda'; err.hidden=false;
       masterKey=null; sessionToken=null; vaultSecret=null; return;
     }
+    sessionStorage.setItem('dtoken', sessionToken);
     sessionStorage.setItem('dsession', JSON.stringify({role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, portals:res.portals}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
     await loadHome();
@@ -643,9 +630,8 @@ async function loadHome() {
 
 function lockVault() {
   masterKey=null; vaultSecret=null; sessionToken=null; currentUser=null;
-  sessionStorage.removeItem('dsession'); sessionStorage.removeItem('dvault');
+  sessionStorage.removeItem('dtoken'); sessionStorage.removeItem('dsession'); sessionStorage.removeItem('dvault');
   stopPolling();
-  if (sbClient) sbClient.auth.signOut();
   show('view-login');
   document.getElementById('login-username').value='';
   document.getElementById('login-pw').value='';
