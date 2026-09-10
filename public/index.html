@@ -415,17 +415,19 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
           <option value="admin">Administrador</option>
         </select>
       </div>
-      <p class="slabel">Direct — Portales gubernamentales</p>
-      <div class="portals-grid">
+      <p class="slabel">Módulos de acceso</p>
+      <label class="chk-row" style="padding:4px 0;font-weight:600">
+        <input type="checkbox" id="u-access-direct" checked onchange="toggleDirectPortals(this.checked)">
+        Direct — Portales gubernamentales
+      </label>
+      <div id="portals-section" class="portals-grid" style="margin-left:24px">
         <label class="chk-row"><input type="checkbox" id="u-portal-dgii" checked> DGII</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-tss" checked> TSS</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-trabajo" checked> Min. Trabajo</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-sirla" checked> SISARIL</label>
       </div>
-      <p class="slabel">Módulo CAMI</p>
-      <label class="chk-row" style="padding:6px 0"><input type="checkbox" id="u-access-cami"> Análisis 606/607 e IT-1</label>
-      <p class="slabel">Módulo NALA</p>
-      <label class="chk-row" style="padding:6px 0"><input type="checkbox" id="u-access-nala"> Chat IA · Facturas 606/607</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-cami"> CAMI — Análisis 606/607 e IT-1</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-nala"> NALA — Chat IA · Facturas 606/607</label>
       <div class="ferr" id="user-err" hidden></div>
     </div>
     <div class="modal-ftr" id="modal-user-ftr">
@@ -669,7 +671,7 @@ async function renderUsersList() {
       if (user.access_nala) modules.push('NALA');
       const uname=(user.username||user.email||'?').replace('@direct.local','');
       const initials=uname.charAt(0).toUpperCase();
-      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
@@ -695,6 +697,10 @@ async function renderUsersList() {
   } catch(e){ list.innerHTML=`<p style="color:var(--danger);font-size:13px;padding:12px">Error: ${e.message}</p>`; }
 }
 
+function toggleDirectPortals(on) {
+  document.getElementById('portals-section').style.display = on ? '' : 'none';
+}
+
 function openUserModal(userData=null) {
   const isEdit = userData && userData.id;
   document.getElementById('modal-user-id').value = isEdit ? userData.id : '';
@@ -703,6 +709,9 @@ function openUserModal(userData=null) {
   document.getElementById('u-pw').value = '';
   document.getElementById('u-pw-label').textContent = isEdit ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña';
   document.getElementById('u-role').value = userData?.role || 'user';
+  const directOn = userData ? (userData.access_direct !== false) : true;
+  document.getElementById('u-access-direct').checked = directOn;
+  toggleDirectPortals(directOn);
   const portals = userData?.portals_direct || ['dgii','tss','trabajo','sirla'];
   ['dgii','tss','trabajo','sirla'].forEach(p => { document.getElementById('u-portal-'+p).checked = portals.includes(p); });
   document.getElementById('u-access-cami').checked = userData?.access_cami || false;
@@ -717,7 +726,8 @@ async function saveUser() {
   const email = username + '@direct.local';
   const password=document.getElementById('u-pw').value;
   const role=document.getElementById('u-role').value;
-  const portals_direct=['dgii','tss','trabajo','sirla'].filter(p=>document.getElementById('u-portal-'+p).checked);
+  const access_direct=document.getElementById('u-access-direct').checked;
+  const portals_direct=access_direct?['dgii','tss','trabajo','sirla'].filter(p=>document.getElementById('u-portal-'+p).checked):[];
   const access_cami=document.getElementById('u-access-cami').checked;
   const access_nala=document.getElementById('u-access-nala').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
@@ -732,7 +742,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={username, role, portals_direct, access_cami, access_nala};
+    const body={username, role, access_direct, portals_direct, access_cami, access_nala};
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
     else await A.post('/api/users',body);

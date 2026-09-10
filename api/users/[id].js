@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
   const { id } = req.query;
   try {
     if (req.method === 'PUT') {
-      const { password, role, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { password, role, access_direct, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
 
       if (password) {
         const { error } = await supabase.auth.admin.updateUserById(id, { password });
@@ -18,6 +18,7 @@ module.exports = async (req, res) => {
 
       const update = {};
       if (role !== undefined) update.role = role;
+      if (access_direct !== undefined) update.access_direct = access_direct;
       if (portals_direct !== undefined) update.portals_direct = portals_direct;
       if (access_cami !== undefined) update.access_cami = access_cami;
       if (access_nala !== undefined) update.access_nala = access_nala;
