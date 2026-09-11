@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
         id: p.id,
         username: emailMap[p.id] || '',
         role: p.role,
-        access_direct: p.access_direct,
+        access_direct: p.access_direct !== false,
         access_cami: p.access_cami,
         access_nala: p.access_nala,
         portals_direct: p.portals_direct,
@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -46,10 +46,10 @@ module.exports = async (req, res) => {
       const { error: profileError } = await supabase.from('direct_profiles').insert({
         id: user.id,
         role: role || 'user',
-        access_direct: true,
+        access_direct: access_direct !== false,
         access_cami: access_cami || false,
         access_nala: access_nala || false,
-        portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla'],
+        portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         user_key_salt: userSalt || null,
         vault_key_iv: vaultKeyIv || null,
         vault_key_ct: vaultKeyCt || null,

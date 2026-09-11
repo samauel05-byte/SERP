@@ -415,22 +415,48 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
           <option value="admin">Administrador</option>
         </select>
       </div>
-      <p class="slabel">Direct — Portales gubernamentales</p>
-      <div class="portals-grid">
+      <p class="slabel">Módulos de acceso</p>
+      <label class="chk-row" style="padding:4px 0;font-weight:600">
+        <input type="checkbox" id="u-access-direct" checked onchange="toggleDirectPortals(this.checked)">
+        Direct — Portales gubernamentales
+      </label>
+      <div id="portals-section" class="portals-grid" style="margin-left:24px">
         <label class="chk-row"><input type="checkbox" id="u-portal-dgii" checked> DGII</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-tss" checked> TSS</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-trabajo" checked> Min. Trabajo</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-sirla" checked> SISARIL</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-carnet"> Carnet</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-azul"> Azul</label>
       </div>
-      <p class="slabel">Módulo CAMI</p>
-      <label class="chk-row" style="padding:6px 0"><input type="checkbox" id="u-access-cami"> Análisis 606/607 e IT-1</label>
-      <p class="slabel">Módulo NALA</p>
-      <label class="chk-row" style="padding:6px 0"><input type="checkbox" id="u-access-nala"> Chat IA · Facturas 606/607</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-cami"> CAMI — Análisis 606/607 e IT-1</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-nala"> NALA — Chat IA · Facturas 606/607</label>
       <div class="ferr" id="user-err" hidden></div>
     </div>
     <div class="modal-ftr" id="modal-user-ftr">
       <button class="btn btn-ghost" onclick="document.getElementById('modal-user').hidden=true">Cancelar</button>
       <button class="btn btn-pri" onclick="saveUser()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal restablecer clave -->
+<div id="modal-reset-pw" class="modal-bg" hidden>
+  <div class="modal" style="max-width:360px">
+    <div class="modal-hdr">
+      <span class="modal-ttl">Restablecer clave</span>
+      <button class="icon-btn" onclick="document.getElementById('modal-reset-pw').hidden=true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="reset-pw-user-id">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Usuario: <strong id="reset-pw-username" style="color:var(--text)"></strong></p>
+      <div class="field"><label>Nueva contraseña</label><input id="reset-pw-new" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+      <div class="ferr" id="reset-pw-err" hidden></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-reset-pw').hidden=true">Cancelar</button>
+      <button class="btn btn-pri" onclick="saveResetPw()">Restablecer</button>
     </div>
   </div>
 </div>
@@ -452,6 +478,8 @@ const INST = {
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',     uf:'usuario', pf:'contrasena' },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',      uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL', uf:'usuario', pf:'contrasena' },
+  carnet:  { name:'Carnet',      desc:'Portal de Cédula y Carnet de Identidad',     grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',      uf:'usuario', pf:'contrasena' },
+  azul:    { name:'Azul',        desc:'Portal Azul',                                grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',      uf:'usuario', pf:'contrasena' },
   cami:    { name:'CAMI',        desc:'Análisis 606/607 e IT-1',                    grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Chat IA · Facturas 606/607',                 grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
 };
@@ -669,7 +697,7 @@ async function renderUsersList() {
       if (user.access_nala) modules.push('NALA');
       const uname=(user.username||user.email||'?').replace('@direct.local','');
       const initials=uname.charAt(0).toUpperCase();
-      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
@@ -682,6 +710,9 @@ async function renderUsersList() {
           </div>
         </div>
         <div style="display:flex;gap:6px">
+          <button class="icon-btn" title="Restablecer clave" onclick="openResetPwModal('${user.id}','${uname}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
           <button class="icon-btn" title="Editar" onclick='openUserModal(${userData})'>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -695,6 +726,10 @@ async function renderUsersList() {
   } catch(e){ list.innerHTML=`<p style="color:var(--danger);font-size:13px;padding:12px">Error: ${e.message}</p>`; }
 }
 
+function toggleDirectPortals(on) {
+  document.getElementById('portals-section').style.display = on ? '' : 'none';
+}
+
 function openUserModal(userData=null) {
   const isEdit = userData && userData.id;
   document.getElementById('modal-user-id').value = isEdit ? userData.id : '';
@@ -703,8 +738,11 @@ function openUserModal(userData=null) {
   document.getElementById('u-pw').value = '';
   document.getElementById('u-pw-label').textContent = isEdit ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña';
   document.getElementById('u-role').value = userData?.role || 'user';
+  const directOn = userData ? (userData.access_direct !== false) : true;
+  document.getElementById('u-access-direct').checked = directOn;
+  toggleDirectPortals(directOn);
   const portals = userData?.portals_direct || ['dgii','tss','trabajo','sirla'];
-  ['dgii','tss','trabajo','sirla'].forEach(p => { document.getElementById('u-portal-'+p).checked = portals.includes(p); });
+  ['dgii','tss','trabajo','sirla','carnet','azul'].forEach(p => { document.getElementById('u-portal-'+p).checked = portals.includes(p); });
   document.getElementById('u-access-cami').checked = userData?.access_cami || false;
   document.getElementById('u-access-nala').checked = userData?.access_nala || false;
   document.getElementById('user-err').hidden=true;
@@ -717,7 +755,8 @@ async function saveUser() {
   const email = username + '@direct.local';
   const password=document.getElementById('u-pw').value;
   const role=document.getElementById('u-role').value;
-  const portals_direct=['dgii','tss','trabajo','sirla'].filter(p=>document.getElementById('u-portal-'+p).checked);
+  const access_direct=document.getElementById('u-access-direct').checked;
+  const portals_direct=access_direct?['dgii','tss','trabajo','sirla','carnet','azul'].filter(p=>document.getElementById('u-portal-'+p).checked):[];
   const access_cami=document.getElementById('u-access-cami').checked;
   const access_nala=document.getElementById('u-access-nala').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
@@ -732,7 +771,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={username, role, portals_direct, access_cami, access_nala};
+    const body={username, role, access_direct, portals_direct, access_cami, access_nala};
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
     else await A.post('/api/users',body);
@@ -746,6 +785,34 @@ async function deleteUser(userId) {
   if (!confirm('¿Eliminar este usuario?')) return;
   try { await A.del(`/api/users/${userId}`); await renderUsersList(); toast('Usuario eliminado','ok'); }
   catch(e){ toast('Error: '+e.message,'err'); }
+}
+
+function openResetPwModal(userId, username) {
+  document.getElementById('reset-pw-user-id').value = userId;
+  document.getElementById('reset-pw-username').textContent = username;
+  document.getElementById('reset-pw-new').value = '';
+  document.getElementById('reset-pw-err').hidden = true;
+  document.getElementById('modal-reset-pw').hidden = false;
+  document.getElementById('reset-pw-new').focus();
+}
+
+async function saveResetPw() {
+  const userId = document.getElementById('reset-pw-user-id').value;
+  const password = document.getElementById('reset-pw-new').value;
+  const err = document.getElementById('reset-pw-err'); err.hidden = true;
+  if (password.length < 6) { err.textContent = 'Mínimo 6 caracteres'; err.hidden = false; return; }
+  try {
+    let userSalt = null, vaultKeyIv = null, vaultKeyCt = null;
+    if (vaultSecret) {
+      userSalt = C.randB64(16);
+      const newUserKey = await C.deriveKey(password, userSalt);
+      const enc = await C.encBytes(newUserKey, vaultSecret);
+      vaultKeyIv = enc.iv; vaultKeyCt = enc.ct;
+    }
+    await A.put(`/api/users/${userId}`, { password, userSalt, vaultKeyIv, vaultKeyCt });
+    document.getElementById('modal-reset-pw').hidden = true;
+    toast('Clave restablecida', 'ok');
+  } catch(e) { err.textContent = 'Error: ' + e.message; err.hidden = false; }
 }
 
 function openCami() {
