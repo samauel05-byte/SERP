@@ -1037,8 +1037,36 @@ async function enterCompany(credId) {
   // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
-  // Open portal if URL configured
-  if (loginUrl) window.open(loginUrl,'_blank');
+  // Auto-login: submit form POST with credentials to the portal
+  if (loginUrl) {
+    const userField = appConfig[cred.institution+'_userField'] || inst.uf || 'usuario';
+    const passField = appConfig[cred.institution+'_passField'] || inst.pf || 'contrasena';
+    autoLoginForm(loginUrl, userField, passField, _chUser, _chPass, cred.institution==='tss' ? _chCedula : null, appConfig['tss_extraFields']);
+  }
+}
+
+function autoLoginForm(url, userField, passField, user, pass, cedula, tssExtraField) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  form.target = '_blank';
+  form.style.cssText = 'display:none;position:absolute';
+
+  const add = (name, value) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = name;
+    inp.value = value;
+    form.appendChild(inp);
+  };
+
+  add(userField, user);
+  add(passField, pass);
+  if (cedula) add(tssExtraField || 'cedula', cedula);
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
 }
 
 function chTogglePw() {
@@ -1056,7 +1084,13 @@ async function chCopy(which) {
   catch { toast('No se pudo copiar','warn'); }
 }
 
-function chLaunch() { if (_chUrl) window.open(_chUrl,'_blank'); }
+function chLaunch() {
+  if (!_chUrl) return;
+  const inst = INST[activePortal] || {};
+  const userField = appConfig[activePortal+'_userField'] || inst.uf || 'usuario';
+  const passField = appConfig[activePortal+'_passField'] || inst.pf || 'contrasena';
+  autoLoginForm(_chUrl, userField, passField, _chUser, _chPass, _chCedula||null, appConfig['tss_extraFields']);
+}
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
 
 /* ── Company modal ── */
