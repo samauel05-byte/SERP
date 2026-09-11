@@ -1005,12 +1005,17 @@ async function enterCompany(credId) {
   const cred=credentials.find(c=>c.id===credId);
   if (!cred) { toast('Credencial no encontrada','err'); return; }
 
+  const instKey=cred.institution;
+  const inst=INST[instKey];
+  const loginUrl=appConfig[instKey+'_loginUrl']||inst?.url||'';
+
+  // Open tab NOW — before any await — so mobile browsers don't block the popup
+  const newTab = loginUrl ? window.open('/autologin.html', '_blank') : null;
+
   let plain;
   try { plain=await C.dec(masterKey,cred.iv,cred.ct); }
-  catch { toast('Error al descifrar credenciales','err'); return; }
+  catch { toast('Error al descifrar credenciales','err'); newTab?.close(); return; }
 
-  const inst=INST[cred.institution];
-  const loginUrl=appConfig[cred.institution+'_loginUrl']||inst?.url||'';
   _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chUrl=loginUrl;
 
   // Show credential helper
@@ -1018,7 +1023,7 @@ async function enterCompany(credId) {
   document.getElementById('ch-sub').textContent=inst.name;
 
   // TSS has RNC/Cédula + Cédula + CLASS labels
-  const isTSS = cred.institution==='tss';
+  const isTSS = instKey==='tss';
   document.getElementById('ch-label-user').textContent = isTSS ? 'RNC o Cédula' : 'Usuario';
   document.getElementById('ch-user').textContent=_chUser;
 
@@ -1048,29 +1053,34 @@ async function enterCompany(credId) {
   // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
-  // Auto-login: relay fetches ViewState tokens from portal, browser submits form with credentials
-  if (loginUrl) {
-    autoLoginForm(loginUrl, cred.institution, _chUser, _chPass, _chCedula);
+  // Navigate the pre-opened tab with credentials in the hash
+  if (newTab && loginUrl) {
+    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, newTab);
   }
 }
 
-async function autoLoginForm(url, institution, user, pass, cedula) {
+function autoLoginForm(url, institution, user, pass, cedula, existingTab=null) {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
   const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || null;
   const passField = appConfig[institution+'_passField'] || aspF.pass || inst.pf || null;
+  const submitField = appConfig[institution+'_submitField'] || aspF.submit || null;
 
   // Build payload — credentials go in the URL hash (never sent to server)
   const payload = { url, user, pass };
   if (cedula) payload.cedula = cedula;
   if (userField) payload.userField = userField;
   if (passField) payload.passField = passField;
+  if (submitField) payload.submitField = submitField;
 
   const hash = btoa(encodeURIComponent(JSON.stringify(payload)));
   const autologinUrl = '/autologin.html#' + hash;
 
-  // Open our intermediate page that handles the form submit in the browser
-  window.open(autologinUrl, '_blank');
+  if (existingTab) {
+    existingTab.location.href = autologinUrl;
+  } else {
+    window.open(autologinUrl, '_blank');
+  }
 }
 
 function chTogglePw() {
