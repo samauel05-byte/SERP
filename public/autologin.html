@@ -90,6 +90,7 @@
   if (!userField) userField = 'usuario';
   if (!passField) passField = 'contrasena';
 
+  set('Enviando credenciales…', relayOk ? 'Formulario listo ✓ — redirigiendo' : 'Enviando sin ViewState…');
   // Navigate to CF Worker /submit page — it serves a page that synchronously
   // calls form.submit() to the portal, bypassing iOS Safari popup restrictions.
   // Credentials travel only in the URL fragment (never sent to the server).
