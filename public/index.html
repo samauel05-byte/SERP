@@ -1024,19 +1024,63 @@ async function renderCompaniesView() {
       </button>
     </div>`;
 
-  // list
+  // list — decrypt all, deduplicate by company name (keep newest updated_at)
   const list=document.getElementById('company-list');
   const cos=getCompanies(activePortal);
   list.innerHTML='';
+
+  // Decrypt all entries first
+  const decoded=[];
+  for (const cred of cos) {
+    let plain;
+    try { plain=await C.dec(masterKey,cred.iv,cred.ct); } catch { plain={companyName:'(error)',username:''}; }
+    decoded.push({cred, plain});
+  }
+
+  // Deduplicate: group by normalized company name, keep newest
+  const seen=new Map(); // normalizedName → {cred, plain}
+  const dupeIds=[];
+  for (const {cred, plain} of decoded) {
+    const key=(plain.companyName||'').trim().toLowerCase();
+    const existing=seen.get(key);
+    if (!existing) {
+      seen.set(key, {cred, plain});
+    } else {
+      // Keep whichever has a later updated_at; push the other to dupes
+      if ((cred.updated_at||0) > (existing.cred.updated_at||0)) {
+        dupeIds.push(existing.cred.id);
+        seen.set(key, {cred, plain});
+      } else {
+        dupeIds.push(cred.id);
+      }
+    }
+  }
+
+  const unique=[...seen.values()];
+
   // reset search
   const searchWrap=document.getElementById('company-search-wrap');
   const searchInput=document.getElementById('company-search');
   searchInput.value='';
-  searchWrap.hidden = cos.length < 6;
+  searchWrap.hidden = unique.length < 6;
 
-  for (const cred of cos) {
-    let plain;
-    try { plain=await C.dec(masterKey,cred.iv,cred.ct); } catch { plain={companyName:'(error)',username:''}; }
+  // Show "clean duplicates" button if there are any
+  let dupeBanner=document.getElementById('dupe-banner');
+  if (!dupeBanner) {
+    dupeBanner=document.createElement('div');
+    dupeBanner.id='dupe-banner';
+    dupeBanner.style.cssText='background:var(--warn,#f59e0b22);border:1px solid var(--warn,#f59e0b);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:10px;margin-bottom:8px';
+    list.parentElement.insertBefore(dupeBanner, list);
+  }
+  if (dupeIds.length > 0) {
+    dupeBanner.hidden=false;
+    dupeBanner.innerHTML=`<span style="flex:1">⚠️ Se detectaron <strong>${dupeIds.length}</strong> duplicados.</span>
+      <button class="btn btn-pri" style="font-size:12px;padding:5px 12px" onclick="cleanDupes(${JSON.stringify(dupeIds)})">Limpiar duplicados</button>`;
+  } else {
+    dupeBanner.hidden=true;
+  }
+
+  for (const {cred, plain} of unique) {
     const initial=(plain.companyName||'?').charAt(0).toUpperCase();
     const item=document.createElement('div');
     item.className='company-card';
@@ -1062,6 +1106,18 @@ function filterCompanies(q) {
   document.querySelectorAll('#company-list .company-card').forEach(el=>{
     el.hidden = term.length > 0 && !el.dataset.name.includes(term);
   });
+}
+
+async function cleanDupes(ids) {
+  if (!ids.length) return;
+  if (!confirm(`¿Eliminar ${ids.length} entradas duplicadas? Esta acción no se puede deshacer.`)) return;
+  let deleted=0;
+  for (const id of ids) {
+    try { await A.del(`/api/credentials/${id}`); credentials=credentials.filter(c=>c.id!==id); deleted++; } catch {}
+  }
+  toast(`${deleted} duplicados eliminados`,'ok');
+  await renderCompaniesView();
+  renderPortalGrid();
 }
 
 /* ── Auto-login ── */
