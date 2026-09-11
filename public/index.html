@@ -327,6 +327,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <p class="slabel">Credenciales de acceso</p>
       <div class="field"><label>Usuario / RNC / Cédula</label><input id="co-user" type="text" autocomplete="off"></div>
       <div class="field"><label>Contraseña</label><input id="co-pass" type="password" autocomplete="new-password"></div>
+      <div class="field" id="co-dgii-codes-row" hidden>
+        <label>Códigos de tarjeta DGII</label>
+        <input id="co-dgii-codes" type="text" placeholder="Cód1,Cód2,Cód3,… (separados por coma)" autocomplete="off">
+        <small style="color:var(--text3);font-size:11px;margin-top:4px;display:block">Un código por posición, en orden (posición 1 = primer código, etc.)</small>
+      </div>
     </div>
     <div class="modal-ftr" id="modal-co-ftr">
       <button class="btn btn-ghost" onclick="closeCompanyModal()">Cancelar</button>
@@ -554,6 +559,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <span class="cred-val pw" id="ch-pass"></span>
     <button class="cred-copy" onclick="chTogglePw()" id="ch-eye">Ver</button>
     <button class="cred-copy" id="ch-copy-pass" onclick="chCopy('pass')">Copiar</button>
+  </div>
+  <div id="ch-row-dgii-codes" hidden>
+    <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Tarjeta de códigos DGII</div>
+    <div class="cred-row" style="margin-bottom:0">
+      <span class="cred-label" style="width:52px;flex-shrink:0">Posición</span>
+      <input id="ch-code-pos" type="number" min="1" placeholder="#" oninput="chLookupCode()" style="width:52px;flex-shrink:0;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font-size:13px;color:var(--text);font-family:'IBM Plex Mono',monospace;text-align:center">
+      <span class="cred-val" id="ch-code-val" style="flex:1;font-family:'IBM Plex Mono',monospace;letter-spacing:2px">—</span>
+      <button class="cred-copy" id="ch-copy-code" onclick="chCopyCode()">Copiar</button>
+    </div>
   </div>
   <div class="cred-helper-actions" id="ch-actions"></div>
 </div>
@@ -1121,7 +1136,7 @@ async function cleanDupes(ids) {
 }
 
 /* ── Auto-login ── */
-let _chUser='', _chPass='', _chCedula='', _chUrl='';
+let _chUser='', _chPass='', _chCedula='', _chUrl='', _chDgiiCodes=[];
 
 // ViewState cache: keyed by portal URL, short TTL so stale values don't accumulate
 const _vsCache = {};
@@ -1161,6 +1176,7 @@ async function enterCompany(credId) {
   catch { toast('Error al descifrar credenciales','err'); newTab?.close(); return; }
 
   _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chUrl=loginUrl;
+  _chDgiiCodes = plain.dgiiCodes ? plain.dgiiCodes.split(',').map(s=>s.trim()) : [];
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
@@ -1186,6 +1202,17 @@ async function enterCompany(credId) {
   document.getElementById('ch-eye').textContent='Ver';
   document.getElementById('ch-copy-user').textContent='Copiar';
   document.getElementById('ch-copy-pass').textContent='Copiar';
+
+  // DGII card codes row
+  const codesRow = document.getElementById('ch-row-dgii-codes');
+  if (_chDgiiCodes.length) {
+    document.getElementById('ch-code-pos').value='';
+    document.getElementById('ch-code-val').textContent='—';
+    document.getElementById('ch-copy-code').textContent='Copiar';
+    codesRow.hidden=false;
+  } else {
+    codesRow.hidden=true;
+  }
   const actions=document.getElementById('ch-actions');
   if (loginUrl) {
     actions.innerHTML=`<button class="cred-btn cred-btn-launch" onclick="chLaunch()">Abrir portal →</button><button class="cred-btn cred-btn-dismiss" onclick="closeCredHelper()">Cerrar</button>`;
@@ -1264,10 +1291,43 @@ function chLaunch() {
 }
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
 
+function chLookupCode() {
+  const pos = parseInt(document.getElementById('ch-code-pos').value, 10);
+  const valEl = document.getElementById('ch-code-val');
+  const copyBtn = document.getElementById('ch-copy-code');
+  if (!pos || pos < 1 || pos > _chDgiiCodes.length) {
+    valEl.textContent = pos > _chDgiiCodes.length && _chDgiiCodes.length > 0
+      ? `— (max ${_chDgiiCodes.length})`
+      : '—';
+    copyBtn.textContent = 'Copiar';
+    copyBtn.classList.remove('copied');
+    return;
+  }
+  valEl.textContent = _chDgiiCodes[pos - 1] || '—';
+  copyBtn.textContent = 'Copiar';
+  copyBtn.classList.remove('copied');
+}
+
+async function chCopyCode() {
+  const pos = parseInt(document.getElementById('ch-code-pos').value, 10);
+  if (!pos || pos < 1 || pos > _chDgiiCodes.length) { toast('Ingresa un número de posición válido','warn'); return; }
+  const code = _chDgiiCodes[pos - 1];
+  if (!code) { toast('Posición sin código','warn'); return; }
+  const btn = document.getElementById('ch-copy-code');
+  try {
+    await navigator.clipboard.writeText(code);
+    btn.textContent = '✓'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1800);
+  } catch { toast('No se pudo copiar','warn'); }
+}
+
 /* ── Company modal ── */
 async function openCompanyModal(credId) {
   document.getElementById('modal-co-id').value = credId||'';
   const ftr=document.getElementById('modal-co-ftr');
+  const codesRow=document.getElementById('co-dgii-codes-row');
+  const isDGII = activePortal==='dgii';
+  codesRow.hidden = !isDGII;
 
   if (credId) {
     document.getElementById('modal-co-title').textContent='Editar empresa';
@@ -1278,10 +1338,12 @@ async function openCompanyModal(credId) {
         document.getElementById('co-name').value=plain.companyName||'';
         document.getElementById('co-user').value=plain.username||'';
         document.getElementById('co-pass').value=plain.password||'';
+        if (isDGII) document.getElementById('co-dgii-codes').value=plain.dgiiCodes||'';
       } catch {
         document.getElementById('co-name').value='';
         document.getElementById('co-user').value='';
         document.getElementById('co-pass').value='';
+        if (isDGII) document.getElementById('co-dgii-codes').value='';
       }
     }
     ftr.innerHTML=`
@@ -1293,6 +1355,7 @@ async function openCompanyModal(credId) {
     document.getElementById('co-name').value='';
     document.getElementById('co-user').value='';
     document.getElementById('co-pass').value='';
+    if (isDGII) document.getElementById('co-dgii-codes').value='';
     ftr.innerHTML=`
       <button class="btn btn-ghost" onclick="closeCompanyModal()">Cancelar</button>
       <button class="btn btn-pri" onclick="saveCompany()">Guardar</button>`;
@@ -1309,9 +1372,15 @@ async function saveCompany() {
   const password=document.getElementById('co-pass').value;
   if (!companyName) { toast('Escribe el nombre de la empresa','warn'); return; }
 
+  const payload={companyName,username,password};
+  if (activePortal==='dgii') {
+    const codes=document.getElementById('co-dgii-codes').value.trim();
+    if (codes) payload.dgiiCodes=codes;
+  }
+
   const id = credId || (activePortal+'_'+Date.now());
   try {
-    const {iv,ct}=await C.enc(masterKey,{companyName,username,password});
+    const {iv,ct}=await C.enc(masterKey,payload);
     await A.put(`/api/credentials/${id}`,{institution:activePortal,category:'acceso',iv,ct});
     const idx=credentials.findIndex(c=>c.id===id);
     const entry={id,institution:activePortal,category:'acceso',iv,ct,updated_at:Date.now()};
