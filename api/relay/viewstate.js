@@ -76,6 +76,14 @@ export default async function handler(req, res) {
       if (nm) { passField = nm[1]; break; } // first password input = password
     }
 
+    // Auto-detect submit button
+    let submitField = null;
+    const submitRe = /<input[^>]+type=["']?submit["']?[^>]*>/gi;
+    while ((match = submitRe.exec(html)) !== null) {
+      const nm = nameRe.exec(match[0]);
+      if (nm) { submitField = nm[1]; break; }
+    }
+
     // Extract form action and resolve to absolute URL
     const formActionMatch = /<form[^>]+action=["']([^"']+)["']/i.exec(html);
     const formAction = formActionMatch ? formActionMatch[1] : null;
@@ -84,7 +92,7 @@ export default async function handler(req, res) {
       try { resolvedAction = new URL(formAction, url).toString(); } catch { resolvedAction = url; }
     }
 
-    return res.json({ hiddenFields, formAction: resolvedAction, userField, passField });
+    return res.json({ hiddenFields, formAction: resolvedAction, userField, passField, submitField });
   } catch (e) {
     return res.status(502).json({ error: `No se pudo conectar al portal: ${e.message}` });
   }

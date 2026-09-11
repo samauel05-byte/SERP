@@ -44,7 +44,7 @@
   try { params = JSON.parse(decodeURIComponent(atob(hash))); }
   catch { set('Error', 'Datos de acceso inválidos.', 'err'); return; }
 
-  const { url, user, pass, cedula, userField: configuredUserField, passField: configuredPassField } = params;
+  const { url, user, pass, cedula, userField: configuredUserField, passField: configuredPassField, submitField: configuredSubmitField } = params;
   if (!url || !user || !pass) { set('Error', 'Faltan datos de acceso.', 'err'); return; }
 
   set('Cargando portal…', url);
@@ -54,6 +54,7 @@
   let formAction = url;
   let userField = configuredUserField || null;
   let passField = configuredPassField || null;
+  let submitField = configuredSubmitField || null;
 
   // Try Cloudflare Worker first (edge node near DR, bypasses IP blocks)
   const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
@@ -66,6 +67,7 @@
     return r.json();
   };
 
+  let relayOk = false;
   try {
     let d;
     try { d = await tryRelay(CF_RELAY); }
@@ -74,13 +76,18 @@
     if (d.formAction) formAction = d.formAction;
     if (!userField && d.userField) userField = d.userField;
     if (!passField && d.passField) passField = d.passField;
+    if (!submitField && d.submitField) submitField = d.submitField;
+    relayOk = hiddenFields.length > 0;
   } catch { /* proceed without relay */ }
 
   // Fallback field names
   if (!userField) userField = 'usuario';
   if (!passField) passField = 'contrasena';
 
-  set('Enviando credenciales…', 'Redirigiendo al portal');
+  set('Enviando credenciales…', relayOk ? 'Formulario listo ✓ — redirigiendo' : 'Enviando sin ViewState…');
+
+  // Short pause so status is visible
+  await new Promise(r => setTimeout(r, 600));
 
   // Build and submit the form from this page (same as portal expects)
   const form = document.createElement('form');
@@ -97,10 +104,11 @@
   hiddenFields.forEach(f => add(f.name, f.value));
   add(userField, user);
   add(passField, pass);
+  if (submitField) add(submitField, 'Entrar');
   if (cedula) {
     // TSS third field
     add('ctl00$MainContent$txtrepresentante', cedula);
-    add('ctl00$MainContent$btLoginRep', 'Entrar');
+    if (!submitField) add('ctl00$MainContent$btLoginRep', 'Entrar');
   }
 
   document.body.appendChild(form);
