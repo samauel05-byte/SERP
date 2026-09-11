@@ -473,6 +473,15 @@ const TIPO_RENTA_MAP = {
   '10':'10 - RENDIMIENTOS DEPÓSITOS A PLAZO',
   '11':'11 - RETENCIONES ITBIS AL GOBIERNO',
 };
+const FORMA_PAGO_MAP = {
+  '01':'01 - EFECTIVO',
+  '02':'02 - CHEQUES/TRANSFERENCIAS/DEPÓSITOS',
+  '03':'03 - TARJETA DE CRÉDITO/DÉBITO',
+  '04':'04 - COMPRA A CRÉDITO',
+  '05':'05 - PERMUTA',
+  '06':'06 - NOTA DE CRÉDITO',
+  '07':'07 - MIXTO',
+};
 
 async function downloadXlsx(tipo, rows, periodo) {
   const cols = tipo === 'IR17' ? COLS_IR17 : (tipo === '607' ? COLS_607 : COLS_606);
@@ -486,9 +495,11 @@ async function downloadXlsx(tipo, rows, periodo) {
   const TIPO_KEY = tipo === 'IR17' ? 'tipoRenta' : (tipo === '607' ? 'tipoIngreso' : 'tipoBienesServicios');
   const TIPO_MAP = tipo === 'IR17' ? TIPO_RENTA_MAP : (tipo === '607' ? TIPO_INGRESO_MAP : TIPO_BIENES_MAP);
   const TIPO_OPTS = Object.values(TIPO_MAP);
+  const FORMA_PAGO_OPTS = tipo === '606' ? Object.values(FORMA_PAGO_MAP) : [];
   const wsListas = wb.addWorksheet('Listas');
   wsListas.state = 'veryHidden';
   TIPO_OPTS.forEach((opt, i) => { wsListas.getCell(`A${i + 1}`).value = opt; });
+  FORMA_PAGO_OPTS.forEach((opt, i) => { wsListas.getCell(`B${i + 1}`).value = opt; });
 
   // Column definitions
   ws.columns = cols.map(([key, label]) => ({
@@ -513,6 +524,8 @@ async function downloadXlsx(tipo, rows, periodo) {
       const v = row[key];
       if (key === TIPO_KEY && v) {
         vals[key] = TIPO_MAP[String(v).trim()] || v;
+      } else if (tipo === '606' && key === 'formaPago' && v) {
+        vals[key] = FORMA_PAGO_MAP[String(v).trim()] || v;
       } else {
         vals[key] = (typeof v === 'number' && v === 0) ? null : (v ?? '');
       }
@@ -578,6 +591,25 @@ async function downloadXlsx(tipo, rows, periodo) {
       showErrorMessage: false,
     });
     ws.getColumn(tipoColIdx2 + 1).width = 46;
+  }
+
+  // Dropdown validation for Forma de Pago (606 only)
+  if (tipo === '606' && FORMA_PAGO_OPTS.length) {
+    const fpColIdx = cols.findIndex(([k]) => k === 'formaPago');
+    if (fpColIdx >= 0) {
+      const fpLetter = ws.getColumn(fpColIdx + 1).letter;
+      const lastValidRow = Math.max(rows.length + 2, 52);
+      ws.dataValidations.add(`${fpLetter}2:${fpLetter}${lastValidRow}`, {
+        type: 'list',
+        allowBlank: true,
+        formulae: [`Listas!$B$1:$B$${FORMA_PAGO_OPTS.length}`],
+        showInputMessage: true,
+        promptTitle: 'Forma de Pago',
+        prompt: 'Selecciona la forma de pago.',
+        showErrorMessage: false,
+      });
+      ws.getColumn(fpColIdx + 1).width = 34;
+    }
   }
 
   const buf = await wb.xlsx.writeBuffer();
