@@ -528,12 +528,21 @@ const LOGOS = {
 };
 
 const INST = {
-  dgii:    { name:'DGII',        desc:'Dirección General de Impuestos Internos',    grad:'linear-gradient(135deg,#004e89 0%,#2563eb 100%)', abbr:'DGII',    uf:'usuario', pf:'contrasena' },
-  tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',     uf:'usuario', pf:'contrasena' },
-  trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',      uf:'usuario', pf:'contrasena' },
-  sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL', uf:'usuario', pf:'contrasena' },
-  carnet:  { name:'Cardnet',     desc:'Red de pagos con tarjetas · POS y comercios',     grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',      uf:'usuario', pf:'contrasena' },
-  azul:    { name:'Azul',        desc:'Portal Azul',                                grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',      uf:'usuario', pf:'contrasena' },
+  // uf/pf = fallback field names; aspFields = real ASP.NET WebForms control IDs
+  dgii:    { name:'DGII',        desc:'Dirección General de Impuestos Internos',    grad:'linear-gradient(135deg,#004e89 0%,#2563eb 100%)', abbr:'DGII',
+             uf:'ctl00$cphMain$txtUsuario', pf:'ctl00$cphMain$txtClave',
+             aspFields:{ user:'ctl00$cphMain$txtUsuario', pass:'ctl00$cphMain$txtClave', submit:'ctl00$cphMain$btnEntrar' } },
+  tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',
+             uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
+             aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' } },
+  trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
+             uf:'usuario', pf:'contrasena' },
+  sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
+             uf:'usuario', pf:'contrasena' },
+  carnet:  { name:'Cardnet',     desc:'Red de pagos con tarjetas · POS y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
+             uf:'usuario', pf:'contrasena' },
+  azul:    { name:'Azul',        desc:'Portal Azul',                                grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',
+             uf:'usuario', pf:'contrasena' },
   cami:    { name:'CAMI',        desc:'Análisis 606/607 e IT-1',                    grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Chat IA · Facturas 606/607',                 grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
 };
@@ -1037,18 +1046,35 @@ async function enterCompany(credId) {
   // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
-  // Auto-login: submit form POST with credentials to the portal
+  // Auto-login: relay fetches ViewState tokens from portal, browser submits form with credentials
   if (loginUrl) {
-    const userField = appConfig[cred.institution+'_userField'] || inst.uf || 'usuario';
-    const passField = appConfig[cred.institution+'_passField'] || inst.pf || 'contrasena';
-    autoLoginForm(loginUrl, userField, passField, _chUser, _chPass, cred.institution==='tss' ? _chCedula : null, appConfig['tss_extraFields']);
+    autoLoginForm(loginUrl, cred.institution, _chUser, _chPass, _chCedula);
   }
 }
 
-function autoLoginForm(url, userField, passField, user, pass, cedula, tssExtraField) {
+async function autoLoginForm(url, institution, user, pass, cedula) {
+  const inst = INST[institution] || {};
+  const aspF = inst.aspFields || {};
+  const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || 'usuario';
+  const passField = appConfig[institution+'_passField'] || aspF.pass || inst.pf || 'contrasena';
+  const cedulaField = aspF.cedula || null;
+  const submitField = aspF.submit || null;
+
+  // Fetch ViewState tokens from relay (server fetches public login page — no credentials involved)
+  let hiddenFields = [];
+  let formAction = url;
+  try {
+    const r = await fetch('/api/relay/viewstate?url=' + encodeURIComponent(url));
+    if (r.ok) {
+      const data = await r.json();
+      hiddenFields = data.hiddenFields || [];
+      formAction = data.formAction || url;
+    }
+  } catch { /* proceed without ViewState — portal may not need it */ }
+
   const form = document.createElement('form');
   form.method = 'POST';
-  form.action = url;
+  form.action = formAction;
   form.target = '_blank';
   form.style.cssText = 'display:none;position:absolute';
 
@@ -1060,9 +1086,14 @@ function autoLoginForm(url, userField, passField, user, pass, cedula, tssExtraFi
     form.appendChild(inp);
   };
 
+  // Add all hidden ASP.NET tokens (ViewState, EventValidation, etc.)
+  hiddenFields.forEach(f => add(f.name, f.value));
+
+  // Add credentials (these never go to the server — only submitted directly to the portal)
   add(userField, user);
   add(passField, pass);
-  if (cedula) add(tssExtraField || 'cedula', cedula);
+  if (cedula && cedulaField) add(cedulaField, cedula);
+  if (submitField) add(submitField, 'Entrar');
 
   document.body.appendChild(form);
   form.submit();
@@ -1086,10 +1117,7 @@ async function chCopy(which) {
 
 function chLaunch() {
   if (!_chUrl) return;
-  const inst = INST[activePortal] || {};
-  const userField = appConfig[activePortal+'_userField'] || inst.uf || 'usuario';
-  const passField = appConfig[activePortal+'_passField'] || inst.pf || 'contrasena';
-  autoLoginForm(_chUrl, userField, passField, _chUser, _chPass, _chCedula||null, appConfig['tss_extraFields']);
+  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'');
 }
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
 
