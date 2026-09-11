@@ -292,6 +292,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       Volver a portales
     </button>
     <div id="portal-banner"></div>
+    <div id="company-search-wrap" hidden style="margin-bottom:8px">
+      <input id="company-search" type="search" placeholder="Buscar empresa…" autocomplete="off"
+        style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;outline:none"
+        oninput="filterCompanies(this.value)">
+    </div>
     <div class="company-list" id="company-list"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="add-company-btn" id="add-company-btn" onclick="openCompanyModal(null)">
@@ -1023,6 +1028,11 @@ async function renderCompaniesView() {
   const list=document.getElementById('company-list');
   const cos=getCompanies(activePortal);
   list.innerHTML='';
+  // reset search
+  const searchWrap=document.getElementById('company-search-wrap');
+  const searchInput=document.getElementById('company-search');
+  searchInput.value='';
+  searchWrap.hidden = cos.length < 6;
 
   for (const cred of cos) {
     let plain;
@@ -1030,6 +1040,7 @@ async function renderCompaniesView() {
     const initial=(plain.companyName||'?').charAt(0).toUpperCase();
     const item=document.createElement('div');
     item.className='company-card';
+    item.dataset.name=(plain.companyName||'').toLowerCase();
     item.innerHTML=`
       <div class="company-initial">${initial}</div>
       <div class="company-info">
@@ -1044,6 +1055,13 @@ async function renderCompaniesView() {
       </div>`;
     list.appendChild(item);
   }
+}
+
+function filterCompanies(q) {
+  const term=q.toLowerCase().trim();
+  document.querySelectorAll('#company-list .company-card').forEach(el=>{
+    el.hidden = term.length > 0 && !el.dataset.name.includes(term);
+  });
 }
 
 /* ── Auto-login ── */
