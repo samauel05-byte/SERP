@@ -504,7 +504,17 @@ async function extractPdfText(file) {
   return text.trim() || `PDF: ${file.name}`;
 }
 
-// Expand a multi-page PDF into per-page text entries (one invoice per page).
+// Render one PDF page to a base64 JPEG (for scanned/image-based pages).
+async function renderPdfPageToImage(page) {
+  const viewport = page.getViewport({ scale: 1.5 });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  return canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+}
+
+// Expand a multi-page PDF into per-page tasks (handles text and scanned PDFs).
 async function expandPdfToPages(file) {
   if (typeof pdfjsLib === 'undefined') return null;
   const buf = await file.arrayBuffer();
@@ -515,7 +525,15 @@ async function expandPdfToPages(file) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     const text = content.items.map(s => s.str).join(' ').trim();
-    if (text) pages.push({ name: `${file.name} (pág. ${i}/${pdf.numPages})`, pdfText: text });
+    const label = `${file.name} (pág. ${i}/${pdf.numPages})`;
+    if (text.length >= 30) {
+      // Text-based page → send as text (cheaper)
+      pages.push({ kind: 'pdf', name: label, pdfText: text });
+    } else {
+      // Scanned / image-based page → render as JPEG and send to vision model
+      const b64 = await renderPdfPageToImage(page);
+      pages.push({ kind: 'img', name: label, base64: b64, mimeType: 'image/jpeg' });
+    }
   }
   return pages.length ? pages : null;
 }
@@ -556,12 +574,19 @@ async function processFiles(files, modeOverride) {
     try {
       let payload = { mode: efectMode };
       if (item.pdfText) {
+        // Pre-extracted text (text-based PDF page)
         payload.pdfText = item.pdfText;
+      } else if (item.base64) {
+        // Pre-rendered image (scanned PDF page)
+        payload.base64 = item.base64;
+        payload.mimeType = item.mimeType || 'image/jpeg';
       } else if (item.kind === 'img') {
+        // User-uploaded image file
         const b64 = await fileToBase64(item.file);
         payload.base64 = b64.split(',')[1];
         payload.mimeType = item.file.type;
       } else {
+        // Single-page PDF — extract text
         payload.pdfText = await extractPdfText(item.file);
       }
 
