@@ -192,8 +192,9 @@ export default {
     if(cfg && cfg.extra && p.cedula){
       fill(document.querySelector('[name="'+cfg.extra+'"]'), p.cedula);
     }
-    // Do NOT auto-submit — user reviews filled fields and presses Enter themselves
-    // to avoid accidental lockouts on portals with failed-attempt limits (e.g. DGII)
+    var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
+    if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
+    if(btn) setTimeout(function(){ btn.click(); }, 800);
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run);
