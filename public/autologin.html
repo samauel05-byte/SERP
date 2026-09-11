@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accediendo…</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  @media (prefers-color-scheme: dark) { body { background: #0f172a; color: #e2e8f0; } }
+  .card { background: white; border-radius: 16px; padding: 40px 32px; box-shadow: 0 4px 24px rgba(0,0,0,.1); text-align: center; max-width: 340px; width: 90%; }
+  @media (prefers-color-scheme: dark) { .card { background: #1e293b; } }
+  .spinner { width: 48px; height: 48px; border: 4px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h2 { margin: 0 0 8px; font-size: 18px; }
+  p  { margin: 0; font-size: 14px; color: #64748b; }
+  .err { color: #ef4444; }
+  .ok  { color: #10b981; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="spinner" id="sp"></div>
+  <h2 id="msg">Iniciando sesión…</h2>
+  <p  id="sub">Conectando con el portal</p>
+</div>
+
+<script>
+(async () => {
+  const set = (msg, sub, err) => {
+    document.getElementById('msg').textContent = msg;
+    document.getElementById('sub').textContent = sub;
+    if (err) {
+      document.getElementById('sp').style.display = 'none';
+      document.getElementById('msg').className = err === 'ok' ? 'ok' : 'err';
+    }
+  };
+
+  // Credentials come from the URL hash — never sent to the server
+  const hash = location.hash.slice(1);
+  if (!hash) { set('Error', 'No se recibieron datos de acceso.', 'err'); return; }
+
+  let params;
+  try { params = JSON.parse(decodeURIComponent(atob(hash))); }
+  catch { set('Error', 'Datos de acceso inválidos.', 'err'); return; }
+
+  const { url, user, pass, cedula, userField: configuredUserField, passField: configuredPassField } = params;
+  if (!url || !user || !pass) { set('Error', 'Faltan datos de acceso.', 'err'); return; }
+
+  set('Cargando portal…', url);
+
+  // Fetch the portal's login page via our relay (same-origin, avoids CORS)
+  let hiddenFields = [];
+  let formAction = url;
+  let userField = configuredUserField || null;
+  let passField = configuredPassField || null;
+
+  try {
+    const r = await fetch('/api/relay/viewstate?url=' + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
+    if (r.ok) {
+      const d = await r.json();
+      hiddenFields = d.hiddenFields || [];
+      if (d.formAction) formAction = d.formAction;
+      if (!userField && d.userField) userField = d.userField;
+      if (!passField && d.passField) passField = d.passField;
+    }
+  } catch { /* proceed without relay */ }
+
+  // Fallback field names
+  if (!userField) userField = 'usuario';
+  if (!passField) passField = 'contrasena';
+
+  set('Enviando credenciales…', 'Redirigiendo al portal');
+
+  // Build and submit the form from this page (same as portal expects)
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = formAction;
+  form.style.display = 'none';
+
+  const add = (n, v) => {
+    const i = document.createElement('input');
+    i.type = 'hidden'; i.name = n; i.value = v;
+    form.appendChild(i);
+  };
+
+  hiddenFields.forEach(f => add(f.name, f.value));
+  add(userField, user);
+  add(passField, pass);
+  if (cedula) {
+    // TSS third field
+    add('ctl00$MainContent$txtrepresentante', cedula);
+    add('ctl00$MainContent$btLoginRep', 'Entrar');
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+})();
+</script>
+</body>
+</html>

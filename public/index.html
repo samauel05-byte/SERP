@@ -1055,55 +1055,20 @@ async function enterCompany(credId) {
 async function autoLoginForm(url, institution, user, pass, cedula) {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
+  const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || null;
+  const passField = appConfig[institution+'_passField'] || aspF.pass || inst.pf || null;
 
-  // Fetch ViewState tokens AND auto-detect field names from the public login page
-  let hiddenFields = [];
-  let formAction = url;
-  let detectedUserField = null;
-  let detectedPassField = null;
-  try {
-    const r = await fetch('/api/relay/viewstate?url=' + encodeURIComponent(url));
-    if (r.ok) {
-      const data = await r.json();
-      hiddenFields = data.hiddenFields || [];
-      formAction = data.formAction || url;
-      detectedUserField = data.userField || null;
-      detectedPassField = data.passField || null;
-    }
-  } catch { /* proceed without relay — portal may not need ViewState */ }
+  // Build payload — credentials go in the URL hash (never sent to server)
+  const payload = { url, user, pass };
+  if (cedula) payload.cedula = cedula;
+  if (userField) payload.userField = userField;
+  if (passField) payload.passField = passField;
 
-  // Field name priority: admin config > relay auto-detect > hardcoded ASP.NET IDs > generic fallback
-  const userField = appConfig[institution+'_userField'] || detectedUserField || aspF.user || inst.uf || 'usuario';
-  const passField = appConfig[institution+'_passField'] || detectedPassField || aspF.pass || inst.pf || 'contrasena';
-  const cedulaField = aspF.cedula || null;
-  const submitField = aspF.submit || null;
+  const hash = btoa(encodeURIComponent(JSON.stringify(payload)));
+  const autologinUrl = '/autologin.html#' + hash;
 
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = formAction;
-  form.target = '_blank';
-  form.style.cssText = 'display:none;position:absolute';
-
-  const add = (name, value) => {
-    const inp = document.createElement('input');
-    inp.type = 'hidden';
-    inp.name = name;
-    inp.value = value;
-    form.appendChild(inp);
-  };
-
-  // Add all hidden ASP.NET tokens (ViewState, EventValidation, etc.)
-  hiddenFields.forEach(f => add(f.name, f.value));
-
-  // Add credentials — only submitted directly to the portal, never to our server
-  add(userField, user);
-  add(passField, pass);
-  if (cedula && cedulaField) add(cedulaField, cedula);
-  if (submitField) add(submitField, 'Entrar');
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
+  // Open our intermediate page that handles the form submit in the browser
+  window.open(autologinUrl, '_blank');
 }
 
 function chTogglePw() {
