@@ -251,7 +251,7 @@
 </div>
 
 <script src="/cami/vendor/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 // ── PDF.js ──────────────────────────────────────────────────────────────────
 if (typeof pdfjsLib !== 'undefined') {
@@ -265,6 +265,7 @@ let chatHistory = [];   // [{role, content}]
 let busy = false;
 let results606 = [];    // accumulated 606 records
 let results607 = [];    // accumulated 607 records
+let resultsIR17 = [];   // accumulated IR-17 records
 
 // ── Mode selection ──────────────────────────────────────────────────────────
 function toggleMode(m) {
@@ -360,7 +361,7 @@ function showWelcome() {
 // ── Excel / TXT generation ───────────────────────────────────────────────────
 const COLS_606 = [
   ['lineas','Líneas'], ['proveedor','Proveedor'], ['rncCedula','RNC o Cédula'],
-  ['tipoBienesServicios','Tipo Bienes y Servicios Comprados'], ['ncf','NCF'],
+  ['tipoId','Tipo Id'], ['tipoBienesServicios','Tipo Bienes y Servicios Comprados'], ['ncf','NCF'],
   ['ncfModificado','NCF ó Documento Modificado'], ['fechaComprobante','Fecha Comprobante'],
   ['diaComprobante','Dia Comprobante'], ['fechaPago','Fecha Pago'], ['diaPago','Dia Pago'],
   ['montoFacturadoServicios','Monto Facturado en Servicios'],
@@ -375,9 +376,17 @@ const COLS_606 = [
   ['montoPropinaLegal','Monto Propina Legal'], ['formaPago','Forma de Pago'], ['estatus','Estatus'],
 ];
 
+const COLS_IR17 = [
+  ['lineas','No'], ['retenido','Nombre / Razón Social'], ['rncCedula','RNC o Cédula'],
+  ['tipoId','Tipo Id'], ['tipoRenta','Tipo de Renta'],
+  ['montoRenta','Monto Renta Pagada / Acreditada'],
+  ['isrRetenido','ISR Retenido'], ['itbisRetenido','ITBIS Retenido'],
+  ['fechaPago','Período de Pago'], ['diaPago','Día de Pago'], ['estatus','Estatus'],
+];
+
 const COLS_607 = [
   ['lineas','No'], ['cliente','Cliente'], ['rncCedulaPasaporte','RNC/Cédula o Pasaporte'],
-  ['ncf','Número Comprobante Fiscal'], ['ncfModificado','Número Comprobante Fiscal Modificado'],
+  ['tipoId','Tipo Id'], ['ncf','Número Comprobante Fiscal'], ['ncfModificado','Número Comprobante Fiscal Modificado'],
   ['tipoIngreso','Tipo de Ingreso'], ['fechaComprobante','Fecha Comprobante'],
   ['diaComprobante','Dia Comprobante'], ['fechaRetencion','Fecha de Retención'],
   ['diaRetencion','Dia de Retención'], ['montoFacturado','Monto Facturado'],
@@ -391,34 +400,130 @@ const COLS_607 = [
   ['permuta','Permuta'], ['otrasFormasVentas','Otras Formas de Ventas'], ['estatus','Estatus'],
 ];
 
-// Keys to exclude from TXT
-const TXT_SKIP = new Set(['lineas','estatus','proveedor','cliente']);
+// Keys to exclude from TXT (names/labels and row-number/status)
+const TXT_SKIP = new Set(['lineas','estatus','proveedor','cliente','retenido','moneda']);
 
 function n(v) { return typeof v === 'number' ? v : (parseFloat(v) || 0); }
 function fmt(v) { return typeof v === 'number' && v === 0 ? '' : (v ?? ''); }
 
-function downloadXlsx(tipo, rows, periodo) {
-  const cols = tipo === '607' ? COLS_607 : COLS_606;
-  const headers = cols.map(c => c[1]);
-  const data = [headers];
+// Ensure single-digit codes get a leading zero (e.g. 1 → "01")
+function pad2(v) {
+  if (v === null || v === undefined || v === '') return v ?? '';
+  const s = String(v).trim();
+  return /^\d$/.test(s) ? '0' + s : s;
+}
+
+function normalizeRow(row, tipo) {
+  if (!row) return row;
+  if (tipo === '606') {
+    row.tipoBienesServicios = pad2(row.tipoBienesServicios);
+    row.formaPago = pad2(row.formaPago);
+    row.tipoId = pad2(row.tipoId);
+    row.tipoRetencionIsr = row.tipoRetencionIsr ? pad2(row.tipoRetencionIsr) : '00';
+  } else if (tipo === '607') {
+    row.tipoIngreso = pad2(row.tipoIngreso);
+    row.tipoId = pad2(row.tipoId);
+  } else if (tipo === 'IR17') {
+    row.tipoRenta = pad2(row.tipoRenta);
+    row.tipoId = pad2(row.tipoId);
+  }
+  return row;
+}
+
+const MONEY_KEYS_606 = new Set(['montoFacturadoServicios','montoFacturadoBienes','totalMontoFacturado',
+  'itbisFacturado','itbisRetenido','itbisProporcionalidad','itbisLlevadoCosto','itbisPorAdelantar',
+  'itbisPercibidoCompras','montoRetencionRenta','isrPercibidoCompras','isc','otrosImpuestos','montoPropinaLegal']);
+const MONEY_KEYS_607 = new Set(['montoFacturado','itbisFacturado','itbisRetenidoTerceros','itbisPercibido',
+  'retencionRentaTerceros','isrPercibido','isc','otrosImpuestos','montoPropinaLegal',
+  'efectivo','chequeTransferenciaDeposito','tarjetaDebitoCredito','ventaCredito',
+  'bonosCertificadosRegalo','permuta','otrasFormasVentas']);
+const MONEY_KEYS_IR17 = new Set(['montoRenta','isrRetenido','itbisRetenido']);
+
+async function downloadXlsx(tipo, rows, periodo) {
+  const cols = tipo === 'IR17' ? COLS_IR17 : (tipo === '607' ? COLS_607 : COLS_606);
+  const MONEY_KEYS = tipo === 'IR17' ? MONEY_KEYS_IR17 : (tipo === '607' ? MONEY_KEYS_607 : MONEY_KEYS_606);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(tipo === '607' ? 'Formato 607' : 'DIGITAR');
+
+  // Column definitions
+  ws.columns = cols.map(([key, label]) => ({
+    header: label, key,
+    width: key === 'lineas' ? 7 : (MONEY_KEYS.has(key) ? 17 : 24),
+  }));
+
+  // Header styling
+  const hRow = ws.getRow(1);
+  hRow.font = { bold: true, size: 10 };
+  hRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+  hRow.alignment = { horizontal: 'center', wrapText: true, vertical: 'middle' };
+  hRow.height = 42;
+
+  // Data rows
   rows.forEach((row, i) => {
-    const r = cols.map(([key]) => {
-      if (key === 'lineas') return String(i + 1);
-      if (key === 'estatus') return '';
+    const isUsd = (row.moneda || '').toUpperCase() === 'USD';
+    const vals = {};
+    cols.forEach(([key]) => {
+      if (key === 'lineas') { vals[key] = i + 1; return; }
+      if (key === 'estatus') { vals[key] = ''; return; }
       const v = row[key];
-      if (typeof v === 'number') return v === 0 ? '' : v;
-      return v ?? '';
+      vals[key] = (typeof v === 'number' && v === 0) ? null : (v ?? '');
     });
-    data.push(r);
+    const eRow = ws.addRow(vals);
+    eRow.font = { size: 10 };
+
+    if (isUsd) {
+      eRow.eachCell({ includeEmpty: true }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+      });
+    }
+    cols.forEach(([key], ci) => {
+      if (MONEY_KEYS.has(key)) {
+        const cell = eRow.getCell(ci + 1);
+        cell.numFmt = '#,##0.00';
+        cell.alignment = { horizontal: 'right' };
+      }
+    });
   });
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, tipo === '607' ? `Formato 607` : 'DIGITAR');
-  XLSX.writeFile(wb, `ModeloExcel_${periodo || getYearMonth()}.xlsx`);
+
+  // Totals row with SUM formulas
+  if (rows.length > 0) {
+    const totals = {};
+    cols.forEach(([key], ci) => {
+      if (key === 'lineas') { totals[key] = 'TOTAL'; return; }
+      if (MONEY_KEYS.has(key)) {
+        const letter = ws.getColumn(ci + 1).letter;
+        totals[key] = { formula: `SUM(${letter}2:${letter}${rows.length + 1})` };
+      } else { totals[key] = ''; }
+    });
+    const tRow = ws.addRow(totals);
+    tRow.font = { bold: true, size: 10 };
+    tRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+    cols.forEach(([key], ci) => {
+      if (MONEY_KEYS.has(key)) {
+        tRow.getCell(ci + 1).numFmt = '#,##0.00';
+        tRow.getCell(ci + 1).alignment = { horizontal: 'right' };
+      }
+    });
+  }
+
+  // Hide Tipo Id column (needed for TXT but not shown visually)
+  const tipoIdIdx = cols.findIndex(([k]) => k === 'tipoId');
+  if (tipoIdIdx >= 0) ws.getColumn(tipoIdIdx + 1).hidden = true;
+
+  // Freeze header
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2' }];
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ModeloExcel_${periodo || getYearMonth()}.xlsx`;
+  a.click(); URL.revokeObjectURL(url);
 }
 
 function downloadTxt(tipo, rows, periodo) {
-  const cols = tipo === '607' ? COLS_607 : COLS_606;
+  const cols = tipo === 'IR17' ? COLS_IR17 : (tipo === '607' ? COLS_607 : COLS_606);
   const txtCols = cols.filter(([key]) => !TXT_SKIP.has(key));
   const lines = rows.map(row =>
     txtCols.map(([key]) => {
@@ -442,37 +547,56 @@ function getYearMonth() {
 
 // ── Result card ──────────────────────────────────────────────────────────────
 function buildResultCard(tipo, row, rowIndex) {
+  const isIR17 = tipo === 'IR17';
   const isCompra = tipo === '606';
-  const nombre = isCompra ? (row.proveedor || '') : (row.cliente || '');
-  const rnc = isCompra ? (row.rncCedula || '') : (row.rncCedulaPasaporte || '');
-  const ncf = row.ncf || '—';
-  const fecha = row.fechaComprobante ? `${row.fechaComprobante}/${row.diaComprobante || '??'}` : '—';
-  const monto = isCompra ? n(row.totalMontoFacturado) : n(row.montoFacturado);
-  const itbis = n(row.itbisFacturado);
-  const montoFmt = 'RD$ ' + monto.toLocaleString('es-DO', { minimumFractionDigits: 2 });
-  const itbisFmt = 'RD$ ' + itbis.toLocaleString('es-DO', { minimumFractionDigits: 2 });
-  const badgeLabel = tipo;
-  const allRows = tipo === '606' ? results606 : results607;
-  const periodo = row.fechaComprobante || getYearMonth();
   const idx = rowIndex;
+  const rowsKey = isIR17 ? 'IR17' : tipo;
+  const tipoLabel = isIR17 ? 'IR-17' : tipo;
 
-  return `
-  <div class="result-card">
-    <div class="result-card-header">
-      <h3>✓ Factura ${idx + 1} procesada</h3>
-      <span class="badge">${badgeLabel}</span>
-    </div>
-    <div class="result-fields">
+  let fields = '';
+  let monto = 0;
+  let periodo = getYearMonth();
+
+  if (isIR17) {
+    const nombre = row.retenido || '';
+    const rnc = row.rncCedula || '';
+    const tipoRenta = row.tipoRenta || '—';
+    monto = n(row.montoRenta);
+    const isr = n(row.isrRetenido);
+    periodo = row.fechaPago || getYearMonth();
+    fields = `
+      ${nombre ? `<div class="result-field"><span class="label">Retenido</span><span class="value">${escHtml(nombre)}</span></div>` : ''}
+      ${rnc ? `<div class="result-field"><span class="label">RNC/Cédula</span><span class="value">${rnc}</span></div>` : ''}
+      <div class="result-field"><span class="label">Tipo de Renta</span><span class="value">${tipoRenta}</span></div>
+      <div class="result-field"><span class="label">Monto Renta</span><span class="value">RD$ ${monto.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+      <div class="result-field"><span class="label">ISR Retenido</span><span class="value">RD$ ${isr.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>`;
+  } else {
+    const nombre = isCompra ? (row.proveedor || '') : (row.cliente || '');
+    const rnc = isCompra ? (row.rncCedula || '') : (row.rncCedulaPasaporte || '');
+    const ncf = row.ncf || '—';
+    const fecha = row.fechaComprobante ? `${row.fechaComprobante}/${row.diaComprobante || '??'}` : '—';
+    monto = isCompra ? n(row.totalMontoFacturado) : n(row.montoFacturado);
+    const itbis = n(row.itbisFacturado);
+    periodo = row.fechaComprobante || getYearMonth();
+    fields = `
       ${nombre ? `<div class="result-field"><span class="label">${isCompra ? 'Proveedor' : 'Cliente'}</span><span class="value">${escHtml(nombre)}</span></div>` : ''}
       ${rnc ? `<div class="result-field"><span class="label">RNC/Cédula</span><span class="value">${rnc}</span></div>` : ''}
       <div class="result-field"><span class="label">NCF</span><span class="value">${ncf}</span></div>
       <div class="result-field"><span class="label">Fecha</span><span class="value">${fecha}</span></div>
-      <div class="result-field"><span class="label">Monto</span><span class="value">${montoFmt}</span></div>
-      <div class="result-field"><span class="label">ITBIS</span><span class="value">${itbisFmt}</span></div>
+      <div class="result-field"><span class="label">Monto</span><span class="value">RD$ ${monto.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+      <div class="result-field"><span class="label">ITBIS</span><span class="value">RD$ ${itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>`;
+  }
+
+  return `
+  <div class="result-card">
+    <div class="result-card-header">
+      <h3>✓ Registro ${idx + 1} procesado</h3>
+      <span class="badge">${tipoLabel}</span>
     </div>
+    <div class="result-fields">${fields}</div>
     <div class="result-actions">
-      <button class="dl-btn dl-xlsx" onclick="downloadXlsx('${tipo}', window._nalaRows${tipo}, '${periodo}')">📥 Excel ${tipo}</button>
-      <button class="dl-btn dl-txt" onclick="downloadTxt('${tipo}', window._nalaRows${tipo}, '${periodo}')">📄 TXT DGII</button>
+      <button class="dl-btn dl-xlsx" onclick="downloadXlsx('${tipo}', window._nalaRows${rowsKey}, '${periodo}')">📥 Excel ${tipoLabel}</button>
+      <button class="dl-btn dl-txt" onclick="downloadTxt('${tipo}', window._nalaRows${rowsKey}, '${periodo}')">📄 TXT DGII</button>
     </div>
   </div>`;
 }
@@ -480,6 +604,7 @@ function buildResultCard(tipo, row, rowIndex) {
 // Keep rows accessible from onclick
 window._nalaRows606 = results606;
 window._nalaRows607 = results607;
+window._nalaRowsIR17 = resultsIR17;
 
 // ── File extraction ──────────────────────────────────────────────────────────
 async function fileToBase64(file) {
@@ -504,14 +629,14 @@ async function extractPdfText(file) {
   return text.trim() || `PDF: ${file.name}`;
 }
 
-// Render one PDF page to a base64 JPEG (for scanned/image-based pages).
+// Render one PDF page to a high-quality JPEG (for scanned/image-based pages).
 async function renderPdfPageToImage(page) {
-  const viewport = page.getViewport({ scale: 1.5 });
+  const viewport = page.getViewport({ scale: 2.0 }); // 2x for better OCR
   const canvas = document.createElement('canvas');
   canvas.width = viewport.width;
   canvas.height = viewport.height;
   await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-  return canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+  return canvas.toDataURL('image/jpeg', 0.95).split(',')[1]; // high quality for AI reading
 }
 
 // Expand a multi-page PDF into per-page tasks (handles text and scanned PDFs).
@@ -549,7 +674,7 @@ async function processFiles(files, modeOverride) {
     if (item.kind === 'pdf' && item.file) {
       const pages = await expandPdfToPages(item.file);
       if (pages) {
-        pages.forEach(p => tasks.push({ kind: 'pdf', name: p.name, pdfText: p.pdfText }));
+        pages.forEach(p => tasks.push(p)); // preserve kind, base64, mimeType for scanned pages
       } else {
         tasks.push(item);
       }
@@ -596,6 +721,7 @@ async function processFiles(files, modeOverride) {
       });
       if (!res.ok) throw new Error(await res.text());
       const { data } = await res.json();
+      normalizeRow(data, efectMode); // ensure leading zeros on code fields
       results.push({ data, name: item.name });
     } catch (e) {
       results.push({ error: e.message, name: item.name });
@@ -615,17 +741,20 @@ async function processFiles(files, modeOverride) {
     // Accumulate all good results first
     goodResults.forEach(r => {
       if (efectMode === '607') results607.push(r.data);
+      else if (efectMode === 'IR17') resultsIR17.push(r.data);
       else results606.push(r.data);
     });
 
-    const tipo = efectMode === '607' ? '607' : '606';
-    const periodo = goodResults[0]?.data?.fechaComprobante || getYearMonth();
+    const tipo = efectMode;
+    const tipoPeriodoKey = tipo === 'IR17' ? 'fechaPago' : 'fechaComprobante';
+    const periodo = goodResults[0]?.data?.[tipoPeriodoKey] || getYearMonth();
 
     if (goodResults.length <= 5) {
       // Show individual result cards for small batches
       goodResults.forEach((r, idx) => {
-        const rowIndex = (efectMode === '607' ? results607 : results606).length - goodResults.length + idx;
-        const cardHtml = buildResultCard(efectMode, r.data, rowIndex);
+        const arr = tipo === '607' ? results607 : (tipo === 'IR17' ? resultsIR17 : results606);
+        const rowIndex = arr.length - goodResults.length + idx;
+        const cardHtml = buildResultCard(tipo, r.data, rowIndex);
         const d = document.createElement('div');
         d.className = 'msg bot';
         d.innerHTML = `<div class="msg-av">N</div><div>${cardHtml}</div>`;
@@ -650,13 +779,15 @@ async function processFiles(files, modeOverride) {
     }
 
     if (goodResults.length > 0) {
+      const tipoLabel = tipo === 'IR17' ? 'IR-17' : tipo;
+      const rowsKey = tipo === 'IR17' ? 'IR17' : tipo;
       const d = document.createElement('div');
       d.className = 'msg bot';
       d.innerHTML = `<div class="msg-av">N</div><div class="bubble">
-        ✅ <strong>${goodResults.length} factura(s) procesadas</strong>${badResults.length ? ` · ⚠️ ${badResults.length} error(es)` : ''} — ${tipo}<br>
+        ✅ <strong>${goodResults.length} registro(s) procesados</strong>${badResults.length ? ` · ⚠️ ${badResults.length} error(es)` : ''} — ${tipoLabel}<br>
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-          <button class="dl-btn dl-xlsx" style="flex:none;padding:7px 14px" onclick="downloadXlsx('${tipo}', window._nalaRows${tipo}, '${periodo}')">📥 Descargar Excel ${tipo}</button>
-          <button class="dl-btn dl-txt" style="flex:none;padding:7px 14px" onclick="downloadTxt('${tipo}', window._nalaRows${tipo}, '${periodo}')">📄 Descargar TXT DGII</button>
+          <button class="dl-btn dl-xlsx" style="flex:none;padding:7px 14px" onclick="downloadXlsx('${tipo}', window._nalaRows${rowsKey}, '${periodo}')">📥 Descargar Excel ${tipoLabel}</button>
+          <button class="dl-btn dl-txt" style="flex:none;padding:7px 14px" onclick="downloadTxt('${tipo}', window._nalaRows${rowsKey}, '${periodo}')">📄 Descargar TXT DGII</button>
         </div>
       </div>`;
       msgs.appendChild(d);

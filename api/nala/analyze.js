@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
 
-  const tipo = mode === '607' ? '607' : '606';
+  const tipo = mode === 'IR17' ? 'IR17' : (mode === '607' ? '607' : '606');
 
   const prompt606 = `Eres un experto en comprobantes fiscales de República Dominicana para el formulario 606 (Compras).
 Extrae EXACTAMENTE estos campos del comprobante y responde SOLO con JSON válido:
@@ -92,7 +92,33 @@ IMPORTANTE:
 - tipoIngreso: usa solo el código (01, 02, etc.)
 - SOLO responde con el JSON, sin explicaciones`;
 
-  const systemPrompt = tipo === '607' ? prompt607 : prompt606;
+  const promptIR17 = `Eres un experto en comprobantes fiscales de República Dominicana para el formulario IR-17 (Retenciones de ISR).
+Extrae EXACTAMENTE estos campos del comprobante de retención y responde SOLO con JSON válido:
+
+{
+  "retenido": "Nombre o razón social de quien se le retuvo el ISR. Vacío si no aparece.",
+  "rncCedula": "RNC (9 dígitos) o Cédula (11 dígitos) del retenido, solo números sin guiones. Vacío si no aparece.",
+  "tipoId": "1 si es RNC (9 dígitos), 2 si es Cédula (11 dígitos), 3 si es Pasaporte. Vacío si no hay número.",
+  "tipoRenta": "Código 01-11 según: 01=SUELDOS Y SALARIOS, 02=HONORARIOS POR SERVICIOS, 03=ARRENDAMIENTOS, 04=DIVIDENDOS, 05=INTERESES, 06=PREMIOS O GANANCIAS, 07=OTRAS RENTAS, 08=OTRAS RENTAS GOBIERNO, 09=RETENCIONES EN EL EXTERIOR, 10=RENDIMIENTOS DEPÓSITOS A PLAZO, 11=RETENCIONES ITBIS AL GOBIERNO",
+  "montoRenta": 0,
+  "isrRetenido": 0,
+  "itbisRetenido": 0,
+  "fechaPago": "YYYYMM del período de pago/retención",
+  "diaPago": "DD del día de pago"
+}
+
+IMPORTANTE:
+- montoRenta = monto total pagado/acreditado ANTES de la retención
+- isrRetenido = monto del ISR retenido (suele ser 10% sobre honorarios, 25% sobre dividendos, 27% sobre sueldos etc.)
+- itbisRetenido = monto del ITBIS retenido si aplica (0 si no hay retención de ITBIS)
+- tipoRenta: usa solo el código (01, 02, etc.)
+- Si es factura de servicios profesionales/consultoría, tipoRenta es "02"
+- Si es factura de arrendamiento, tipoRenta es "03"
+- Si es nómina o sueldo, tipoRenta es "01"
+- Todos los montos son números, no strings
+- SOLO responde con el JSON, sin explicaciones`;
+
+  const systemPrompt = tipo === 'IR17' ? promptIR17 : (tipo === '607' ? prompt607 : prompt606);
   const isImage = base64 && mimeType && mimeType.startsWith('image/');
 
   let messages;
