@@ -528,11 +528,13 @@ const LOGOS = {
 };
 
 const INST = {
-  // uf/pf = fallback field names; aspFields = real ASP.NET WebForms control IDs
+  // uf/pf = fallback field names; aspFields = real ASP.NET WebForms control IDs; url = default login URL
   dgii:    { name:'DGII',        desc:'Dirección General de Impuestos Internos',    grad:'linear-gradient(135deg,#004e89 0%,#2563eb 100%)', abbr:'DGII',
+             url:'https://oficinavirtual.dgii.gov.do/ih/RegistroInicioSesion.aspx',
              uf:'ctl00$cphMain$txtUsuario', pf:'ctl00$cphMain$txtClave',
              aspFields:{ user:'ctl00$cphMain$txtUsuario', pass:'ctl00$cphMain$txtClave', submit:'ctl00$cphMain$btnEntrar' } },
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',
+             url:'https://www.tss.gob.do/Tss/Account/LogIn',
              uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
              aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' } },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
@@ -951,7 +953,7 @@ function renderPortalGrid() {
 /* ── Companies view ── */
 async function renderCompaniesView() {
   const inst=INST[activePortal];
-  const hasUrl=!!appConfig[activePortal+'_loginUrl'];
+  const hasUrl=!!(appConfig[activePortal+'_loginUrl']||inst?.url);
 
   // banner
   const logoKey2=activePortal==='sirla'?'sisaril':activePortal;
@@ -1008,7 +1010,7 @@ async function enterCompany(credId) {
   catch { toast('Error al descifrar credenciales','err'); return; }
 
   const inst=INST[cred.institution];
-  const loginUrl=appConfig[cred.institution+'_loginUrl']||'';
+  const loginUrl=appConfig[cred.institution+'_loginUrl']||inst?.url||'';
   _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chUrl=loginUrl;
 
   // Show credential helper
