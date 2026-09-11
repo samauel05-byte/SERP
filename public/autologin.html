@@ -44,48 +44,53 @@
   try { params = JSON.parse(decodeURIComponent(atob(hash))); }
   catch { set('Error', 'Datos de acceso inválidos.', 'err'); return; }
 
-  const { url, user, pass, cedula, userField: configuredUserField, passField: configuredPassField, submitField: configuredSubmitField } = params;
+  const { url, user, pass, cedula,
+    userField: configuredUserField, passField: configuredPassField, submitField: configuredSubmitField,
+    hiddenFields: prefetchedFields, formAction: prefetchedAction } = params;
   if (!url || !user || !pass) { set('Error', 'Faltan datos de acceso.', 'err'); return; }
 
-  set('Cargando portal…', url);
-
-  // Fetch the portal's login page via our relay (same-origin, avoids CORS)
-  let hiddenFields = [];
-  let formAction = url;
-  let userField = configuredUserField || null;
-  let passField = configuredPassField || null;
-  let submitField = configuredSubmitField || null;
-
-  // Try Cloudflare Worker first (edge node near DR, bypasses IP blocks)
   const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
   const VERCEL_RELAY = '/api/relay/viewstate';
 
-  const tryRelay = async (relayBase) => {
-    const endpoint = relayBase + '?url=' + encodeURIComponent(url);
-    const r = await fetch(endpoint, { signal: AbortSignal.timeout(12000) });
-    if (!r.ok) throw new Error('relay ' + r.status);
-    return r.json();
-  };
+  let hiddenFields = prefetchedFields || [];
+  let formAction = prefetchedAction || url;
+  let userField = configuredUserField || null;
+  let passField = configuredPassField || null;
+  let submitField = configuredSubmitField || null;
+  let relayOk = hiddenFields.length > 0;
 
-  let relayOk = false;
-  try {
-    let d;
-    try { d = await tryRelay(CF_RELAY); }
-    catch { d = await tryRelay(VERCEL_RELAY); }
-    hiddenFields = d.hiddenFields || [];
-    if (d.formAction) formAction = d.formAction;
-    if (!userField && d.userField) userField = d.userField;
-    if (!passField && d.passField) passField = d.passField;
-    if (!submitField && d.submitField) submitField = d.submitField;
-    relayOk = hiddenFields.length > 0;
-  } catch { /* proceed without relay */ }
+  if (relayOk) {
+    // ViewState was pre-fetched by the main app — skip the relay call entirely
+    set('Enviando credenciales…', 'Formulario listo ✓ — redirigiendo');
+  } else {
+    set('Cargando portal…', url);
+
+    const tryRelay = async (relayBase) => {
+      const r = await fetch(relayBase + '?url=' + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
+      if (!r.ok) throw new Error('relay ' + r.status);
+      return r.json();
+    };
+
+    try {
+      let d;
+      try { d = await tryRelay(CF_RELAY); }
+      catch { d = await tryRelay(VERCEL_RELAY); }
+      hiddenFields = d.hiddenFields || [];
+      if (d.formAction) formAction = d.formAction;
+      if (!userField && d.userField) userField = d.userField;
+      if (!passField && d.passField) passField = d.passField;
+      if (!submitField && d.submitField) submitField = d.submitField;
+      relayOk = hiddenFields.length > 0;
+    } catch { /* proceed without relay */ }
+
+    set('Enviando credenciales…', relayOk ? 'Formulario listo ✓ — redirigiendo' : 'Enviando sin ViewState…');
+  }
 
   // Fallback field names
   if (!userField) userField = 'usuario';
   if (!passField) passField = 'contrasena';
 
   set('Enviando credenciales…', relayOk ? 'Formulario listo ✓ — redirigiendo' : 'Enviando sin ViewState…');
-
   // Navigate to CF Worker /submit page — it serves a page that synchronously
   // calls form.submit() to the portal, bypassing iOS Safari popup restrictions.
   // Credentials travel only in the URL fragment (never sent to the server).
