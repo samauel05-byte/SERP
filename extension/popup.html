@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Llave Maestra</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  width: 320px;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 200px;
+}
+.header {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header svg { flex-shrink: 0; }
+.header-text h1 { font-size: 15px; font-weight: 700; }
+.header-text p  { font-size: 11px; opacity: .75; }
+.body { padding: 14px 16px; }
+.section-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+input[type="password"], input[type="text"] {
+  flex: 1;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e2e8f0;
+  font-size: 13px;
+  outline: none;
+}
+input:focus { border-color: #6366f1; }
+.btn {
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { background: #4f46e5; }
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.btn-outline {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94a3b8;
+}
+.btn-outline:hover { border-color: #6366f1; color: #e2e8f0; }
+.btn-green  { background: #10b981; }
+.btn-green:hover { background: #059669; }
+.btn-red    { background: #ef4444; }
+.cred-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.cred-item {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cred-info { flex: 1; min-width: 0; }
+.cred-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cred-sub  { font-size: 11px; color: #64748b; }
+.cred-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.status {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  display: none;
+}
+.status.ok  { display:block; background:#064e3b; color:#34d399; border:1px solid #065f46; }
+.status.err { display:block; background:#450a0a; color:#fca5a5; border:1px solid #7f1d1d; }
+.status.warn{ display:block; background:#431407; color:#fdba74; border:1px solid #7c2d12; }
+.divider { border: none; border-top: 1px solid #1e293b; margin: 12px 0; }
+.add-form { display: none; flex-direction: column; gap: 8px; margin-top: 8px; }
+.add-form.open { display: flex; }
+.add-form input, .add-form select {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e2e8f0;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+.add-form select option { background: #1e293b; }
+.label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
+#lock-screen { padding: 16px; }
+#lock-screen p { font-size: 12px; color: #64748b; margin-top: 6px; }
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: #94a3b8;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+  </svg>
+  <div class="header-text">
+    <h1>Llave Maestra</h1>
+    <p>Auto-login portales RD</p>
+  </div>
+</div>
+
+<!-- Lock screen -->
+<div id="lock-screen" class="body">
+  <div class="section-title">Acceso Llave Maestra</div>
+  <div id="status-lock" class="status"></div>
+  <div style="margin-bottom:8px">
+    <input type="text" id="master-user" placeholder="Usuario (el de la app web)" style="width:100%">
+  </div>
+  <div class="input-row">
+    <input type="password" id="master-pw" placeholder="Contraseña maestra">
+    <button class="btn" id="btn-unlock">Entrar</button>
+  </div>
+  <p>Las mismas credenciales que usas en direct-save.vercel.app.</p>
+</div>
+
+<!-- Main screen (hidden until unlocked) -->
+<div id="main-screen" class="body" hidden>
+  <div id="status-main" class="status"></div>
+
+  <div class="section-title">Credenciales guardadas</div>
+  <div id="cred-list" class="cred-list">
+    <div style="font-size:12px;color:#64748b;padding:8px 0">Sin credenciales. Importa desde la app web o agrega una.</div>
+  </div>
+
+  <hr class="divider">
+
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-sm btn-outline" id="btn-refresh">↺ Actualizar</button>
+    <button class="btn btn-sm btn-outline btn-red" id="btn-lock" style="margin-left:auto">Cerrar sesión</button>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
