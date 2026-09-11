@@ -530,9 +530,9 @@ const LOGOS = {
 const INST = {
   // uf/pf = fallback field names; aspFields = real ASP.NET WebForms control IDs; url = default login URL
   dgii:    { name:'DGII',        desc:'Dirección General de Impuestos Internos',    grad:'linear-gradient(135deg,#004e89 0%,#2563eb 100%)', abbr:'DGII',
-             url:'https://oficinavirtual.dgii.gov.do/ih/RegistroInicioSesion.aspx',
-             uf:'ctl00$cphMain$txtUsuario', pf:'ctl00$cphMain$txtClave',
-             aspFields:{ user:'ctl00$cphMain$txtUsuario', pass:'ctl00$cphMain$txtClave', submit:'ctl00$cphMain$btnEntrar' } },
+             url:'https://www.dgii.gov.do/ofv/login.aspx',
+             uf:'ctl00$ContentPlaceHolder1$txtUsuario', pf:'ctl00$ContentPlaceHolder1$txtPassword',
+             aspFields:{ user:'ctl00$ContentPlaceHolder1$txtUsuario', pass:'ctl00$ContentPlaceHolder1$txtPassword' } },
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',
              url:'https://www.tss.gob.do/Tss/Account/LogIn',
              uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
