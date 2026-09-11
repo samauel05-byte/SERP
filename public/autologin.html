@@ -55,15 +55,25 @@
   let userField = configuredUserField || null;
   let passField = configuredPassField || null;
 
+  // Try Cloudflare Worker first (edge node near DR, bypasses IP blocks)
+  const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
+  const VERCEL_RELAY = '/api/relay/viewstate';
+
+  const tryRelay = async (relayBase) => {
+    const endpoint = relayBase + '?url=' + encodeURIComponent(url);
+    const r = await fetch(endpoint, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) throw new Error('relay ' + r.status);
+    return r.json();
+  };
+
   try {
-    const r = await fetch('/api/relay/viewstate?url=' + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
-    if (r.ok) {
-      const d = await r.json();
-      hiddenFields = d.hiddenFields || [];
-      if (d.formAction) formAction = d.formAction;
-      if (!userField && d.userField) userField = d.userField;
-      if (!passField && d.passField) passField = d.passField;
-    }
+    let d;
+    try { d = await tryRelay(CF_RELAY); }
+    catch { d = await tryRelay(VERCEL_RELAY); }
+    hiddenFields = d.hiddenFields || [];
+    if (d.formAction) formAction = d.formAction;
+    if (!userField && d.userField) userField = d.userField;
+    if (!passField && d.passField) passField = d.passField;
   } catch { /* proceed without relay */ }
 
   // Fallback field names
