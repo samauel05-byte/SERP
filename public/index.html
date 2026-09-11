@@ -989,7 +989,7 @@ async function renderCompaniesView() {
         <div class="company-user">${plain.username||''}</div>
       </div>
       <div class="company-actions">
-        <button class="btn-enter-company" onclick="enterCompany('${cred.id}')">ENTRAR</button>
+        <button class="btn-enter-company" onclick="enterCompany('${cred.id}')" onmouseenter="prefetchViewState('${cred.id}')" ontouchstart="prefetchViewState('${cred.id}')">ENTRAR</button>
         <button class="btn-edit-co" title="Editar" onclick="openCompanyModal('${cred.id}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
@@ -1000,6 +1000,28 @@ async function renderCompaniesView() {
 
 /* ── Auto-login ── */
 let _chUser='', _chPass='', _chCedula='', _chUrl='';
+
+// ViewState cache: keyed by portal URL, short TTL so stale values don't accumulate
+const _vsCache = {};
+const _VS_TTL = 90000; // 90 seconds
+
+async function prefetchViewState(credId) {
+  const cred = credentials.find(c => c.id === credId);
+  if (!cred) return;
+  const inst = INST[cred.institution];
+  const url = appConfig[cred.institution + '_loginUrl'] || inst?.url || '';
+  if (!url) return;
+  const now = Date.now();
+  if (_vsCache[url] && now - _vsCache[url].ts < _VS_TTL) return; // already fresh
+  _vsCache[url] = { ts: now, promise: null, data: null };
+  _vsCache[url].promise = (async () => {
+    try {
+      const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
+      const r = await fetch(CF_RELAY + '?url=' + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
+      if (r.ok) { const d = await r.json(); _vsCache[url].data = d; }
+    } catch {}
+  })();
+}
 
 async function enterCompany(credId) {
   const cred=credentials.find(c=>c.id===credId);
@@ -1072,6 +1094,17 @@ function autoLoginForm(url, institution, user, pass, cedula, existingTab=null) {
   if (userField) payload.userField = userField;
   if (passField) payload.passField = passField;
   if (submitField) payload.submitField = submitField;
+
+  // Attach pre-fetched ViewState if available (avoids the relay fetch delay in autologin.html)
+  const cached = _vsCache[url];
+  if (cached?.data) {
+    const d = cached.data;
+    if (d.hiddenFields?.length) payload.hiddenFields = d.hiddenFields;
+    if (d.formAction) payload.formAction = d.formAction;
+    if (!userField && d.userField) payload.userField = d.userField;
+    if (!passField && d.passField) payload.passField = d.passField;
+    if (!submitField && d.submitField) payload.submitField = d.submitField;
+  }
 
   const hash = btoa(encodeURIComponent(JSON.stringify(payload)));
   const autologinUrl = '/autologin.html#' + hash;
