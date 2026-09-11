@@ -86,33 +86,22 @@
 
   set('Enviando credenciales…', relayOk ? 'Formulario listo ✓ — redirigiendo' : 'Enviando sin ViewState…');
 
-  // Short pause so status is visible
-  await new Promise(r => setTimeout(r, 600));
-
-  // Build and submit the form from this page (same as portal expects)
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = formAction;
-  form.style.display = 'none';
-
-  const add = (n, v) => {
-    const i = document.createElement('input');
-    i.type = 'hidden'; i.name = n; i.value = v;
-    form.appendChild(i);
+  // Navigate to CF Worker /submit page — it serves a page that synchronously
+  // calls form.submit() to the portal, bypassing iOS Safari popup restrictions.
+  // Credentials travel only in the URL fragment (never sent to the server).
+  const submitPayload = {
+    url,
+    formAction,
+    user,
+    pass,
+    userField,
+    passField,
+    submitField: submitField || null,
+    cedula: cedula || undefined,
+    hiddenFields,
   };
-
-  hiddenFields.forEach(f => add(f.name, f.value));
-  add(userField, user);
-  add(passField, pass);
-  if (submitField) add(submitField, 'Entrar');
-  if (cedula) {
-    // TSS third field
-    add('ctl00$MainContent$txtrepresentante', cedula);
-    if (!submitField) add('ctl00$MainContent$btLoginRep', 'Entrar');
-  }
-
-  document.body.appendChild(form);
-  form.submit();
+  const submitHash = btoa(encodeURIComponent(JSON.stringify(submitPayload)));
+  window.location.replace(CF_RELAY + '/submit#' + submitHash);
 })();
 </script>
 </body>
