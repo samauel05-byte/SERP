@@ -439,6 +439,50 @@ const MONEY_KEYS_607 = new Set(['montoFacturado','itbisFacturado','itbisRetenido
   'bonosCertificadosRegalo','permuta','otrasFormasVentas']);
 const MONEY_KEYS_IR17 = new Set(['montoRenta','isrRetenido','itbisRetenido']);
 
+const TIPO_BIENES_MAP = {
+  '01':'01 - GASTOS DE PERSONAL',
+  '02':'02 - GASTOS POR TRABAJOS, SUMINISTROS Y SERVICIOS',
+  '03':'03 - ARRENDAMIENTOS',
+  '04':'04 - GASTOS DE ACTIVOS FIJO',
+  '05':'05 - GASTOS DE REPRESENTACIÓN',
+  '06':'06 - OTRAS DEDUCCIONES ADMITIDAS',
+  '07':'07 - GASTOS FINANCIEROS',
+  '08':'08 - GASTOS EXTRAORDINARIOS',
+  '09':'09 - COMPRAS Y GASTOS QUE FORMAN PARTE DEL COSTO DE VENTA',
+  '10':'10 - ADQUISICIONES DE ACTIVOS',
+  '11':'11 - GASTOS DE SEGUROS',
+};
+const TIPO_INGRESO_MAP = {
+  '01':'01 - INGRESOS POR OPERACIONES (NO FINANCIEROS)',
+  '02':'02 - INGRESOS FINANCIEROS',
+  '03':'03 - INGRESOS EXTRAORDINARIOS',
+  '04':'04 - INGRESOS POR ARRENDAMIENTOS',
+  '05':'05 - INGRESOS POR VENTA DE ACTIVO DEPRECIABLE',
+  '06':'06 - OTROS INGRESOS',
+};
+const TIPO_RENTA_MAP = {
+  '01':'01 - SUELDOS Y SALARIOS',
+  '02':'02 - HONORARIOS POR SERVICIOS',
+  '03':'03 - ARRENDAMIENTOS',
+  '04':'04 - DIVIDENDOS',
+  '05':'05 - INTERESES',
+  '06':'06 - PREMIOS O GANANCIAS',
+  '07':'07 - OTRAS RENTAS',
+  '08':'08 - OTRAS RENTAS GOBIERNO',
+  '09':'09 - RETENCIONES EN EL EXTERIOR',
+  '10':'10 - RENDIMIENTOS DEPÓSITOS A PLAZO',
+  '11':'11 - RETENCIONES ITBIS AL GOBIERNO',
+};
+const FORMA_PAGO_MAP = {
+  '01':'01 - EFECTIVO',
+  '02':'02 - CHEQUES/TRANSFERENCIAS/DEPÓSITOS',
+  '03':'03 - TARJETA DE CRÉDITO/DÉBITO',
+  '04':'04 - COMPRA A CRÉDITO',
+  '05':'05 - PERMUTA',
+  '06':'06 - NOTA DE CRÉDITO',
+  '07':'07 - MIXTO',
+};
+
 async function downloadXlsx(tipo, rows, periodo) {
   const cols = tipo === 'IR17' ? COLS_IR17 : (tipo === '607' ? COLS_607 : COLS_606);
   const MONEY_KEYS = tipo === 'IR17' ? MONEY_KEYS_IR17 : (tipo === '607' ? MONEY_KEYS_607 : MONEY_KEYS_606);
@@ -446,6 +490,16 @@ async function downloadXlsx(tipo, rows, periodo) {
   const wb = new ExcelJS.Workbook();
   wb.calcProperties.fullCalcOnLoad = true;
   const ws = wb.addWorksheet(tipo === '607' ? 'Formato 607' : 'DIGITAR');
+
+  // Hidden sheet with dropdown options for tipo column
+  const TIPO_KEY = tipo === 'IR17' ? 'tipoRenta' : (tipo === '607' ? 'tipoIngreso' : 'tipoBienesServicios');
+  const TIPO_MAP = tipo === 'IR17' ? TIPO_RENTA_MAP : (tipo === '607' ? TIPO_INGRESO_MAP : TIPO_BIENES_MAP);
+  const TIPO_OPTS = Object.values(TIPO_MAP);
+  const FORMA_PAGO_OPTS = tipo === '606' ? Object.values(FORMA_PAGO_MAP) : [];
+  const wsListas = wb.addWorksheet('Listas');
+  wsListas.state = 'veryHidden';
+  TIPO_OPTS.forEach((opt, i) => { wsListas.getCell(`A${i + 1}`).value = opt; });
+  FORMA_PAGO_OPTS.forEach((opt, i) => { wsListas.getCell(`B${i + 1}`).value = opt; });
 
   // Column definitions
   ws.columns = cols.map(([key, label]) => ({
@@ -468,7 +522,13 @@ async function downloadXlsx(tipo, rows, periodo) {
       if (key === 'lineas') { vals[key] = i + 1; return; }
       if (key === 'estatus') { vals[key] = ''; return; }
       const v = row[key];
-      vals[key] = (typeof v === 'number' && v === 0) ? null : (v ?? '');
+      if (key === TIPO_KEY && v) {
+        vals[key] = TIPO_MAP[String(v).trim()] || v;
+      } else if (tipo === '606' && key === 'formaPago' && v) {
+        vals[key] = FORMA_PAGO_MAP[String(v).trim()] || v;
+      } else {
+        vals[key] = (typeof v === 'number' && v === 0) ? null : (v ?? '');
+      }
     });
     const eRow = ws.addRow(vals);
     eRow.font = { size: 10 };
@@ -515,6 +575,42 @@ async function downloadXlsx(tipo, rows, periodo) {
 
   // Freeze header
   ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2' }];
+
+  // Dropdown validation + wider column for tipo field
+  const tipoColIdx2 = cols.findIndex(([k]) => k === TIPO_KEY);
+  if (tipoColIdx2 >= 0) {
+    const tipoLetter = ws.getColumn(tipoColIdx2 + 1).letter;
+    const lastValidRow = Math.max(rows.length + 2, 52);
+    ws.dataValidations.add(`${tipoLetter}2:${tipoLetter}${lastValidRow}`, {
+      type: 'list',
+      allowBlank: true,
+      formulae: [`Listas!$A$1:$A$${TIPO_OPTS.length}`],
+      showInputMessage: true,
+      promptTitle: 'Opciones DGII',
+      prompt: 'Selecciona una opción del menú para esta casilla.',
+      showErrorMessage: false,
+    });
+    ws.getColumn(tipoColIdx2 + 1).width = 46;
+  }
+
+  // Dropdown validation for Forma de Pago (606 only)
+  if (tipo === '606' && FORMA_PAGO_OPTS.length) {
+    const fpColIdx = cols.findIndex(([k]) => k === 'formaPago');
+    if (fpColIdx >= 0) {
+      const fpLetter = ws.getColumn(fpColIdx + 1).letter;
+      const lastValidRow = Math.max(rows.length + 2, 52);
+      ws.dataValidations.add(`${fpLetter}2:${fpLetter}${lastValidRow}`, {
+        type: 'list',
+        allowBlank: true,
+        formulae: [`Listas!$B$1:$B$${FORMA_PAGO_OPTS.length}`],
+        showInputMessage: true,
+        promptTitle: 'Forma de Pago',
+        prompt: 'Selecciona la forma de pago.',
+        showErrorMessage: false,
+      });
+      ws.getColumn(fpColIdx + 1).width = 34;
+    }
+  }
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
