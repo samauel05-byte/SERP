@@ -1089,8 +1089,13 @@ function toast(msg,type='ok') {
 
 document.addEventListener('keydown', e=>{
   if(e.key!=='Enter') return;
-  if(!document.querySelector('#view-setup:not([hidden])') && !document.querySelector('#view-login:not([hidden])')) return;
   if(document.activeElement?.tagName==='BUTTON') return;
+  if(document.activeElement?.tagName==='TEXTAREA') return;
+  // Modals take priority
+  if(!document.getElementById('modal-company').hidden){ saveCompany(); return; }
+  if(!document.getElementById('modal-user').hidden){ saveUser(); return; }
+  if(!document.getElementById('modal-reset-pw').hidden){ saveResetPw(); return; }
+  if(!document.querySelector('#view-setup:not([hidden])') && !document.querySelector('#view-login:not([hidden])')) return;
   if(document.querySelector('#view-setup:not([hidden])')) handleSetup();
   else handleLogin();
 });

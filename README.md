@@ -1,78 +1,85 @@
-# Llave Maestra — Bóveda de Credenciales Institucionales
+# Direct Save — Bóveda de Credenciales Institucionales
 
-Aplicación web segura para gestionar credenciales de acceso a los portales gubernamentales dominicanos: **DGII, TSS, Ministerio de Trabajo y SIRLA**.
+Sistema web seguro para gestionar credenciales de acceso a los portales gubernamentales dominicanos. Permite a equipos de contabilidad y consultoría acceder rápidamente a los portales de sus clientes con auto-login.
 
-## Acceso directo
+## URL de producción
 
-**[Abrir Llave Maestra](https://claude.ai/code/artifact/620a4319-2420-432f-bf84-e6fcf9eba18a)**
-
-> Requiere una cuenta en [claude.ai](https://claude.ai). Funciona desde cualquier red.
+**[https://direct-save.vercel.app](https://direct-save.vercel.app)**
 
 ---
 
-## Cómo empezar
+## Portales soportados
 
-### Primera vez (quien configura la bóveda)
-
-1. Abre el enlace de arriba
-2. Verás la pantalla **"Crear bóveda"** — es la primera vez que alguien entra
-3. Elige una **contraseña maestra** que todo el equipo usará (mínimo 8 caracteres)
-4. Confírmala y presiona **Crear bóveda**
-5. Comparte la contraseña con los 10 usuarios del equipo (por un canal seguro)
-
-### Usuarios del equipo (acceso posterior)
-
-1. Abre el mismo enlace
-2. Ingresa la contraseña maestra del equipo
-3. Accedes inmediatamente a todas las credenciales del equipo
-
-### Agentes externos (otra red)
-
-Exactamente igual — el mismo enlace, la misma contraseña. No hay diferencia entre red interna y externa.
-
----
-
-## Características
-
-| Función | Detalle |
-|---|---|
-| **Instituciones** | DGII · TSS · Ministerio de Trabajo · SIRLA |
-| **Sincronización** | Tiempo real — todos los usuarios ven los cambios al instante |
-| **Cifrado** | AES-256-GCM en el navegador (las credenciales nunca viajan sin cifrar) |
-| **Contraseña** | La clave maestra solo existe en memoria; nunca se almacena en el servidor |
-| **Usuarios** | Sin límite — 10 internos + externos desde cualquier red |
-| **Campos secretos** | Contraseñas y tokens ocultos por defecto; revelar al pasar el cursor |
-| **Copiar** | Un clic copia cualquier campo al portapapeles |
-| **Búsqueda** | Busca por institución, categoría, nombre o campo |
-| **Tema** | Claro / Oscuro según el sistema o elección manual |
+| Portal | Clave |
+|--------|-------|
+| DGII — Dirección General de Impuestos Internos | `dgii` |
+| TSS — Tesorería de la Seguridad Social | `tss` |
+| Ministerio de Trabajo | `trabajo` |
+| SIRLA — IDOPPRIL | `sirla` |
+| Azul | `azul` |
+| Carnet — Portal de Cédula | `carnet` |
 
 ---
 
 ## Seguridad
 
 ```
-Contraseña maestra (solo en memoria del navegador)
+Contraseña del usuario (solo en memoria del navegador)
         │
-        ▼ PBKDF2 · SHA-256 · 200 000 iteraciones + salt aleatorio
+        ▼ PBKDF2 · SHA-256 · 200 000 iteraciones + salt personal
         │
-        ▼ Clave AES-256-GCM
+        ▼ Clave de usuario (desencripta la clave de bóveda)
         │
-        ├─ Cifra cada credencial antes de subirla a la nube
+        ▼ Secreto de bóveda (bytes aleatorios, en memoria únicamente)
+        │
+        ▼ PBKDF2 · SHA-256 · 200 000 iteraciones + vaultSalt global
+        │
+        ▼ MasterKey AES-256-GCM
+        │
+        ├─ Cifra cada credencial antes de subirla al servidor
         └─ Descifra al abrirla — el servidor nunca ve texto plano
 ```
 
-- El **salt** y el **verificador de contraseña** se guardan en la base de datos compartida
-- Los **datos de credenciales** se guardan cifrados — ilegibles sin la contraseña maestra
-- **Cerrar sesión** borra la clave de memoria; al volver hay que ingresar la contraseña de nuevo
+- El servidor **nunca** recibe credenciales en texto plano
+- Todo el cifrado/descifrado ocurre en el navegador (Web Crypto API)
+- El secreto de bóveda existe **solo en memoria de sesión**
+- Cada usuario tiene su propio salt y su copia cifrada del secreto de bóveda
 
 ---
 
-## Cambiar la contraseña maestra
+## Módulos
 
-1. Dentro de la app, clic en **Contraseña** (pie del menú lateral)
-2. Ingresa la contraseña actual y la nueva (dos veces)
-3. La app re-cifra todas las credenciales con la nueva clave automáticamente
-4. Informa al equipo la nueva contraseña
+| Módulo | Descripción |
+|--------|-------------|
+| **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login |
+| **Cami** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 |
+| **NALA** | Chat IA para contabilidad dominicana |
+
+---
+
+## Roles de usuario
+
+| Rol | Permisos |
+|-----|----------|
+| `admin` | Gestión completa: usuarios, credenciales, config. |
+| `user` | Acceso a los portales asignados por el admin |
+
+El admin puede:
+- Crear y desactivar usuarios
+- Asignar acceso a módulos (Direct / Cami / NALA)
+- Asignar portales individuales a cada usuario
+- Restablecer la contraseña de cualquier usuario
+
+---
+
+## Características
+
+- **Auto-login**: un clic envía automáticamente las credenciales al portal en una nueva pestaña
+- **Cifrado AES-256-GCM** en el navegador — las credenciales viajan y se almacenan siempre cifradas
+- **Multi-usuario** con bóveda compartida (todos ven las mismas credenciales cifradas)
+- **Sincronización en tiempo real** — cualquier cambio se refleja al instante
+- **Enter funciona** en todos los formularios y modales
+- **Tema claro / oscuro** según preferencia del sistema o manual
 
 ---
 
@@ -80,14 +87,53 @@ Contraseña maestra (solo en memoria del navegador)
 
 ```
 SERP/
-└── index.html   # Aplicación completa (HTML + CSS + JS en un solo archivo)
+├── api/
+│   ├── auth/
+│   │   ├── login.js       — Autenticación + entrega de material de bóveda
+│   │   └── setup.js       — Creación del primer administrador
+│   ├── config.js          — Config global de la app (vaultSalt, verifier, URLs de portales)
+│   ├── credentials.js     — Lectura de credenciales cifradas
+│   ├── credentials/
+│   │   └── [id].js        — Escritura / borrado de una credencial
+│   └── users/
+│       ├── index.js        — CRUD de usuarios (admin only)
+│       └── [id].js         — Actualización de usuario / reset de clave
+├── lib/
+│   ├── auth.js            — Middleware de autenticación JWT
+│   ├── db.js              — Abstracción sobre Supabase
+│   └── supabase.js        — Cliente Supabase con rol de servicio
+├── public/
+│   └── index.html         — App completa (HTML + CSS + JS)
+└── vercel.json            — Ruteo de API y archivos estáticos
 ```
 
 ---
 
 ## Tecnologías
 
-- **Web Crypto API** — cifrado AES-256-GCM nativo del navegador
-- **claude.ai `db` capability** — base de datos compartida en tiempo real
-- **Google Fonts** — Libre Baskerville · DM Sans · IBM Plex Mono
-- Sin frameworks · Sin dependencias externas · Sin servidor propio
+- **Frontend**: HTML + CSS + JS vanilla — sin frameworks
+- **Cifrado**: Web Crypto API (AES-256-GCM, PBKDF2)
+- **Backend**: Vercel Serverless Functions (Node.js)
+- **Base de datos**: Supabase (PostgreSQL + Auth)
+- **Despliegue**: Vercel (dominio `direct-save.vercel.app`)
+
+---
+
+## Cuenta de administrador por defecto
+
+| Campo | Valor |
+|-------|-------|
+| Usuario | `root` |
+| Contraseña | *(configurada en el primer despliegue)* |
+
+---
+
+## Cómo subir empresas desde Excel
+
+El script `upload-companies.mjs` lee el Excel de credenciales y las sube directamente a la bóveda cifrada:
+
+```bash
+node upload-companies.mjs
+```
+
+El script inicia sesión como admin, deriva el masterKey en local, cifra cada credencial con AES-256-GCM y hace PUT a la API. El servidor nunca ve las contraseñas en texto plano.
