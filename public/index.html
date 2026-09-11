@@ -523,6 +523,8 @@ const LOGOS = {
   tss: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect x="4" y="44" width="29" height="54" rx="7" fill="#1547a8"/><rect x="36" y="27" width="29" height="71" rx="7" fill="#0099c7"/><rect x="68" y="9" width="29" height="89" rx="7" fill="#3db849"/><text x="18" y="87" text-anchor="middle" fill="white" font-size="26" font-weight="900" font-family="Arial Black,sans-serif">T</text><text x="50" y="87" text-anchor="middle" fill="white" font-size="26" font-weight="900" font-family="Arial Black,sans-serif">S</text><text x="82" y="87" text-anchor="middle" fill="white" font-size="22" font-weight="900" font-family="Arial Black,sans-serif">s</text></svg>`,
   trabajo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect x="46" y="2" width="8" height="11" rx="2" fill="#1a3d8f"/><rect x="43" y="12" width="14" height="4" rx="1" fill="#0f2d7a"/><path d="M18,58 Q18,12 50,8 Q82,12 82,58 Z" fill="#1a3d8f"/><rect x="18" y="55" width="64" height="7" fill="#0f2d7a"/><rect x="14" y="62" width="72" height="4" rx="1" fill="#1a3d8f"/><rect x="10" y="66" width="80" height="4" rx="1" fill="#0f2d7a"/><rect x="8" y="70" width="84" height="4" fill="#dc2626"/><text x="50" y="88" text-anchor="middle" fill="#dc2626" font-size="10" font-weight="800" font-family="Georgia,serif" letter-spacing="2">TRABAJO</text></svg>`,
   sisaril: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><path d="M22,26 Q50,4 78,26" fill="none" stroke="#3db849" stroke-width="8" stroke-linecap="round"/><path d="M28,31 Q50,14 72,31" fill="none" stroke="#2a9c35" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="28" r="10" fill="#1547a8"/><line x1="50" y1="50" x2="22" y2="70" stroke="#1547a8" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="50" x2="78" y2="70" stroke="#3db849" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="72" x2="22" y2="95" stroke="#3db849" stroke-width="13" stroke-linecap="round"/><line x1="50" y1="72" x2="78" y2="95" stroke="#1547a8" stroke-width="13" stroke-linecap="round"/><circle cx="50" cy="61" r="7" fill="#1547a8"/></svg>`,
+  carnet: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="14" fill="#ffffff"/><path d="M8,50 Q12,18 50,14 Q72,14 82,28" fill="none" stroke="#e91e8c" stroke-width="7" stroke-linecap="round"/><path d="M8,50 Q12,82 50,86 Q72,86 82,72" fill="none" stroke="#00b4b4" stroke-width="7" stroke-linecap="round"/><path d="M82,28 Q94,42 92,50 Q94,58 82,72" fill="none" stroke="#00b4b4" stroke-width="7" stroke-linecap="round"/><text x="50" y="56" text-anchor="middle" fill="#1a1a2e" font-size="13" font-weight="900" font-family="Arial Black,sans-serif" letter-spacing="1">CARDNET</text><text x="50" y="70" text-anchor="middle" fill="#888" font-size="7" font-family="Arial,sans-serif" letter-spacing="2">NOS UNE</text></svg>`,
+  azul: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="14" fill="#0047ba"/><rect x="6" y="6" width="88" height="88" rx="10" fill="none" stroke="#1a6aff" stroke-width="3"/><rect x="6" y="6" width="14" height="14" rx="2" fill="#1a6aff" opacity=".7"/><rect x="22" y="6" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="64" y="6" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="80" y="6" width="14" height="14" rx="2" fill="#1a6aff" opacity=".7"/><rect x="6" y="22" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="80" y="22" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="6" y="64" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="80" y="64" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="6" y="80" width="14" height="14" rx="2" fill="#1a6aff" opacity=".7"/><rect x="22" y="80" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="64" y="80" width="14" height="14" rx="2" fill="#1a6aff" opacity=".5"/><rect x="80" y="80" width="14" height="14" rx="2" fill="#1a6aff" opacity=".7"/><text x="50" y="58" text-anchor="middle" fill="#ffffff" font-size="26" font-weight="900" font-family="Arial Black,sans-serif" letter-spacing="3">AZUL</text></svg>`,
 };
 
 const INST = {
@@ -530,7 +532,7 @@ const INST = {
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',     uf:'usuario', pf:'contrasena' },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',      uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL', uf:'usuario', pf:'contrasena' },
-  carnet:  { name:'Carnet',      desc:'Portal de Cédula y Carnet de Identidad',     grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',      uf:'usuario', pf:'contrasena' },
+  carnet:  { name:'Cardnet',     desc:'Red de pagos con tarjetas · POS y comercios',     grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',      uf:'usuario', pf:'contrasena' },
   azul:    { name:'Azul',        desc:'Portal Azul',                                grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',      uf:'usuario', pf:'contrasena' },
   cami:    { name:'CAMI',        desc:'Análisis 606/607 e IT-1',                    grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Chat IA · Facturas 606/607',                 grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
@@ -1035,8 +1037,36 @@ async function enterCompany(credId) {
   // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
-  // Open portal if URL configured
-  if (loginUrl) window.open(loginUrl,'_blank');
+  // Auto-login: submit form POST with credentials to the portal
+  if (loginUrl) {
+    const userField = appConfig[cred.institution+'_userField'] || inst.uf || 'usuario';
+    const passField = appConfig[cred.institution+'_passField'] || inst.pf || 'contrasena';
+    autoLoginForm(loginUrl, userField, passField, _chUser, _chPass, cred.institution==='tss' ? _chCedula : null, appConfig['tss_extraFields']);
+  }
+}
+
+function autoLoginForm(url, userField, passField, user, pass, cedula, tssExtraField) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  form.target = '_blank';
+  form.style.cssText = 'display:none;position:absolute';
+
+  const add = (name, value) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = name;
+    inp.value = value;
+    form.appendChild(inp);
+  };
+
+  add(userField, user);
+  add(passField, pass);
+  if (cedula) add(tssExtraField || 'cedula', cedula);
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
 }
 
 function chTogglePw() {
@@ -1054,7 +1084,13 @@ async function chCopy(which) {
   catch { toast('No se pudo copiar','warn'); }
 }
 
-function chLaunch() { if (_chUrl) window.open(_chUrl,'_blank'); }
+function chLaunch() {
+  if (!_chUrl) return;
+  const inst = INST[activePortal] || {};
+  const userField = appConfig[activePortal+'_userField'] || inst.uf || 'usuario';
+  const passField = appConfig[activePortal+'_passField'] || inst.pf || 'contrasena';
+  autoLoginForm(_chUrl, userField, passField, _chUser, _chPass, _chCedula||null, appConfig['tss_extraFields']);
+}
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
 
 /* ── Company modal ── */
