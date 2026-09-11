@@ -251,7 +251,7 @@
 </div>
 
 <script src="/cami/vendor/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 // ── PDF.js ──────────────────────────────────────────────────────────────────
 if (typeof pdfjsLib !== 'undefined') {
@@ -360,7 +360,7 @@ function showWelcome() {
 // ── Excel / TXT generation ───────────────────────────────────────────────────
 const COLS_606 = [
   ['lineas','Líneas'], ['proveedor','Proveedor'], ['rncCedula','RNC o Cédula'],
-  ['tipoBienesServicios','Tipo Bienes y Servicios Comprados'], ['ncf','NCF'],
+  ['tipoId','Tipo Id'], ['tipoBienesServicios','Tipo Bienes y Servicios Comprados'], ['ncf','NCF'],
   ['ncfModificado','NCF ó Documento Modificado'], ['fechaComprobante','Fecha Comprobante'],
   ['diaComprobante','Dia Comprobante'], ['fechaPago','Fecha Pago'], ['diaPago','Dia Pago'],
   ['montoFacturadoServicios','Monto Facturado en Servicios'],
@@ -377,7 +377,7 @@ const COLS_606 = [
 
 const COLS_607 = [
   ['lineas','No'], ['cliente','Cliente'], ['rncCedulaPasaporte','RNC/Cédula o Pasaporte'],
-  ['ncf','Número Comprobante Fiscal'], ['ncfModificado','Número Comprobante Fiscal Modificado'],
+  ['tipoId','Tipo Id'], ['ncf','Número Comprobante Fiscal'], ['ncfModificado','Número Comprobante Fiscal Modificado'],
   ['tipoIngreso','Tipo de Ingreso'], ['fechaComprobante','Fecha Comprobante'],
   ['diaComprobante','Dia Comprobante'], ['fechaRetencion','Fecha de Retención'],
   ['diaRetencion','Dia de Retención'], ['montoFacturado','Monto Facturado'],
@@ -391,30 +391,122 @@ const COLS_607 = [
   ['permuta','Permuta'], ['otrasFormasVentas','Otras Formas de Ventas'], ['estatus','Estatus'],
 ];
 
-// Keys to exclude from TXT
-const TXT_SKIP = new Set(['lineas','estatus','proveedor','cliente']);
+// Keys to exclude from TXT (names/labels and row-number/status)
+const TXT_SKIP = new Set(['lineas','estatus','proveedor','cliente','moneda']);
 
 function n(v) { return typeof v === 'number' ? v : (parseFloat(v) || 0); }
 function fmt(v) { return typeof v === 'number' && v === 0 ? '' : (v ?? ''); }
 
-function downloadXlsx(tipo, rows, periodo) {
+// Ensure single-digit codes get a leading zero (e.g. 1 → "01")
+function pad2(v) {
+  if (v === null || v === undefined || v === '') return v ?? '';
+  const s = String(v).trim();
+  return /^\d$/.test(s) ? '0' + s : s;
+}
+
+function normalizeRow(row, tipo) {
+  if (!row) return row;
+  if (tipo === '606') {
+    row.tipoBienesServicios = pad2(row.tipoBienesServicios);
+    row.formaPago = pad2(row.formaPago);
+    row.tipoId = pad2(row.tipoId);
+    row.tipoRetencionIsr = row.tipoRetencionIsr ? pad2(row.tipoRetencionIsr) : '00';
+  } else if (tipo === '607') {
+    row.tipoIngreso = pad2(row.tipoIngreso);
+    row.tipoId = pad2(row.tipoId);
+  }
+  return row;
+}
+
+const MONEY_KEYS_606 = new Set(['montoFacturadoServicios','montoFacturadoBienes','totalMontoFacturado',
+  'itbisFacturado','itbisRetenido','itbisProporcionalidad','itbisLlevadoCosto','itbisPorAdelantar',
+  'itbisPercibidoCompras','montoRetencionRenta','isrPercibidoCompras','isc','otrosImpuestos','montoPropinaLegal']);
+const MONEY_KEYS_607 = new Set(['montoFacturado','itbisFacturado','itbisRetenidoTerceros','itbisPercibido',
+  'retencionRentaTerceros','isrPercibido','isc','otrosImpuestos','montoPropinaLegal',
+  'efectivo','chequeTransferenciaDeposito','tarjetaDebitoCredito','ventaCredito',
+  'bonosCertificadosRegalo','permuta','otrasFormasVentas']);
+
+async function downloadXlsx(tipo, rows, periodo) {
   const cols = tipo === '607' ? COLS_607 : COLS_606;
-  const headers = cols.map(c => c[1]);
-  const data = [headers];
+  const MONEY_KEYS = tipo === '607' ? MONEY_KEYS_607 : MONEY_KEYS_606;
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(tipo === '607' ? 'Formato 607' : 'DIGITAR');
+
+  // Column definitions
+  ws.columns = cols.map(([key, label]) => ({
+    header: label, key,
+    width: key === 'lineas' ? 7 : (MONEY_KEYS.has(key) ? 17 : 24),
+  }));
+
+  // Header styling
+  const hRow = ws.getRow(1);
+  hRow.font = { bold: true, size: 10 };
+  hRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+  hRow.alignment = { horizontal: 'center', wrapText: true, vertical: 'middle' };
+  hRow.height = 42;
+
+  // Data rows
   rows.forEach((row, i) => {
-    const r = cols.map(([key]) => {
-      if (key === 'lineas') return String(i + 1);
-      if (key === 'estatus') return '';
+    const isUsd = (row.moneda || '').toUpperCase() === 'USD';
+    const vals = {};
+    cols.forEach(([key]) => {
+      if (key === 'lineas') { vals[key] = i + 1; return; }
+      if (key === 'estatus') { vals[key] = ''; return; }
       const v = row[key];
-      if (typeof v === 'number') return v === 0 ? '' : v;
-      return v ?? '';
+      vals[key] = (typeof v === 'number' && v === 0) ? null : (v ?? '');
     });
-    data.push(r);
+    const eRow = ws.addRow(vals);
+    eRow.font = { size: 10 };
+
+    if (isUsd) {
+      eRow.eachCell({ includeEmpty: true }, cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+      });
+    }
+    cols.forEach(([key], ci) => {
+      if (MONEY_KEYS.has(key)) {
+        const cell = eRow.getCell(ci + 1);
+        cell.numFmt = '#,##0.00';
+        cell.alignment = { horizontal: 'right' };
+      }
+    });
   });
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, tipo === '607' ? `Formato 607` : 'DIGITAR');
-  XLSX.writeFile(wb, `ModeloExcel_${periodo || getYearMonth()}.xlsx`);
+
+  // Totals row with SUM formulas
+  if (rows.length > 0) {
+    const totals = {};
+    cols.forEach(([key], ci) => {
+      if (key === 'lineas') { totals[key] = 'TOTAL'; return; }
+      if (MONEY_KEYS.has(key)) {
+        const letter = ws.getColumn(ci + 1).letter;
+        totals[key] = { formula: `SUM(${letter}2:${letter}${rows.length + 1})` };
+      } else { totals[key] = ''; }
+    });
+    const tRow = ws.addRow(totals);
+    tRow.font = { bold: true, size: 10 };
+    tRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+    cols.forEach(([key], ci) => {
+      if (MONEY_KEYS.has(key)) {
+        tRow.getCell(ci + 1).numFmt = '#,##0.00';
+        tRow.getCell(ci + 1).alignment = { horizontal: 'right' };
+      }
+    });
+  }
+
+  // Hide Tipo Id column (needed for TXT but not shown visually)
+  const tipoIdIdx = cols.findIndex(([k]) => k === 'tipoId');
+  if (tipoIdIdx >= 0) ws.getColumn(tipoIdIdx + 1).hidden = true;
+
+  // Freeze header
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2' }];
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ModeloExcel_${periodo || getYearMonth()}.xlsx`;
+  a.click(); URL.revokeObjectURL(url);
 }
 
 function downloadTxt(tipo, rows, periodo) {
@@ -504,14 +596,14 @@ async function extractPdfText(file) {
   return text.trim() || `PDF: ${file.name}`;
 }
 
-// Render one PDF page to a base64 JPEG (for scanned/image-based pages).
+// Render one PDF page to a high-quality JPEG (for scanned/image-based pages).
 async function renderPdfPageToImage(page) {
-  const viewport = page.getViewport({ scale: 1.5 });
+  const viewport = page.getViewport({ scale: 2.0 }); // 2x for better OCR
   const canvas = document.createElement('canvas');
   canvas.width = viewport.width;
   canvas.height = viewport.height;
   await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-  return canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+  return canvas.toDataURL('image/jpeg', 0.95).split(',')[1]; // high quality for AI reading
 }
 
 // Expand a multi-page PDF into per-page tasks (handles text and scanned PDFs).
@@ -596,6 +688,7 @@ async function processFiles(files, modeOverride) {
       });
       if (!res.ok) throw new Error(await res.text());
       const { data } = await res.json();
+      normalizeRow(data, efectMode); // ensure leading zeros on code fields
       results.push({ data, name: item.name });
     } catch (e) {
       results.push({ error: e.message, name: item.name });
