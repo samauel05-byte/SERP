@@ -65,10 +65,11 @@ function extractPortals(row) {
   const dgiiPass = str(row[2]);
   if (dgiiUser && dgiiPass) portals.push({ portal: 'dgii', username: dgiiUser, password: dgiiPass });
 
-  // TSS (Tesorería)
-  const tssUser = str(row[4]);  // tesoreria_rnc_cedula
-  const tssPass = str(row[6]);  // tesoreria_class
-  if (tssUser && tssPass) portals.push({ portal: 'tss', username: tssUser, password: tssPass });
+  // TSS (Tesorería) — RNC o Cédula + Cédula + CLASS
+  const tssUser = str(row[4]);    // tesoreria_rnc_cedula (RNC o Cédula)
+  const tssCedula = str(row[5]);  // tesoreria_cedula (Cédula)
+  const tssPass = str(row[6]);    // tesoreria_class (CLASS)
+  if (tssUser && tssPass) portals.push({ portal: 'tss', username: tssUser, cedula: tssCedula, password: tssPass });
 
   // Min. Trabajo
   const trabajoUser = str(row[8]);  // mintrabajo_username
@@ -138,8 +139,10 @@ async function main() {
     process.stdout.write(`  ${companyName} — ${portals.map(p => p.portal).join(', ')} ... `);
 
     try {
-      for (const { portal, username, password } of portals) {
-        const { iv, ct } = await enc(masterKey, { companyName, username, password });
+      for (const { portal, username, cedula, password } of portals) {
+        const payload = { companyName, username, password };
+        if (cedula) payload.cedula = cedula;
+        const { iv, ct } = await enc(masterKey, payload);
         const id = `${portal}_${companyName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${Date.now()}`;
         await api('PUT', `/api/credentials/${id}`, { institution: portal, category: 'acceso', iv, ct }, access_token);
       }

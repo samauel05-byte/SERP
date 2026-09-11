@@ -509,9 +509,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <button class="cred-helper-close" onclick="closeCredHelper()">×</button>
   </div>
   <div class="cred-row">
-    <span class="cred-label">Usuario</span>
+    <span class="cred-label" id="ch-label-user">Usuario</span>
     <span class="cred-val" id="ch-user"></span>
     <button class="cred-copy" id="ch-copy-user" onclick="chCopy('user')">Copiar</button>
+  </div>
+  <div class="cred-row" id="ch-row-cedula" hidden>
+    <span class="cred-label">Cédula</span>
+    <span class="cred-val" id="ch-cedula"></span>
+    <button class="cred-copy" id="ch-copy-cedula" onclick="chCopy('cedula')">Copiar</button>
   </div>
   <div class="cred-row">
     <span class="cred-label">Clave</span>
@@ -905,7 +910,11 @@ function renderPortalGrid() {
   const grid=document.getElementById('portal-grid');
   grid.innerHTML='';
   const allowed = [];
-  if (currentUser?.access_direct !== false) allowed.push(...(Array.isArray(currentUser?.portals)?currentUser.portals:['dgii','tss','trabajo','sirla']));
+  if (currentUser?.access_direct !== false) {
+    const allPortals=['dgii','tss','trabajo','sirla','carnet','azul'];
+    const userPortals=Array.isArray(currentUser?.portals)?currentUser.portals:allPortals;
+    allowed.push(...(currentUser?.role==='admin'?allPortals:userPortals));
+  }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
   for (const [key,inst] of Object.entries(INST)) {
@@ -988,7 +997,7 @@ async function renderCompaniesView() {
 }
 
 /* ── Auto-login ── */
-let _chUser='', _chPass='', _chUrl='';
+let _chUser='', _chPass='', _chCedula='', _chUrl='';
 
 async function enterCompany(credId) {
   const cred=credentials.find(c=>c.id===credId);
@@ -1000,12 +1009,27 @@ async function enterCompany(credId) {
 
   const inst=INST[cred.institution];
   const loginUrl=appConfig[cred.institution+'_loginUrl']||'';
-  _chUser=plain.username||''; _chPass=plain.password||''; _chUrl=loginUrl;
+  _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chUrl=loginUrl;
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
   document.getElementById('ch-sub').textContent=inst.name;
+
+  // TSS has RNC/Cédula + Cédula + CLASS labels
+  const isTSS = cred.institution==='tss';
+  document.getElementById('ch-label-user').textContent = isTSS ? 'RNC o Cédula' : 'Usuario';
   document.getElementById('ch-user').textContent=_chUser;
+
+  // Cédula row (TSS only)
+  const cedulaRow = document.getElementById('ch-row-cedula');
+  if (_chCedula) {
+    document.getElementById('ch-cedula').textContent=_chCedula;
+    document.getElementById('ch-copy-cedula').textContent='Copiar';
+    cedulaRow.hidden=false;
+  } else {
+    cedulaRow.hidden=true;
+  }
+
   document.getElementById('ch-pass').textContent='••••••••••';
   document.getElementById('ch-pass').className='cred-val pw';
   document.getElementById('ch-eye').textContent='Ver';
@@ -1019,7 +1043,7 @@ async function enterCompany(credId) {
   }
   document.getElementById('cred-helper').hidden=false;
 
-  // Auto-copy username to clipboard
+  // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
   // Open portal if URL configured
@@ -1034,8 +1058,9 @@ function chTogglePw() {
 }
 
 async function chCopy(which) {
-  const val=which==='user'?_chUser:_chPass;
-  const btn=document.getElementById(which==='user'?'ch-copy-user':'ch-copy-pass');
+  const val=which==='user'?_chUser:which==='cedula'?_chCedula:_chPass;
+  const btnId=which==='user'?'ch-copy-user':which==='cedula'?'ch-copy-cedula':'ch-copy-pass';
+  const btn=document.getElementById(btnId);
   try { await navigator.clipboard.writeText(val); btn.textContent='✓'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='Copiar'; btn.classList.remove('copied'); },1800); }
   catch { toast('No se pudo copiar','warn'); }
 }
