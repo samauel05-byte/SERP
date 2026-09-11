@@ -293,10 +293,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </button>
     <div id="portal-banner"></div>
     <div class="company-list" id="company-list"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="add-company-btn" id="add-company-btn" onclick="openCompanyModal(null)">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Agregar empresa
     </button>
+    <button class="add-company-btn" id="import-xlsx-btn" onclick="openImportModal()" style="background:var(--accent2,#059669);border-color:var(--accent2,#059669)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Importar Excel
+    </button>
+    </div>
   </main>
 </div>
 
@@ -485,6 +491,38 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
+<!-- Modal importar Excel -->
+<div id="modal-import" class="modal-bg" hidden>
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hdr">
+      <span class="modal-ttl">Importar empresas desde Excel</span>
+      <button class="icon-btn" onclick="closeImportModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+        Selecciona el archivo <strong>PARA_SUBIR.xlsx</strong> (o compatible). Las credenciales se cifrarán en tu navegador antes de enviarse.
+      </p>
+      <div class="field">
+        <label>Archivo Excel (.xlsx)</label>
+        <input type="file" id="import-file" accept=".xlsx,.xls,.ods,.csv" style="padding:6px 0">
+      </div>
+      <div id="import-preview" hidden style="background:var(--bg2);border-radius:8px;padding:12px;font-size:12px;color:var(--text2);margin-top:4px"></div>
+      <div id="import-progress" hidden style="margin-top:12px">
+        <div style="font-size:13px;margin-bottom:6px;color:var(--text2)" id="import-progress-txt">Procesando…</div>
+        <div style="background:var(--bg2);border-radius:4px;height:8px;overflow:hidden">
+          <div id="import-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-ghost" onclick="closeImportModal()">Cancelar</button>
+      <button class="btn btn-pri" id="import-btn" onclick="startImport()" disabled>Importar</button>
+    </div>
+  </div>
+</div>
+
 <div class="notif-wrap" id="notif-wrap"></div>
 
 <!-- Credential helper panel -->
@@ -544,6 +582,16 @@ const INST = {
   carnet:  { name:'Cardnet',     desc:'Red de pagos con tarjetas · POS y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
              uf:'usuario', pf:'contrasena' },
   azul:    { name:'Azul',        desc:'Portal Azul',                                grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',
+             uf:'usuario', pf:'contrasena' },
+  idoppril:{ name:'IDOPPRIL',   desc:'Instituto Dom. de Prev. del Riesgo Lab.',     grad:'linear-gradient(135deg,#7c3aed 0%,#a855f7 100%)', abbr:'IDP',
+             uf:'usuario', pf:'contrasena' },
+  onapi:   { name:'ONAPI',      desc:'Oficina Nacional de la Propiedad Industrial', grad:'linear-gradient(135deg,#be123c 0%,#f43f5e 100%)', abbr:'ON',
+             uf:'email', pf:'password' },
+  formalizate:{ name:'Formalízate', desc:'Portal Formalízate · Registro de empresas',grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'FZ',
+             uf:'usuario', pf:'contrasena' },
+  camara:  { name:'Cámara',     desc:'Cámara de Comercio y Producción',             grad:'linear-gradient(135deg,#92400e 0%,#f59e0b 100%)', abbr:'CC',
+             uf:'email', pf:'password' },
+  citrus:  { name:'Citrus',     desc:'Portal Citrus · Pagos y servicios',           grad:'linear-gradient(135deg,#065f46 0%,#059669 100%)', abbr:'CT',
              uf:'usuario', pf:'contrasena' },
   cami:    { name:'CAMI',        desc:'Análisis 606/607 e IT-1',                    grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Chat IA · Facturas 606/607',                 grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
@@ -1286,6 +1334,143 @@ document.addEventListener('keydown', e=>{
   if(document.querySelector('#view-setup:not([hidden])')) handleSetup();
   else handleLogin();
 });
+
+/* ── Excel bulk import ── */
+function slugId(name) {
+  return name.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40);
+}
+
+function openImportModal() {
+  document.getElementById('modal-import').hidden=false;
+  document.getElementById('import-preview').hidden=true;
+  document.getElementById('import-progress').hidden=true;
+  document.getElementById('import-file').value='';
+  document.getElementById('import-btn').disabled=true;
+}
+function closeImportModal() { document.getElementById('modal-import').hidden=true; }
+
+document.getElementById('import-file')?.addEventListener('change', async function(){
+  const f=this.files[0]; if(!f) return;
+  document.getElementById('import-preview').hidden=true;
+  document.getElementById('import-btn').disabled=true;
+  const prev=document.getElementById('import-preview');
+  prev.textContent='Leyendo archivo…'; prev.hidden=false;
+  try {
+    const rows=await parseExcel(f);
+    prev.innerHTML=`<strong>${rows.length}</strong> empresas encontradas — listas para importar.`;
+    document.getElementById('import-btn').disabled=false;
+    document.getElementById('import-btn').dataset.rows=JSON.stringify(rows);
+  } catch(e) {
+    prev.textContent='Error al leer el archivo: '+e.message;
+  }
+});
+
+async function parseExcel(file) {
+  if(typeof XLSX==='undefined') {
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+  }
+  const buf=await file.arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  if(raw.length<3) throw new Error('El archivo no tiene datos suficientes');
+
+  // Row 0 = column keys
+  const keys=raw[0].map(k=>String(k).trim().toLowerCase().replace(/\s+/g,'_'));
+  const companies=[];
+
+  for(let i=2;i<raw.length;i++){
+    const row=raw[i];
+    const col=k=>{ const idx=keys.indexOf(k); return idx>=0?String(row[idx]||'').trim():''; };
+    const name=col('profile_name'); if(!name) continue;
+
+    companies.push({
+      name,
+      dgii:    {user:col('dgii_username'), pass:col('dgii_password')},
+      tss:     {user:col('tesoreria_rnc_cedula'), cedula:col('tesoreria_cedula'), pass:col('tesoreria_class')},
+      trabajo: {user:col('mintrabajo_username'), pass:col('mintrabajo_password'), rnc:col('mintrabajo_rnc')},
+      idoppril:{user:col('idoppril_rnc_user'), pass:col('idoppril_password')},
+      azul:    {user:col('azul_username'), pass:col('azul_password')},
+      carnet:  {user:col('cardnet_username'), pass:col('cardnet_password')},
+      onapi:   {user:col('onapi_email'), pass:col('onapi_password')},
+      formalizate:{user:col('formalizate_username'), pass:col('formalizate_password')},
+      camara:  {user:col('camara_email'), pass:col('camara_password')},
+      citrus:  {user:col('citrus_username'), pass:col('citrus_password'), company:col('citrus_company')},
+      sirla:   {user:col('sisalril_email'), pass:col('sisalril_password')},
+    });
+  }
+  return companies;
+}
+
+async function startImport() {
+  if(!masterKey) { toast('Inicia sesión primero','warn'); return; }
+  const btn=document.getElementById('import-btn');
+  let rows;
+  try { rows=JSON.parse(btn.dataset.rows||'[]'); } catch { rows=[]; }
+  if(!rows.length) { toast('Sin datos para importar','warn'); return; }
+
+  btn.disabled=true;
+  const prog=document.getElementById('import-progress');
+  const progTxt=document.getElementById('import-progress-txt');
+  const progBar=document.getElementById('import-progress-bar');
+  prog.hidden=false;
+
+  const PORTALS=['dgii','tss','trabajo','idoppril','azul','carnet','onapi','formalizate','camara','citrus','sirla'];
+  const batch=[];
+  let processed=0;
+
+  for(const co of rows){
+    const slug=slugId(co.name);
+    for(const inst of PORTALS){
+      const d=co[inst]; if(!d) continue;
+      const hasUser=d.user&&d.user.length>0;
+      const hasPass=d.pass&&d.pass.length>0;
+      if(!hasUser && !hasPass) continue;
+
+      const plain={companyName:co.name, username:d.user||'', password:d.pass||''};
+      if(d.cedula) plain.cedula=d.cedula;
+      if(d.rnc)    plain.rnc=d.rnc;
+      if(d.company) plain.company=d.company;
+
+      try {
+        const {iv,ct}=await C.enc(masterKey,plain);
+        batch.push({id:`${slug}_${inst}`, institution:inst, category:'acceso', iv, ct});
+      } catch {}
+    }
+    processed++;
+    const pct=Math.round(processed/rows.length*70);
+    progBar.style.width=pct+'%';
+    progTxt.textContent=`Cifrando… ${processed}/${rows.length} empresas`;
+    if(processed%20===0) await new Promise(r=>setTimeout(r,0)); // yield to UI
+  }
+
+  progTxt.textContent=`Subiendo ${batch.length} credenciales…`;
+  progBar.style.width='80%';
+
+  try {
+    const res=await A.post('/api/credentials',{credentials:batch});
+    if(!res.ok) throw new Error(res.error||'Error en servidor');
+    progBar.style.width='100%';
+    progTxt.textContent=`✓ ${res.count} credenciales importadas`;
+    // Reload credentials from server
+    const data=await A.get('/api/credentials');
+    credentials=data.credentials||[];
+    renderPortalGrid();
+    if(activePortal) await renderCompaniesView();
+    toast(`Importadas ${res.count} credenciales de ${rows.length} empresas`,'ok');
+    setTimeout(closeImportModal,1500);
+  } catch(e) {
+    progTxt.textContent='Error: '+e.message;
+    toast('Error al importar: '+e.message,'err');
+    btn.disabled=false;
+  }
+}
 
 boot();
 </script>
