@@ -8,6 +8,36 @@ const ALLOWED_HOSTS = [
   'www.mt.gob.do',
   'cardnet.com.do',
   'www.cardnet.com.do',
+  // Azul
+  'azul.com.do',
+  'www.azul.com.do',
+  'ecommerce.azul.com.do',
+  // IDOPPRIL
+  'idoppril.gov.do',
+  'www.idoppril.gov.do',
+  'idoppril.gob.do',
+  'www.idoppril.gob.do',
+  // ONAPI
+  'onapi.gov.do',
+  'www.onapi.gov.do',
+  'onapi.gob.do',
+  'www.onapi.gob.do',
+  // Formalízate
+  'formalizate.gob.do',
+  'www.formalizate.gob.do',
+  'formalizate.gov.do',
+  // Cámara de Comercio
+  'camarasantodomingo.do',
+  'www.camarasantodomingo.do',
+  'camarasd.org.do',
+  'www.camarasd.org.do',
+  // Citrus
+  'citrus.com.do',
+  'www.citrus.com.do',
+  'portal.citrus.com.do',
+  // SISALRIL (alternate)
+  'sisalril.gov.do',
+  'www.sisalril.gov.do',
 ];
 const CORS_ORIGIN = 'https://direct-save.vercel.app';
 
