@@ -1055,22 +1055,28 @@ async function enterCompany(credId) {
 async function autoLoginForm(url, institution, user, pass, cedula) {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
-  const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || 'usuario';
-  const passField = appConfig[institution+'_passField'] || aspF.pass || inst.pf || 'contrasena';
-  const cedulaField = aspF.cedula || null;
-  const submitField = aspF.submit || null;
 
-  // Fetch ViewState tokens from relay (server fetches public login page — no credentials involved)
+  // Fetch ViewState tokens AND auto-detect field names from the public login page
   let hiddenFields = [];
   let formAction = url;
+  let detectedUserField = null;
+  let detectedPassField = null;
   try {
     const r = await fetch('/api/relay/viewstate?url=' + encodeURIComponent(url));
     if (r.ok) {
       const data = await r.json();
       hiddenFields = data.hiddenFields || [];
       formAction = data.formAction || url;
+      detectedUserField = data.userField || null;
+      detectedPassField = data.passField || null;
     }
-  } catch { /* proceed without ViewState — portal may not need it */ }
+  } catch { /* proceed without relay — portal may not need ViewState */ }
+
+  // Field name priority: admin config > relay auto-detect > hardcoded ASP.NET IDs > generic fallback
+  const userField = appConfig[institution+'_userField'] || detectedUserField || aspF.user || inst.uf || 'usuario';
+  const passField = appConfig[institution+'_passField'] || detectedPassField || aspF.pass || inst.pf || 'contrasena';
+  const cedulaField = aspF.cedula || null;
+  const submitField = aspF.submit || null;
 
   const form = document.createElement('form');
   form.method = 'POST';
@@ -1089,7 +1095,7 @@ async function autoLoginForm(url, institution, user, pass, cedula) {
   // Add all hidden ASP.NET tokens (ViewState, EventValidation, etc.)
   hiddenFields.forEach(f => add(f.name, f.value));
 
-  // Add credentials (these never go to the server — only submitted directly to the portal)
+  // Add credentials — only submitted directly to the portal, never to our server
   add(userField, user);
   add(passField, pass);
   if (cedula && cedulaField) add(cedulaField, cedula);

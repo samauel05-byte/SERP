@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
     const html = await response.text();
 
-    // Extract all hidden inputs
+    // Extract all hidden inputs (ViewState, EventValidation, etc.)
     const hiddenFields = [];
     const hiddenRe = /<input[^>]+type=["']?hidden["']?[^>]*>/gi;
     const nameRe = /name=["']([^"']+)["']/i;
@@ -58,21 +58,33 @@ export default async function handler(req, res) {
       }
     }
 
-    // Extract form action
-    const formActionMatch = /<form[^>]+action=["']([^"']+)["']/i.exec(html);
-    const formAction = formActionMatch ? formActionMatch[1] : null;
-
-    // Resolve relative action URL
-    let resolvedAction = url;
-    if (formAction) {
-      try {
-        resolvedAction = new URL(formAction, url).toString();
-      } catch {
-        resolvedAction = url;
-      }
+    // Auto-detect visible text inputs (username field)
+    const textRe = /<input[^>]+type=["']?text["']?[^>]*>/gi;
+    let userField = null;
+    while ((match = textRe.exec(html)) !== null) {
+      const tag = match[0];
+      const nm = nameRe.exec(tag);
+      if (nm) { userField = nm[1]; break; } // first text input = username
     }
 
-    return res.json({ hiddenFields, formAction: resolvedAction });
+    // Auto-detect password input
+    const passRe = /<input[^>]+type=["']?password["']?[^>]*>/gi;
+    let passField = null;
+    while ((match = passRe.exec(html)) !== null) {
+      const tag = match[0];
+      const nm = nameRe.exec(tag);
+      if (nm) { passField = nm[1]; break; } // first password input = password
+    }
+
+    // Extract form action and resolve to absolute URL
+    const formActionMatch = /<form[^>]+action=["']([^"']+)["']/i.exec(html);
+    const formAction = formActionMatch ? formActionMatch[1] : null;
+    let resolvedAction = url;
+    if (formAction) {
+      try { resolvedAction = new URL(formAction, url).toString(); } catch { resolvedAction = url; }
+    }
+
+    return res.json({ hiddenFields, formAction: resolvedAction, userField, passField });
   } catch (e) {
     return res.status(502).json({ error: `No se pudo conectar al portal: ${e.message}` });
   }
