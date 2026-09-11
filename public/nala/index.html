@@ -549,7 +549,7 @@ async function processFiles(files, modeOverride) {
     if (item.kind === 'pdf' && item.file) {
       const pages = await expandPdfToPages(item.file);
       if (pages) {
-        pages.forEach(p => tasks.push({ kind: 'pdf', name: p.name, pdfText: p.pdfText }));
+        pages.forEach(p => tasks.push(p)); // preserve kind, base64, mimeType for scanned pages
       } else {
         tasks.push(item);
       }
