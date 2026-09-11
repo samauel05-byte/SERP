@@ -1106,13 +1106,18 @@ function autoLoginForm(url, institution, user, pass, cedula, existingTab=null) {
     if (!submitField && d.submitField) payload.submitField = d.submitField;
   }
 
-  const hash = btoa(encodeURIComponent(JSON.stringify(payload)));
-  const autologinUrl = '/autologin.html#' + hash;
+  // Use CF Worker proxy: fetches portal HTML server-side, injects autofill script.
+  // Credentials are ONLY in the hash — never sent to the worker.
+  const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
+  const proxyPayload = { user: payload.user, pass: payload.pass };
+  if (payload.cedula) proxyPayload.cedula = payload.cedula;
+  const hash = btoa(encodeURIComponent(JSON.stringify(proxyPayload)));
+  const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '#' + hash;
 
   if (existingTab) {
-    existingTab.location.href = autologinUrl;
+    existingTab.location.href = proxyUrl;
   } else {
-    window.open(autologinUrl, '_blank');
+    window.open(proxyUrl, '_blank');
   }
 }
 
