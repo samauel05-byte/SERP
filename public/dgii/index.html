@@ -27,6 +27,12 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .save-badge.show{opacity:1}
 .btn{padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit}
 .btn-save{background:rgba(32,189,90,.12);border:1px solid rgba(32,189,90,.35);color:var(--green)}
+.btn-back{background:transparent;border:none;color:var(--fg2);font-size:11px;font-weight:700;cursor:pointer;padding:4px 8px;border-radius:5px;font-family:inherit;letter-spacing:.03em}
+.btn-back:hover{color:var(--fg)}
+.hdr-sel,.hdr-inp{padding:3px 7px;border-radius:5px;border:1px solid var(--bdr);background:var(--surf);color:var(--fg);font-size:11px;font-family:inherit;outline:none}
+.hdr-sel:focus,.hdr-inp:focus{border-color:var(--acc2)}
+.hdr-sel option{background:var(--surf2)}
+.hdr-inp::placeholder{color:var(--fg3)}
 
 /* TABS */
 .tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 14px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
@@ -82,13 +88,17 @@ select option{background:var(--surf2)}
 
 <div class="hdr">
   <div class="hdr-l">
+    <button class="btn-back" onclick="window.parent.postMessage({action:'showPortals'},'*')">← Volver</button>
     <div class="logo">SAVE</div>
     <div class="hdr-title">Estimación Fiscal</div>
   </div>
   <div class="hdr-r">
     <span class="save-badge" id="sbadge">✓ Guardado</span>
-    <span class="rnc-tag" id="rnc-tag">—</span>
-    <span class="anio-badge" id="anio-badge">—</span>
+    <select id="co-select" class="hdr-sel" onchange="changeCompany(this.value)">
+      <option value="">— Empresa —</option>
+    </select>
+    <input id="rnc-inp" class="hdr-inp" type="text" placeholder="RNC" style="width:100px" oninput="RNC=this.value.trim()">
+    <select id="anio-sel" class="hdr-sel" onchange="changeAnio(this.value)" style="width:68px"></select>
     <button class="btn btn-save" onclick="saveAll()">Guardar</button>
   </div>
 </div>
@@ -282,7 +292,8 @@ select option{background:var(--surf2)}
 
 <script>
 const API='/api/ir2/resumen';
-const token=()=>sessionStorage.getItem('dtoken')||'';
+let _token='',_companies=[];
+const token=()=>_token||sessionStorage.getItem('dtoken')||'';
 let RNC='',NOMBRE='',ANIO=new Date().getFullYear();
 
 /* ── Module definitions ── */
@@ -517,7 +528,6 @@ function delRow(mod,i){DATA[mod].splice(i,1);renderMod(mod);}
 /* ── API ── */
 async function load(){
   const tk=token();
-  document.getElementById('anio-badge').textContent=ANIO;
   if(!tk||!RNC){renderAll();return;}
   try{
     const r=await fetch(`${API}?rnc=${encodeURIComponent(RNC)}&anio=${ANIO}&tipo=dgii-modulos`,{headers:{Authorization:'Bearer '+tk}});
@@ -528,7 +538,10 @@ async function load(){
 
 async function saveAll(){
   const tk=token();
-  if(!tk||!RNC){alert('No hay sesión activa');return;}
+  if(!tk){alert('No hay sesión activa');return;}
+  const ri=document.getElementById('rnc-inp');
+  if(ri) RNC=ri.value.trim();
+  if(!RNC){alert('Ingresa un RNC primero');return;}
   try{
     await fetch(API,{
       method:'POST',
@@ -541,14 +554,59 @@ async function saveAll(){
 
 function showBadge(){const b=document.getElementById('sbadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000);}
 
+/* ── Company / year selectors ── */
+function renderCoSel(){
+  const sel=document.getElementById('co-select');
+  if(!sel) return;
+  sel.innerHTML='<option value="">— Empresa —</option>'+
+    _companies.map(c=>`<option value="${c.rnc||''}">${c.nombre||(c.rnc||'Sin nombre')}</option>`).join('');
+  if(RNC) sel.value=RNC;
+}
+function renderAnioSel(){
+  const sel=document.getElementById('anio-sel');
+  if(!sel) return;
+  const y=new Date().getFullYear();
+  let s='';
+  for(let i=y+1;i>=y-6;i--) s+=`<option value="${i}"${i===ANIO?' selected':''}>${i}</option>`;
+  sel.innerHTML=s;
+}
+function changeCompany(rnc){
+  const co=_companies.find(c=>c.rnc===rnc)||{rnc:'',nombre:''};
+  RNC=co.rnc; NOMBRE=co.nombre;
+  const ri=document.getElementById('rnc-inp');
+  if(ri) ri.value=RNC;
+  MODKEYS.forEach(k=>DATA[k]=[]);
+  load();
+}
+function changeAnio(y){
+  ANIO=parseInt(y)||new Date().getFullYear();
+  MODKEYS.forEach(k=>DATA[k]=[]);
+  load();
+}
+
+/* ── postMessage from parent ── */
+window.addEventListener('message',e=>{
+  if(!e.data||e.data.action!=='dgii-init') return;
+  _token=e.data.token||'';
+  _companies=e.data.companies||[];
+  renderCoSel();
+  renderAnioSel();
+  load();
+});
+
 /* ── Init ── */
 (function init(){
   const p=new URLSearchParams(location.search);
   RNC=p.get('rnc')||'';
   ANIO=parseInt(p.get('anio'))||new Date().getFullYear();
   NOMBRE=p.get('nombre')||'';
-  document.getElementById('rnc-tag').textContent=RNC?(NOMBRE?`${NOMBRE} · ${RNC}`:RNC):'Sin RNC';
-  load();
+  const ri=document.getElementById('rnc-inp');
+  if(ri) ri.value=RNC;
+  renderAnioSel();
+  renderAll();
+  window.parent.postMessage({action:'dgii-ready'},'*');
+  // fallback: if parent doesn't respond in 800ms, try sessionStorage token
+  setTimeout(()=>{ if(!_token) load(); },800);
 })();
 </script>
 </body>
