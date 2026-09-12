@@ -18,7 +18,10 @@ export default async function handler(req, res) {
     'tss.gob.do', 'www.tss.gob.do',
     'dgii.gov.do', 'www.dgii.gov.do',
     'oficinavirtual.dgii.gov.do',
-    'sisaril.mt.gob.do', 'www.mt.gob.do',
+    // Ministerio de Trabajo
+    'ovi.mt.gob.do', 'mt.gob.do', 'www.mt.gob.do',
+    // SISARIL
+    'sisaril.mt.gob.do', 'sisaril.gob.do', 'www.sisaril.gob.do',
     'cardnet.com.do', 'www.cardnet.com.do',
   ];
   if (!allowed.some(h => target.hostname === h || target.hostname.endsWith('.' + h))) {

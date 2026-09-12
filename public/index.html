@@ -322,6 +322,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <p class="slabel">Credenciales de acceso</p>
       <div class="field"><label>Usuario / RNC / Cédula</label><input id="co-user" type="text" autocomplete="off"></div>
       <div class="field"><label>Contraseña</label><input id="co-pass" type="password" autocomplete="new-password"></div>
+      <div class="field" id="co-tarjeta-row" hidden>
+        <label>Tarjeta / Código adicional <span style="color:var(--text3);font-weight:400;font-size:11px">(opcional)</span></label>
+        <input id="co-tarjeta" type="text" autocomplete="off" placeholder="Ej: código de tarjeta, token o pin adicional">
+      </div>
       <div class="field" id="co-dgii-codes-row" hidden>
         <label>Códigos de tarjeta DGII</label>
         <input id="co-dgii-codes" type="text" placeholder="Cód1,Cód2,Cód3,… (separados por coma)" autocomplete="off">
@@ -558,6 +562,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <button class="cred-copy" onclick="chTogglePw()" id="ch-eye">Ver</button>
     <button class="cred-copy" id="ch-copy-pass" onclick="chCopy('pass')">Copiar</button>
   </div>
+  <div class="cred-row" id="ch-row-tarjeta" hidden>
+    <span class="cred-label">Tarjeta</span>
+    <span class="cred-val" id="ch-tarjeta"></span>
+    <button class="cred-copy" id="ch-copy-tarjeta" onclick="chCopy('tarjeta')">Copiar</button>
+  </div>
   <div id="ch-row-dgii-codes" hidden>
     <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
     <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Tarjeta de códigos DGII</div>
@@ -594,8 +603,10 @@ const INST = {
              uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
              aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' } },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
+             url:'https://ovi.mt.gob.do/account/login',
              uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
+             url:'https://sisaril.mt.gob.do',
              uf:'usuario', pf:'contrasena' },
   carnet:  { name:'Cardnet',     desc:'Portal bancario · Acceso a pagos y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
              uf:'usuario', pf:'contrasena' },
@@ -1167,7 +1178,7 @@ async function cleanDupes(ids) {
 }
 
 /* ── Auto-login ── */
-let _chUser='', _chPass='', _chCedula='', _chUrl='', _chDgiiCodes=[];
+let _chUser='', _chPass='', _chCedula='', _chTarjeta='', _chUrl='', _chDgiiCodes=[];
 
 // ViewState cache: keyed by portal URL, short TTL so stale values don't accumulate
 const _vsCache = {};
@@ -1206,7 +1217,7 @@ async function enterCompany(credId) {
   try { plain=await C.dec(masterKey,cred.iv,cred.ct); }
   catch { toast('Error al descifrar credenciales','err'); newTab?.close(); return; }
 
-  _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chUrl=loginUrl;
+  _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
   _chDgiiCodes = plain.dgiiCodes ? plain.dgiiCodes.split(',').map(s=>s.trim()) : [];
 
   // Show credential helper
@@ -1226,6 +1237,16 @@ async function enterCompany(credId) {
     cedulaRow.hidden=false;
   } else {
     cedulaRow.hidden=true;
+  }
+
+  // Tarjeta row (banca y otros portales con código adicional)
+  const tarjetaRow = document.getElementById('ch-row-tarjeta');
+  if (_chTarjeta) {
+    document.getElementById('ch-tarjeta').textContent=_chTarjeta;
+    document.getElementById('ch-copy-tarjeta').textContent='Copiar';
+    tarjetaRow.hidden=false;
+  } else {
+    tarjetaRow.hidden=true;
   }
 
   document.getElementById('ch-pass').textContent='••••••••••';
@@ -1257,11 +1278,11 @@ async function enterCompany(credId) {
 
   // Navigate the pre-opened tab with credentials in the hash
   if (newTab && loginUrl) {
-    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, newTab);
+    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, newTab);
   }
 }
 
-function autoLoginForm(url, institution, user, pass, cedula, existingTab=null) {
+function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existingTab=null) {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
   const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || null;
@@ -1271,6 +1292,7 @@ function autoLoginForm(url, institution, user, pass, cedula, existingTab=null) {
   // Build payload — credentials go in the URL hash (never sent to server)
   const payload = { url, user, pass };
   if (cedula) payload.cedula = cedula;
+  if (tarjeta) payload.tarjeta = tarjeta;
   if (userField) payload.userField = userField;
   if (passField) payload.passField = passField;
   if (submitField) payload.submitField = submitField;
@@ -1291,6 +1313,7 @@ function autoLoginForm(url, institution, user, pass, cedula, existingTab=null) {
   const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
   const proxyPayload = { user: payload.user, pass: payload.pass };
   if (payload.cedula) proxyPayload.cedula = payload.cedula;
+  if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;
   const hash = btoa(encodeURIComponent(JSON.stringify(proxyPayload)));
   const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '#' + hash;
 
@@ -1309,8 +1332,8 @@ function chTogglePw() {
 }
 
 async function chCopy(which) {
-  const val=which==='user'?_chUser:which==='cedula'?_chCedula:_chPass;
-  const btnId=which==='user'?'ch-copy-user':which==='cedula'?'ch-copy-cedula':'ch-copy-pass';
+  const val=which==='user'?_chUser:which==='cedula'?_chCedula:which==='tarjeta'?_chTarjeta:_chPass;
+  const btnId=which==='user'?'ch-copy-user':which==='cedula'?'ch-copy-cedula':which==='tarjeta'?'ch-copy-tarjeta':'ch-copy-pass';
   const btn=document.getElementById(btnId);
   try { await navigator.clipboard.writeText(val); btn.textContent='✓'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='Copiar'; btn.classList.remove('copied'); },1800); }
   catch { toast('No se pudo copiar','warn'); }
@@ -1318,7 +1341,7 @@ async function chCopy(which) {
 
 function chLaunch() {
   if (!_chUrl) return;
-  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'');
+  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'');
 }
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
 
@@ -1357,8 +1380,10 @@ async function openCompanyModal(credId) {
   document.getElementById('modal-co-id').value = credId||'';
   const ftr=document.getElementById('modal-co-ftr');
   const codesRow=document.getElementById('co-dgii-codes-row');
+  const tarjetaRow=document.getElementById('co-tarjeta-row');
   const isDGII = activePortal==='dgii';
   codesRow.hidden = !isDGII;
+  tarjetaRow.hidden = isDGII; // DGII ya tiene su tarjeta de códigos; otros portales usan el campo tarjeta
 
   if (credId) {
     document.getElementById('modal-co-title').textContent='Editar empresa';
@@ -1369,11 +1394,13 @@ async function openCompanyModal(credId) {
         document.getElementById('co-name').value=plain.companyName||'';
         document.getElementById('co-user').value=plain.username||'';
         document.getElementById('co-pass').value=plain.password||'';
+        document.getElementById('co-tarjeta').value=plain.tarjeta||'';
         if (isDGII) document.getElementById('co-dgii-codes').value=plain.dgiiCodes||'';
       } catch {
         document.getElementById('co-name').value='';
         document.getElementById('co-user').value='';
         document.getElementById('co-pass').value='';
+        document.getElementById('co-tarjeta').value='';
         if (isDGII) document.getElementById('co-dgii-codes').value='';
       }
     }
@@ -1386,6 +1413,7 @@ async function openCompanyModal(credId) {
     document.getElementById('co-name').value='';
     document.getElementById('co-user').value='';
     document.getElementById('co-pass').value='';
+    document.getElementById('co-tarjeta').value='';
     if (isDGII) document.getElementById('co-dgii-codes').value='';
     ftr.innerHTML=`
       <button class="btn btn-ghost" onclick="closeCompanyModal()">Cancelar</button>
@@ -1404,6 +1432,8 @@ async function saveCompany() {
   if (!companyName) { toast('Escribe el nombre de la empresa','warn'); return; }
 
   const payload={companyName,username,password};
+  const tarjeta=document.getElementById('co-tarjeta').value.trim();
+  if (tarjeta) payload.tarjeta=tarjeta;
   if (activePortal==='dgii') {
     const codes=document.getElementById('co-dgii-codes').value.trim();
     if (codes) payload.dgiiCodes=codes;

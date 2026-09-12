@@ -4,8 +4,15 @@ const ALLOWED_HOSTS = [
   'dgii.gov.do',
   'www.tss.gob.do',
   'tss.gob.do',
-  'sisaril.mt.gob.do',
+  // Ministerio de Trabajo (OVI)
+  'ovi.mt.gob.do',
+  'mt.gob.do',
   'www.mt.gob.do',
+  // SISARIL / SISALRIL
+  'sisaril.mt.gob.do',
+  'sisaril.gob.do',
+  'www.sisaril.gob.do',
+  'portal.sisaril.gob.do',
   'cardnet.com.do',
   'www.cardnet.com.do',
   // Azul
