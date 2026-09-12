@@ -584,6 +584,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <span class="cred-val" id="ch-tarjeta"></span>
     <button class="cred-copy" id="ch-copy-tarjeta" onclick="chCopy('tarjeta')">Copiar</button>
   </div>
+  <div id="ch-row-hint" hidden>
+    <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
+    <div id="ch-hint-text" style="font-size:12px;color:var(--text3);line-height:1.55;padding:0 2px"></div>
+  </div>
   <div id="ch-row-dgii-codes" hidden>
     <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
     <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Tarjeta de códigos DGII</div>
@@ -1295,7 +1299,10 @@ async function enterCompany(credId) {
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
-  document.getElementById('ch-sub').textContent=inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name;
+  const directSubtitle = instKey==='trabajo'
+    ? 'Min. Trabajo · 3 campos — ver instrucciones abajo'
+    : (inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name);
+  document.getElementById('ch-sub').textContent=directSubtitle;
 
   // TSS has RNC/Cédula + Usuario + Contraseña (suir.gob.do form)
   const isTSS = instKey==='tss';
@@ -1329,6 +1336,16 @@ async function enterCompany(credId) {
   document.getElementById('ch-eye').textContent='Ver';
   document.getElementById('ch-copy-user').textContent='Copiar';
   document.getElementById('ch-copy-pass').textContent='Copiar';
+
+  // Portal-specific hint (OVI / Min. Trabajo has 3 form fields, username goes in first two)
+  const hintRow = document.getElementById('ch-row-hint');
+  const hintText = document.getElementById('ch-hint-text');
+  if (instKey === 'trabajo') {
+    hintText.innerHTML = '📋 El formulario OVI tiene 3 casillas:<br><strong>1ª RNC/Cédula</strong> → pega <em>Usuario</em><br><strong>2ª Nombre de usuario</strong> → pega <em>Usuario</em> otra vez<br><strong>3ª Contraseña</strong> → pega <em>Clave</em>';
+    hintRow.hidden = false;
+  } else {
+    hintRow.hidden = true;
+  }
 
   // DGII card codes row
   const codesRow = document.getElementById('ch-row-dgii-codes');
