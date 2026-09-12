@@ -604,10 +604,10 @@ const INST = {
              aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' } },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
-             uf:'usuario', pf:'contrasena' },
+             uf:'usuario', pf:'contrasena', directOpen:true },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
              url:'https://sisaril.mt.gob.do',
-             uf:'usuario', pf:'contrasena' },
+             uf:'usuario', pf:'contrasena', directOpen:true },
   carnet:  { name:'Cardnet',     desc:'Portal bancario · Acceso a pagos y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
              uf:'usuario', pf:'contrasena' },
   azul:    { name:'Azul',        desc:'Portal bancario · Banca en línea',           grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',
@@ -1211,7 +1211,8 @@ async function enterCompany(credId) {
   const loginUrl=appConfig[instKey+'_loginUrl']||inst?.url||'';
 
   // Open tab NOW — before any await — so mobile browsers don't block the popup
-  const newTab = loginUrl ? window.open('/autologin.html', '_blank') : null;
+  // directOpen portals are SPAs that break under the proxy — open them directly
+  const newTab = loginUrl ? window.open(inst?.directOpen ? loginUrl : '/autologin.html', '_blank') : null;
 
   let plain;
   try { plain=await C.dec(masterKey,cred.iv,cred.ct); }
@@ -1276,8 +1277,8 @@ async function enterCompany(credId) {
   // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
-  // Navigate the pre-opened tab with credentials in the hash
-  if (newTab && loginUrl) {
+  // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs)
+  if (newTab && loginUrl && !inst?.directOpen) {
     autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, newTab);
   }
 }
@@ -1341,6 +1342,7 @@ async function chCopy(which) {
 
 function chLaunch() {
   if (!_chUrl) return;
+  if (INST[activePortal]?.directOpen) { window.open(_chUrl, '_blank'); return; }
   autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'');
 }
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
