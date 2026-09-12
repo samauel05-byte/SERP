@@ -1807,7 +1807,7 @@ function renderSalesConsolidated() {
     kpiCard('VENTAS GLOBALES',fmtM(fiscalTotal),'g','607 + tarjetas únicas + ventas adicionales')+
     kpiCard('Efectivo global',fmtM(r2((s7.paymentSummary?.cash||0)+consumer.cash)),'c')+
     kpiCard('Tarjetas globales',fmtM(r2((s7.paymentSummary?.card||0)+card.additionalGross)),'v','Sin contar operaciones dos veces')+
-    kpiCard('ITBIS global de ventas',fmtM(r2(s7.totItbis+consumer.itbis+card.additionalItbis)),'a')+
+    kpiCard('ITBIS global de ventas',fmtM(getGlobalSalesItbis(s7)),'a','ITBIS de CardNET/Azul reportado + ventas adicionales')+
     kpiCard('Retenido por clientes',fmtM(s7.totRet),'m')+
     kpiCard('Retención computable reportada',fmtM(cardRetention),'r','Solo valor leído del reporte; no estimaciones');
 }
@@ -1828,6 +1828,16 @@ function getConsumerSummary() {
   const taxable=r2(read('in-b02-taxable')),exempt=r2(read('in-b02-exempt')),itbis=r2(read('in-b02-itbis'));
   const cash=r2(read('in-sale-cash')),transfer=r2(read('in-sale-transfer')),credit=r2(read('in-sale-credit')),other=r2(read('in-sale-other'));
   return {count,taxable,exempt,itbis,cash,transfer,credit,other,net:r2(taxable+exempt),gross:r2(taxable+exempt+itbis)};
+}
+
+// El ITBIS declarado por CardNET/Azul es la fuente fiscal del cobro con tarjeta.
+// Solo se estima desde el 607 cuando el reporte del procesador no lo incluye.
+function getGlobalSalesItbis(s7) {
+  const consumer=getConsumerSummary();
+  const reports=Object.values(CARD_STATE).filter(Boolean);
+  const reportedItbis=r2(reports.reduce((sum,report)=>sum+(report.itbis||0),0));
+  if(reportedItbis>0) return r2(reportedItbis+consumer.itbis);
+  return r2(s7.totItbis+consumer.itbis+getCardConsolidation(s7).additionalItbis);
 }
 
 function getCardConsolidation(s7) {
@@ -1909,7 +1919,7 @@ function updateIT1() {
   const importaciones=parseFloat($('in-importaciones').value)||0;
   const abonos=parseFloat($('in-abonos').value)||0;
   const cardRet=r2(Object.values(CARD_STATE).filter(Boolean).reduce((n,r)=>n+(r.retencionAcreditable||0),0));
-  const debito=r2(s7.totItbis+consumer.itbis+card.additionalItbis),credito=s6.totAdel,itbisRetVentas=r2(s7.totRet+cardRet);
+  const debito=getGlobalSalesItbis(s7),credito=s6.totAdel,itbisRetVentas=r2(s7.totRet+cardRet);
   const resultado=calculateIT1({debito,credito,importaciones,retenciones:itbisRetVentas,saldo,abonos});
   if(DISPLAY_CURRENCY!=='DOP'){
     alertEl.hidden=false;
