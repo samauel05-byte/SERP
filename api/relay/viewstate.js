@@ -16,6 +16,7 @@ export default async function handler(req, res) {
   // Only allow Dominican government/banking portals
   const allowed = [
     'tss.gob.do', 'www.tss.gob.do',
+    'suir.gob.do', 'www.suir.gob.do',
     'dgii.gov.do', 'www.dgii.gov.do',
     'oficinavirtual.dgii.gov.do',
     // Ministerio de Trabajo
