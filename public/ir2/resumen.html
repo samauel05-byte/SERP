@@ -141,7 +141,9 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
     <div class="hdr-title">Datos DGII · Resumen Estimación</div>
   </div>
   <div class="hdr-right">
-    <button class="btn btn-outline btn-sm" onclick="location.href='/dgii/index.html'+location.search">Consultas DGII</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(1)">Inmuebles</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(3)">Vehículos</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(5)">Importaciones</button>
     <button class="btn btn-outline btn-sm" onclick="openAnexos()">Anexos DGII</button>
     <button class="btn btn-primary btn-sm" onclick="save()">Guardar</button>
     <span class="save-badge" id="save-badge">✓ Guardado</span>
@@ -415,6 +417,10 @@ function syncDgiiSummary(){
 function openAnexos(){
   const q=new URLSearchParams({rnc:document.getElementById('h-rnc').value,nombre:document.getElementById('h-nombre').value,anio:document.getElementById('h-anio').value});
   location.href='/ir2/anexos.html?'+q;
+}
+function openDgiiSection(tab){
+  const q=new URLSearchParams({rnc:document.getElementById('h-rnc').value,nombre:document.getElementById('h-nombre').value,anio:document.getElementById('h-anio').value,tab});
+  location.href='/dgii/index.html?'+q;
 }
 function importDgiiFile(input,type){
   const file=input.files?.[0]; if(!file||!window.XLSX)return;

@@ -548,6 +548,8 @@ function showBadge(){const b=document.getElementById('sbadge');b.classList.add('
   ANIO=parseInt(p.get('anio'))||new Date().getFullYear();
   NOMBRE=p.get('nombre')||'';
   document.getElementById('rnc-tag').textContent=RNC?(NOMBRE?`${NOMBRE} · ${RNC}`:RNC):'Sin RNC';
+  const tab=Number(p.get('tab'));
+  if(Number.isInteger(tab) && tab>=0 && tab<MODKEYS.length) sw(tab);
   load();
 })();
 </script>
