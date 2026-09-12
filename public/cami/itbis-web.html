@@ -362,6 +362,8 @@ tbody td{
 }
 tbody tr:nth-child(even){background:var(--surface-2);}
 tbody tr:hover{background:var(--blue-lt);}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+#tb-sales-breakdown .total-row{font-weight:800;background:var(--blue-lt)!important;color:var(--blue-dk);border-top:2px solid var(--blue);}
 .tnote{font-size:.7rem;color:var(--muted);text-align:right;padding:6px 0;}
 
 /* ── IT-1 module ── */
@@ -881,6 +883,12 @@ tbody tr:nth-child(even){background:var(--surface-2);}
 
     <div class="slabel">Reporte global de ventas — 607 + CardNET + Azul + adicionales</div>
     <div class="kpi-row" id="kpis-sales-total"></div>
+
+    <div class="slabel">Resumen facturado por origen</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Origen</th><th class="num">Subtotal</th><th class="num">ITBIS</th><th class="num">Total facturado</th></tr></thead>
+      <tbody id="tb-sales-breakdown"></tbody>
+    </table></div>
 
     <div class="slabel">Por tasa de ITBIS</div>
     <div class="kpi-row" id="kpis-tasa-607"></div>
@@ -1778,9 +1786,9 @@ function renderCardTotal() {
 }
 
 function renderSalesConsolidated() {
-  const target=$('kpis-sales-total'),s7=STATE?.['607']?.summary;
+  const target=$('kpis-sales-total'),breakdown=$('tb-sales-breakdown'),s7=STATE?.['607']?.summary;
   if(!target)return;
-  if(!s7){target.innerHTML=kpiCard('Pendiente','Carga el reporte 607','m','Luego se sumarán CardNET y Azul.');return;}
+  if(!s7){target.innerHTML=kpiCard('Pendiente','Carga el reporte 607','m','Luego se sumarán CardNET y Azul.');if(breakdown)breakdown.innerHTML='<tr><td colspan="4" class="muted">Carga el 607 para ver el desglose facturado.</td></tr>';return;}
   const consumer=getConsumerSummary();
   const reports=Object.values(CARD_STATE).filter(Boolean);
   const cardRetention=r2(reports.reduce((n,r)=>n+(r.retencionAcreditable||0),0));
@@ -1810,6 +1818,22 @@ function renderSalesConsolidated() {
     kpiCard('ITBIS global de ventas',fmtM(getGlobalSalesItbis(s7)),'a','ITBIS de CardNET/Azul reportado + ventas adicionales')+
     kpiCard('Retenido por clientes',fmtM(s7.totRet),'m')+
     kpiCard('Retención computable reportada',fmtM(cardRetention),'r','Solo valor leído del reporte; no estimaciones');
+
+  if(breakdown){
+    const row=(name,subtotal,itbis,total,cls='')=>`<tr class="${cls}"><td>${name}</td><td class="num">${fmtM(subtotal)}</td><td class="num">${fmtM(itbis)}</td><td class="num">${fmtM(total)}</td></tr>`;
+    const rows=[];
+    const subtotal607=r2(s7.totGrav+s7.totExento),itbis607=r2(s7.totItbis),total607=r2(subtotal607+itbis607);
+    rows.push(row('607 — Archivo DGII',subtotal607,itbis607,total607));
+    [['CardNET',CARD_STATE.cardnet],['Azul',CARD_STATE.azul]].forEach(([name,report])=>{
+      if(!report)return;
+      const subtotal=r2(report.totalSujetoRetencion||report.monto||0),itbis=r2(report.itbis||report.itbisTarjeta||0);
+      rows.push(row(`${name} — Reporte de tarjeta`,subtotal,itbis,r2(subtotal+itbis)));
+    });
+    rows.push(row('Ventas manuales',consumer.net,consumer.itbis,consumer.gross));
+    const totalItbis=getGlobalSalesItbis(s7),totalSubtotal=r2(fiscalTotal-totalItbis);
+    rows.push(row('TOTAL FACTURADO GLOBAL',totalSubtotal,totalItbis,fiscalTotal,'total-row'));
+    breakdown.innerHTML=rows.join('');
+  }
 }
 
 function calculateIT1({debito,credito,importaciones,retenciones,saldo,abonos}) {
