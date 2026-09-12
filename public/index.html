@@ -380,29 +380,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </div>
 
 <!-- IR-2 -->
-<div id="view-ir2" class="layer" hidden>
-  <header class="hdr">
-    <div class="hdr-brand">
-      <div class="brand-ico" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
-      Direct
-    </div>
-    <div class="hdr-right">
-      <button class="back-btn" style="margin:0" onclick="showPortals()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Volver
-      </button>
-      <button class="icon-btn" title="Cerrar sesión" onclick="lockVault()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      </button>
-    </div>
-  </header>
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 56px);padding:24px;text-align:center;gap:16px">
-    <div style="width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;margin-bottom:8px">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    </div>
-    <div style="font-size:22px;font-weight:700;color:var(--fg)">IR-2</div>
-    <div style="font-size:15px;color:var(--fg2);max-width:320px;line-height:1.6">Aún en creación, pronto estará disponible para ustedes.</div>
-  </div>
+<div id="view-ir2" class="layer" hidden style="padding:0">
+  <iframe id="ir2-frame" src="" style="width:100%;height:100vh;border:none;display:block;"></iframe>
 </div>
 
 <!-- CAMI -->
@@ -984,6 +963,10 @@ function openNala() {
 }
 
 function openIr2() {
+  const frame = document.getElementById('ir2-frame');
+  if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('ir2')) {
+    frame.src = '/ir2/index.html';
+  }
   show('view-ir2');
 }
 
