@@ -12,132 +12,176 @@
   --acc:#0060e0;--acc2:#3d8bff;--acc3:#80b8ff;
   --green:#20BD5A;--red:#ef4444;--warn:#f59e0b;
   --purple:#7c3aed;
+  --hdr-h:52px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);font-size:13px;min-height:100vh}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);font-size:13px;min-height:100dvh}
 
 /* ── Header ── */
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:50px;background:var(--bg2);border-bottom:1px solid var(--bdr);gap:12px;position:sticky;top:0;z-index:50}
-.hdr-title{font-size:15px;font-weight:700;color:var(--acc3)}
-.hdr-sub{font-size:11px;color:var(--fg2)}
-.hdr-info{display:flex;flex-direction:column}
-.hdr-actions{display:flex;gap:8px}
-.btn{padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:opacity .15s}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:var(--hdr-h);background:var(--bg2);border-bottom:1px solid var(--bdr);gap:10px;position:sticky;top:0;z-index:50;flex-shrink:0}
+.hdr-left{display:flex;align-items:center;gap:10px;min-width:0}
+.back-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid var(--bdr2);background:transparent;color:var(--acc3);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.back-btn:hover{background:var(--surf)}
+.hdr-title{font-size:14px;font-weight:700;color:var(--acc3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-sub{font-size:10px;color:var(--fg3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-info{min-width:0;display:flex;flex-direction:column;gap:1px}
+.hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.save-badge{font-size:10px;color:var(--green);opacity:0;transition:opacity .4s;white-space:nowrap}
+.save-badge.show{opacity:1}
+.btn{padding:6px 13px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:opacity .15s;white-space:nowrap}
 .btn-primary{background:var(--acc);color:#fff}
 .btn-primary:hover{opacity:.85}
 .btn-outline{background:transparent;border:1px solid var(--bdr2);color:var(--acc2)}
 .btn-outline:hover{background:var(--surf)}
-.btn-sm{padding:4px 10px;font-size:11px}
-.btn-danger{background:transparent;border:1px solid rgba(239,68,68,.4);color:var(--red)}
+.btn-sm{padding:5px 11px;font-size:11px}
 
 /* ── Tabs ── */
-.tabs{display:flex;gap:0;background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 20px;overflow-x:auto}
-.tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--fg3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s}
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 16px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:10px 14px;font-size:12px;font-weight:600;color:var(--fg3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s;flex-shrink:0}
 .tab.active{color:var(--acc2);border-bottom-color:var(--acc2)}
 .tab:hover:not(.active){color:var(--fg2)}
 
 /* ── Layout ── */
-.content{padding:20px;max-width:960px;margin:0 auto}
+.content{padding:16px;max-width:920px;margin:0 auto}
 .section{display:none}
 .section.active{display:block}
 
 /* ── Cards ── */
-.card{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:18px;margin-bottom:16px}
-.card-title{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--fg3);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--bdr)}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:16px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--fg3);margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--bdr)}
 
 /* ── Grid form ── */
-.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group label{font-size:11px;font-weight:600;color:var(--fg2)}
-.form-group input,.form-group select{background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:8px 10px;font-size:13px;outline:none;width:100%}
+.form-group input,.form-group select{background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:7px 10px;font-size:13px;outline:none;width:100%}
 .form-group input:focus,.form-group select:focus{border-color:var(--acc2)}
 .form-group select option{background:var(--bg2)}
 
 /* ── Table ── */
-.tbl-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:580px}
 thead tr{border-bottom:2px solid var(--bdr2)}
-th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fg3)}
+th{text-align:left;padding:7px 9px;font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fg3)}
 th.num{text-align:right}
-td{padding:7px 10px;border-bottom:1px solid var(--bdr)}
+td{padding:6px 9px;border-bottom:1px solid var(--bdr)}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 tr:last-child td{border-bottom:none}
 tr.total-row td{border-top:2px solid var(--bdr2);font-weight:700;color:var(--fg);background:var(--bg2)}
-tr.subtotal td{font-weight:600;color:var(--acc3);background:rgba(0,96,224,.08)}
+tr.subtotal td{font-weight:600;color:var(--acc3);background:rgba(0,96,224,.07)}
 td input{background:transparent;border:none;color:var(--fg);width:100%;outline:none;font-size:12.5px}
 td input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
-td select{background:var(--bg2);border:1px solid transparent;border-radius:6px;color:var(--fg);padding:3px 6px;font-size:12px;outline:none}
+td select{background:var(--bg2);border:1px solid transparent;border-radius:6px;color:var(--fg);padding:3px 5px;font-size:11.5px;outline:none;max-width:100%}
 td select:focus{border-color:var(--acc2)}
-.tbl-actions{display:flex;gap:8px;margin-top:12px;align-items:center}
+.tbl-actions{display:flex;gap:8px;margin-top:11px;align-items:center;flex-wrap:wrap}
+
+/* ── Preset dropdown ── */
+.preset-wrap{position:relative;display:inline-block}
+.preset-btn{display:flex;align-items:center;gap:4px;padding:5px 11px;border-radius:8px;border:1px solid var(--bdr2);background:transparent;color:var(--acc2);font-size:11px;font-weight:600;cursor:pointer}
+.preset-btn:hover{background:var(--surf)}
+.preset-menu{position:absolute;top:calc(100% + 4px);left:0;background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;padding:6px;min-width:280px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none}
+.preset-menu.open{display:block}
+.preset-item{padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--fg2)}
+.preset-item:hover{background:var(--surf2);color:var(--fg)}
+.preset-sep{height:1px;background:var(--bdr);margin:4px 0}
 
 /* ── Conciliación rows ── */
-.conc-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-.conc-row input[type=text]{flex:1;background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:7px 10px;font-size:12.5px;outline:none}
-.conc-row input[type=number]{width:140px;background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:7px 10px;font-size:12.5px;text-align:right;outline:none}
+.conc-row{display:flex;gap:7px;align-items:center;margin-bottom:7px;flex-wrap:wrap}
+.conc-row input[type=text]{flex:1;min-width:160px;background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:7px 10px;font-size:12.5px;outline:none}
+.conc-row input[type=number]{width:130px;background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:7px 10px;font-size:12.5px;text-align:right;outline:none}
 .conc-row input:focus{border-color:var(--acc2)}
-.rm-btn{background:none;border:none;color:var(--fg3);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;line-height:1}
+.rm-btn{background:none;border:none;color:var(--fg3);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;line-height:1;flex-shrink:0}
 .rm-btn:hover{color:var(--red)}
 
 /* ── Resumen tiles ── */
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
-.tile{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:14px 16px}
-.tile-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--fg3);margin-bottom:6px}
-.tile-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:11px;margin-bottom:14px}
+.tile{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:13px 15px}
+.tile-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--fg3);margin-bottom:5px}
+.tile-val{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;word-break:break-all}
 .tile-val.green{color:var(--green)}
 .tile-val.red{color:var(--red)}
 .tile-val.warn{color:var(--warn)}
 .tile-val.blue{color:var(--acc2)}
 
 /* ── Resultado line ── */
-.res-line{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr)}
+.res-line{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--bdr);gap:8px}
 .res-line:last-child{border-bottom:none}
 .res-line.bold{font-weight:700;color:var(--fg)}
-.res-line.total{font-weight:700;font-size:15px;border-top:2px solid var(--bdr2);margin-top:4px;padding-top:12px}
-.res-line .lbl{color:var(--fg2)}
-.res-line .val{font-variant-numeric:tabular-nums;font-weight:600}
+.res-line.total{font-weight:700;font-size:15px;border-top:2px solid var(--bdr2);margin-top:4px;padding-top:11px}
+.res-line .lbl{color:var(--fg2);flex:1}
+.res-line .val{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;white-space:nowrap}
 .res-line .val.pos{color:var(--green)}
 .res-line .val.neg{color:var(--red)}
-.res-line .indent{padding-left:20px;color:var(--fg3)}
+.res-line .indent{padding-left:18px;color:var(--fg3)}
 
 /* ── Alert ── */
-.alert{padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:14px}
+.alert{padding:9px 13px;border-radius:8px;font-size:12.5px;margin-bottom:12px}
 .alert-warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--warn)}
 .alert-ok{background:rgba(32,189,90,.1);border:1px solid rgba(32,189,90,.3);color:var(--green)}
 .alert-err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red)}
 
 /* ── ISR inputs ── */
-.isr-field{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bdr)}
+.isr-field{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);gap:8px;flex-wrap:wrap}
 .isr-field label{font-size:12.5px;color:var(--fg2)}
-.isr-field input[type=number]{width:160px;background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:6px 10px;font-size:13px;text-align:right;outline:none}
+.isr-field input[type=number]{width:150px;background:var(--bg2);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:6px 10px;font-size:13px;text-align:right;outline:none}
 .isr-field input:focus{border-color:var(--acc2)}
+.isr-sub{font-size:11px;color:var(--fg3);padding:4px 0 8px}
 
 /* ── Print ── */
 @media print{
-  body{background:#fff;color:#000}
-  .hdr,.tabs,.tbl-actions,.btn,.rm-btn,.no-print{display:none!important}
-  .card{border:1px solid #ccc;break-inside:avoid}
+  body{background:#fff;color:#000;font-size:12px}
+  .hdr,.tabs,.tbl-actions,.btn,.rm-btn,.no-print,.preset-wrap{display:none!important}
+  .card{border:1px solid #ccc;break-inside:avoid;margin-bottom:10px;padding:12px}
   td input,td select{border:none;background:transparent;color:#000}
-  .tile-val,.res-line .val{color:#000!important}
+  .tile-val,.res-line .val,.tile-val.green,.tile-val.red,.tile-val.warn,.tile-val.blue{color:#000!important}
+  .print-header{display:block!important}
+  .content{padding:8px;max-width:100%}
+  table{min-width:unset}
+  .tiles{grid-template-columns:repeat(3,1fr)}
 }
+.print-header{display:none;margin-bottom:16px;border-bottom:2px solid #000;padding-bottom:10px}
+.print-header h2{font-size:16px;font-weight:700}
+.print-header p{font-size:11px;color:#555}
 
 /* ── Misc ── */
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-green{background:rgba(32,189,90,.15);color:var(--green)}
-.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
-.hint{font-size:11px;color:var(--fg3);margin-top:6px}
+.hint{font-size:11px;color:var(--fg3);margin-top:6px;line-height:1.5}
+.span2{grid-column:span 2}
+@media(max-width:500px){.span2{grid-column:span 1}}
+
+/* ── Anticipos calc ── */
+.calc-box{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:14px}
+.calc-box-title{font-size:11px;font-weight:700;color:var(--fg3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.7px}
+.calc-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.calc-row label{font-size:12px;color:var(--fg2);flex:1;min-width:180px}
+.calc-row input{width:130px;background:var(--surf);border:1px solid var(--bdr2);border-radius:8px;color:var(--fg);padding:6px 10px;text-align:right;font-size:13px;outline:none}
+.calc-row input:focus{border-color:var(--acc2)}
+.calc-result{font-size:12px;color:var(--acc3);margin-top:4px}
 </style>
 </head>
 <body>
 
+<!-- Print header (hidden on screen) -->
+<div class="print-header" id="print-hdr">
+  <h2 id="ph-title">IR-2 — Declaración Jurada Renta Personas Jurídicas</h2>
+  <p id="ph-sub"></p>
+</div>
+
 <div class="hdr">
-  <div class="hdr-info">
-    <div class="hdr-title">IR-2 — Declaración Jurada Renta Personas Jurídicas</div>
-    <div class="hdr-sub" id="hdr-empresa-sub">Complete los datos de la empresa en la pestaña Empresa</div>
+  <div class="hdr-left">
+    <button class="back-btn" onclick="volverPortales()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="hdr-info">
+      <div class="hdr-title">IR-2 — Declaración de Renta</div>
+      <div class="hdr-sub" id="hdr-sub">Complete los datos de la empresa</div>
+    </div>
   </div>
-  <div class="hdr-actions">
-    <button class="btn btn-outline btn-sm no-print" onclick="guardarLocal()">Guardar</button>
+  <div class="hdr-right">
+    <span class="save-badge" id="save-badge">✓ Guardado</span>
     <button class="btn btn-outline btn-sm no-print" onclick="limpiarTodo()">Nuevo</button>
-    <button class="btn btn-primary btn-sm no-print" onclick="window.print()">Imprimir</button>
+    <button class="btn btn-primary btn-sm no-print" onclick="imprimirReporte()">Imprimir</button>
   </div>
 </div>
 
@@ -157,70 +201,69 @@ td select:focus{border-color:var(--acc2)}
   <div class="card">
     <div class="card-title">Identificación del Contribuyente</div>
     <div class="form-grid">
-      <div class="form-group" style="grid-column:span 2">
+      <div class="form-group span2">
         <label>Razón Social / Nombre Comercial</label>
-        <input id="e-nombre" type="text" placeholder="Empresa, S.R.L." oninput="syncEmpresa()">
+        <input id="e-nombre" type="text" placeholder="Empresa, S.R.L." oninput="syncEmpresa();autoSave()">
       </div>
       <div class="form-group">
-        <label>RNC (9 dígitos)</label>
-        <input id="e-rnc" type="text" placeholder="000-00000-0" maxlength="11" oninput="syncEmpresa()">
+        <label>RNC (sin guiones)</label>
+        <input id="e-rnc" type="text" placeholder="000000000" maxlength="11" oninput="syncEmpresa();autoSave()">
       </div>
       <div class="form-group">
         <label>Período Fiscal (Año)</label>
-        <input id="e-anio" type="number" value="2024" min="2000" max="2099" oninput="syncEmpresa()">
+        <input id="e-anio" type="number" value="2024" min="2000" max="2099" oninput="syncEmpresa();autoSave()">
       </div>
       <div class="form-group">
         <label>Tipo de Declaración</label>
-        <select id="e-tipo" onchange="syncEmpresa()">
+        <select id="e-tipo" onchange="syncEmpresa();autoSave()">
           <option value="original">Original</option>
           <option value="rectificativa">Rectificativa</option>
         </select>
       </div>
       <div class="form-group">
         <label>Actividad Económica</label>
-        <input id="e-actividad" type="text" placeholder="Comercio al por mayor">
+        <input id="e-actividad" type="text" placeholder="Comercio al por mayor" oninput="autoSave()">
       </div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">Datos del Representante Legal</div>
+    <div class="card-title">Representante Legal</div>
     <div class="form-grid">
-      <div class="form-group" style="grid-column:span 2">
-        <label>Nombre Representante Legal</label>
-        <input id="e-rep" type="text" placeholder="Nombre completo">
+      <div class="form-group span2">
+        <label>Nombre Completo</label>
+        <input id="e-rep" type="text" placeholder="Nombre del representante" oninput="autoSave()">
       </div>
       <div class="form-group">
-        <label>Cédula Representante</label>
-        <input id="e-cedula" type="text" placeholder="000-0000000-0" maxlength="13">
+        <label>Cédula</label>
+        <input id="e-cedula" type="text" placeholder="000-0000000-0" maxlength="13" oninput="autoSave()">
       </div>
       <div class="form-group">
         <label>Cargo</label>
-        <input id="e-cargo" type="text" placeholder="Gerente General">
+        <input id="e-cargo" type="text" placeholder="Gerente General" oninput="autoSave()">
       </div>
     </div>
   </div>
-  <div class="hint">💡 Tasa IR-2 vigente: <b>27%</b> sobre Renta Neta Imponible. ISR Mínimo Alternativo: <b>1.5%</b> sobre ingresos brutos. Se aplica el mayor de los dos.</div>
+  <div class="hint">💡 Tasa ISR vigente: <b>27%</b> sobre Renta Neta Imponible (Art. 297 CT). ISR Mínimo Alternativo: <b>1.5%</b> sobre ingresos brutos (Art. 314 CT). Se aplica el mayor de los dos.</div>
 </div>
 
 <!-- ═══ TAB 1: Balance de Comprobación ═══ -->
 <div class="section" id="sec-1">
   <div class="card">
-    <div class="card-title">Balance de Comprobación Ajustado — Período Fiscal <span id="bc-anio"></span></div>
+    <div class="card-title">Balance de Comprobación Ajustado — Período <span id="bc-anio"></span></div>
     <div id="bc-alert"></div>
     <div class="tbl-wrap">
       <table id="bc-table">
         <thead>
           <tr>
-            <th style="width:90px">Código</th>
-            <th>Descripción de la Cuenta</th>
-            <th class="num" style="width:130px">Saldo Deudor</th>
-            <th class="num" style="width:130px">Saldo Acreedor</th>
-            <th style="width:150px">Tipo</th>
-            <th style="width:32px"></th>
+            <th style="width:80px">Código</th>
+            <th>Descripción</th>
+            <th class="num" style="width:120px">Saldo Deudor</th>
+            <th class="num" style="width:120px">Saldo Acreedor</th>
+            <th style="width:140px">Tipo</th>
+            <th style="width:30px"></th>
           </tr>
         </thead>
-        <tbody id="bc-body">
-        </tbody>
+        <tbody id="bc-body"></tbody>
         <tfoot>
           <tr class="total-row">
             <td colspan="2">TOTALES</td>
@@ -236,20 +279,20 @@ td select:focus{border-color:var(--acc2)}
       <button class="btn btn-outline btn-sm" onclick="addFilasEjemplo()">Cargar ejemplo</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('csv-in').click()">Importar CSV</button>
       <input id="csv-in" type="file" accept=".csv" style="display:none" onchange="importarCSV(this)">
-      <span class="hint" style="margin-left:auto">CSV: código,descripción,debe,haber,tipo</span>
+      <span class="hint" style="margin-left:auto;margin-top:0">CSV: código,descripción,debe,haber,tipo</span>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">Tipos de Cuenta</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;font-size:12px;color:var(--fg2)">
-      <span><b>1xx → activo</b> — Activos (balance)</span>
-      <span><b>2xx → pasivo</b> — Pasivos (balance)</span>
-      <span><b>3xx → capital</b> — Patrimonio (balance)</span>
-      <span><b>4xx → ingresos</b> — Ventas/ingresos operacionales</span>
-      <span><b>5xx → costo</b> — Costo de ventas / producción</span>
-      <span><b>6xx → gastos</b> — Gastos operativos</span>
-      <span><b>7xx → otros-ing</b> — Otros ingresos (financieros, etc.)</span>
-      <span><b>8xx → otros-gas</b> — Otros gastos (financieros, etc.)</span>
+    <div class="card-title">Prefijos de Cuenta (auto-detección)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:7px;font-size:12px;color:var(--fg2)">
+      <span><b style="color:var(--acc3)">1xx</b> → Activo (balance)</span>
+      <span><b style="color:var(--acc3)">2xx</b> → Pasivo (balance)</span>
+      <span><b style="color:var(--acc3)">3xx</b> → Capital/Patrimonio</span>
+      <span><b style="color:var(--acc3)">4xx</b> → Ingresos operacionales</span>
+      <span><b style="color:var(--acc3)">5xx</b> → Costo de ventas</span>
+      <span><b style="color:var(--acc3)">6xx</b> → Gastos operativos</span>
+      <span><b style="color:var(--acc3)">7xx</b> → Otros ingresos</span>
+      <span><b style="color:var(--acc3)">8xx</b> → Otros gastos</span>
     </div>
   </div>
 </div>
@@ -257,27 +300,46 @@ td select:focus{border-color:var(--acc2)}
 <!-- ═══ TAB 2: Estado de Resultados ═══ -->
 <div class="section" id="sec-2">
   <div class="card">
-    <div class="card-title">Estado de Resultados — Período Fiscal <span id="er-anio"></span></div>
-    <div id="er-content"></div>
+    <div class="card-title">Estado de Resultados — Período <span id="er-anio"></span></div>
+    <div id="er-content"><div class="hint">Ingrese datos en el Balance de Comprobación para ver el Estado de Resultados.</div></div>
   </div>
 </div>
 
 <!-- ═══ TAB 3: Conciliación Fiscal ═══ -->
 <div class="section" id="sec-3">
   <div class="card">
-    <div class="card-title">Resultado Contable</div>
-    <div class="res-line">
-      <span class="lbl">Utilidad (Pérdida) antes de ISR (del Estado de Resultados)</span>
+    <div class="card-title">Base: Resultado Contable</div>
+    <div class="res-line bold">
+      <span class="lbl">Utilidad (Pérdida) antes de ISR</span>
       <span class="val" id="c-utilidad">RD$ 0.00</span>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">(+) Gastos No Deducibles</div>
-    <div class="hint" style="margin-bottom:12px">Gastos contabilizados que la DGII no permite deducir: multas, recargos, provisiones no pagadas, depreciación en exceso, gastos personales de socios, donaciones &gt; 5% renta neta, etc.</div>
+    <div class="hint" style="margin-bottom:11px">Gastos contabilizados que la DGII rechaza: multas, recargos, provisiones no pagadas, depreciación en exceso, gastos personales de socios, donaciones &gt; 5% renta neta, gastos sin NCF válido, etc.</div>
     <div id="nd-rows"></div>
-    <button class="btn btn-outline btn-sm no-print" onclick="addND()">+ Agregar gasto no deducible</button>
-    <div class="res-line bold" style="margin-top:12px">
+    <div class="tbl-actions no-print" style="margin-top:10px">
+      <button class="btn btn-primary btn-sm" onclick="addND()">+ Agregar</button>
+      <div class="preset-wrap">
+        <button class="preset-btn no-print" onclick="togglePreset('nd-preset')">Presets ▾</button>
+        <div class="preset-menu" id="nd-preset">
+          <div class="preset-item" onclick="addND('Multas y recargos DGII')">Multas y recargos DGII</div>
+          <div class="preset-item" onclick="addND('Gastos sin soporte fiscal (NCF)')">Gastos sin soporte fiscal (NCF)</div>
+          <div class="preset-item" onclick="addND('Gastos personales de socios/directores')">Gastos personales de socios</div>
+          <div class="preset-sep"></div>
+          <div class="preset-item" onclick="addND('Provisión para cuentas incobrables (no pagada)')">Provisión incobrable (no pagada)</div>
+          <div class="preset-item" onclick="addND('Depreciación en exceso de tasas permitidas')">Depreciación en exceso</div>
+          <div class="preset-item" onclick="addND('Donaciones superiores al 5% de la renta neta')">Donaciones &gt; 5% renta neta</div>
+          <div class="preset-sep"></div>
+          <div class="preset-item" onclick="addND('Intereses pagados a partes vinculadas (subcapitalización)')">Intereses partes vinculadas</div>
+          <div class="preset-item" onclick="addND('Pérdidas en venta de activos no operacionales')">Pérdidas venta activos no op.</div>
+          <div class="preset-item" onclick="addND('Gastos de representación excesivos')">Gastos representación excesivos</div>
+          <div class="preset-item" onclick="addND('Aportes a planes de pensión no autorizados')">Pensión no autorizada</div>
+        </div>
+      </div>
+    </div>
+    <div class="res-line bold" style="margin-top:10px">
       <span>Total Gastos No Deducibles</span>
       <span class="val" id="c-total-nd">RD$ 0.00</span>
     </div>
@@ -285,21 +347,32 @@ td select:focus{border-color:var(--acc2)}
 
   <div class="card">
     <div class="card-title">(−) Ingresos Exentos</div>
-    <div class="hint" style="margin-bottom:12px">Ingresos que la ley exime del ISR: dividendos recibidos de subsidiarias, rentas de zonas francas (si aplica), etc.</div>
+    <div class="hint" style="margin-bottom:11px">Rentas exentas por ley: dividendos de subsidiarias dominicanas, rentas de zonas francas, intereses del Estado, etc.</div>
     <div id="ex-rows"></div>
-    <button class="btn btn-outline btn-sm no-print" onclick="addEX()">+ Agregar ingreso exento</button>
-    <div class="res-line bold" style="margin-top:12px">
+    <div class="tbl-actions no-print" style="margin-top:10px">
+      <button class="btn btn-primary btn-sm" onclick="addEX()">+ Agregar</button>
+      <div class="preset-wrap">
+        <button class="preset-btn no-print" onclick="togglePreset('ex-preset')">Presets ▾</button>
+        <div class="preset-menu" id="ex-preset">
+          <div class="preset-item" onclick="addEX('Dividendos recibidos de subsidiarias dominicanas')">Dividendos de subsidiarias</div>
+          <div class="preset-item" onclick="addEX('Ingresos de zonas francas (exentos)')">Ingresos zona franca</div>
+          <div class="preset-item" onclick="addEX('Intereses sobre valores del Estado')">Intereses valores del Estado</div>
+          <div class="preset-item" onclick="addEX('Rentas exentas por tratado internacional')">Rentas por tratado</div>
+        </div>
+      </div>
+    </div>
+    <div class="res-line bold" style="margin-top:10px">
       <span>Total Ingresos Exentos</span>
       <span class="val" id="c-total-ex">RD$ 0.00</span>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-title">(−) Pérdidas Años Anteriores</div>
-    <div class="hint" style="margin-bottom:12px">Pérdidas fiscales arrastradas de hasta 5 años anteriores. Solo aplican cuando el ISR normal &gt; ISR mínimo.</div>
+    <div class="card-title">(−) Pérdidas de Años Anteriores</div>
+    <div class="hint" style="margin-bottom:11px">Pérdidas fiscales arrastradas. Solo aplican cuando ISR Normal &gt; ISR Mínimo (Art. 287 CT — hasta 5 años).</div>
     <div id="pe-rows"></div>
-    <button class="btn btn-outline btn-sm no-print" onclick="addPE()">+ Agregar pérdida anterior</button>
-    <div class="res-line bold" style="margin-top:12px">
+    <button class="btn btn-primary btn-sm no-print" onclick="addPE()" style="margin-top:10px">+ Agregar año</button>
+    <div class="res-line bold" style="margin-top:10px">
       <span>Total Pérdidas Anteriores</span>
       <span class="val" id="c-total-pe">RD$ 0.00</span>
     </div>
@@ -307,22 +380,10 @@ td select:focus{border-color:var(--acc2)}
 
   <div class="card">
     <div class="card-title">Renta Neta Imponible</div>
-    <div class="res-line">
-      <span class="lbl">Utilidad contable</span>
-      <span class="val" id="c2-utilidad">RD$ 0.00</span>
-    </div>
-    <div class="res-line">
-      <span class="lbl indent">(+) Gastos no deducibles</span>
-      <span class="val" id="c2-nd">RD$ 0.00</span>
-    </div>
-    <div class="res-line">
-      <span class="lbl indent">(−) Ingresos exentos</span>
-      <span class="val" id="c2-ex">RD$ 0.00</span>
-    </div>
-    <div class="res-line">
-      <span class="lbl indent">(−) Pérdidas anteriores</span>
-      <span class="val" id="c2-pe">RD$ 0.00</span>
-    </div>
+    <div class="res-line"><span class="lbl">Utilidad contable</span><span class="val" id="c2-utilidad">RD$ 0.00</span></div>
+    <div class="res-line"><span class="lbl indent">(+) Gastos no deducibles</span><span class="val" id="c2-nd">RD$ 0.00</span></div>
+    <div class="res-line"><span class="lbl indent">(−) Ingresos exentos</span><span class="val" id="c2-ex">RD$ 0.00</span></div>
+    <div class="res-line"><span class="lbl indent">(−) Pérdidas anteriores</span><span class="val" id="c2-pe">RD$ 0.00</span></div>
     <div class="res-line total">
       <span>RENTA NETA IMPONIBLE</span>
       <span class="val" id="c2-rni">RD$ 0.00</span>
@@ -335,32 +396,35 @@ td select:focus{border-color:var(--acc2)}
   <div class="tiles" id="isr-tiles"></div>
 
   <div class="card">
-    <div class="card-title">Cálculo del Impuesto Sobre la Renta</div>
-    <div class="res-line">
-      <span class="lbl">Renta Neta Imponible</span>
-      <span class="val" id="i-rni">RD$ 0.00</span>
-    </div>
-    <div class="res-line">
-      <span class="lbl indent">ISR Normal (RNI × 27%)</span>
-      <span class="val" id="i-isr-normal">RD$ 0.00</span>
-    </div>
-    <div class="res-line">
-      <span class="lbl">Ingresos Brutos Totales</span>
-      <span class="val" id="i-ing-brutos">RD$ 0.00</span>
-    </div>
-    <div class="res-line">
-      <span class="lbl indent">ISR Mínimo Alternativo (Ing. Brutos × 1.5%)</span>
-      <span class="val" id="i-isr-min">RD$ 0.00</span>
-    </div>
-    <div class="res-line bold" style="padding:10px 0">
-      <span>ISR a Pagar <small style="font-weight:400;color:var(--fg3)">(el mayor de los dos)</small></span>
+    <div class="card-title">Determinación del Impuesto</div>
+    <div class="res-line"><span class="lbl">Renta Neta Imponible</span><span class="val" id="i-rni">RD$ 0.00</span></div>
+    <div class="res-line"><span class="lbl indent">ISR Normal (RNI × 27%)</span><span class="val" id="i-isr-normal">RD$ 0.00</span></div>
+    <div class="res-line"><span class="lbl">Ingresos Brutos Totales</span><span class="val" id="i-ing-brutos">RD$ 0.00</span></div>
+    <div class="res-line"><span class="lbl indent">ISR Mínimo Alternativo (Ing. Brutos × 1.5%)</span><span class="val" id="i-isr-min">RD$ 0.00</span></div>
+    <div class="res-line bold" style="padding:9px 0">
+      <span>ISR Base a Pagar <small style="font-weight:400;color:var(--fg3)">(el mayor)</small></span>
       <span class="val" id="i-isr-pagar">RD$ 0.00</span>
     </div>
     <div id="isr-base-alert"></div>
   </div>
 
   <div class="card">
-    <div class="card-title">Créditos y Anticipos</div>
+    <div class="card-title">Calculadora de Anticipos</div>
+    <div class="calc-box">
+      <div class="calc-box-title">Auto-calcular anticipos del año</div>
+      <div class="calc-row">
+        <label>ISR pagado en el año anterior (RD$)</label>
+        <input type="number" id="ant-isr-prev" min="0" step="0.01" value="0" oninput="calcAnticipo()">
+      </div>
+      <div class="calc-row">
+        <label>Número de cuotas pagadas (1–12)</label>
+        <input type="number" id="ant-cuotas" min="0" max="12" step="1" value="12" oninput="calcAnticipo()">
+      </div>
+      <div class="calc-result" id="ant-result">Anticipo calculado: RD$ 0.00 (0 cuotas × RD$ 0.00/mes)</div>
+      <button class="btn btn-outline btn-sm no-print" style="margin-top:8px" onclick="aplicarAnticipo()">Aplicar este monto →</button>
+    </div>
+
+    <div class="card-title" style="margin-top:14px">Créditos y Pagos a Cuenta</div>
     <div class="isr-field">
       <label>(−) Anticipos pagados en el año</label>
       <input type="number" id="i-anticipos" min="0" step="0.01" value="0" oninput="recalcISR()">
@@ -373,7 +437,7 @@ td select:focus{border-color:var(--acc2)}
       <label>(−) ISR percibido / crédito adicional</label>
       <input type="number" id="i-percibido" min="0" step="0.01" value="0" oninput="recalcISR()">
     </div>
-    <div class="res-line total">
+    <div class="res-line total" style="margin-top:6px">
       <span id="saldo-lbl">SALDO A PAGAR</span>
       <span class="val" id="i-saldo">RD$ 0.00</span>
     </div>
@@ -388,248 +452,203 @@ td select:focus{border-color:var(--acc2)}
 </div><!-- /content -->
 
 <script>
-/* ══════════════════════════════════════════
-   Estado global
-══════════════════════════════════════════ */
-let rows = [];   // { id, codigo, desc, debe, haber, tipo }
-let ndRows = []; // { id, desc, monto }
-let exRows = [];
-let peRows = []; // { id, anio, monto }
-let rowId = 0;
+/* ══ Estado global ══ */
+let rows=[], ndRows=[], exRows=[], peRows=[], rowId=0;
+let saveTimer=null;
 
-const TIPOS = [
-  { v:'activo',    l:'Activo' },
-  { v:'pasivo',    l:'Pasivo' },
-  { v:'capital',   l:'Capital/Patrimonio' },
-  { v:'ingresos',  l:'Ingresos operacionales' },
-  { v:'costo',     l:'Costo de ventas' },
-  { v:'gastos',    l:'Gastos operativos' },
-  { v:'otros-ing', l:'Otros ingresos' },
-  { v:'otros-gas', l:'Otros gastos' },
+const TIPOS=[
+  {v:'activo',l:'Activo'},{v:'pasivo',l:'Pasivo'},{v:'capital',l:'Capital/Patrimonio'},
+  {v:'ingresos',l:'Ingresos operacionales'},{v:'costo',l:'Costo de ventas'},
+  {v:'gastos',l:'Gastos operativos'},{v:'otros-ing',l:'Otros ingresos'},{v:'otros-gas',l:'Otros gastos'},
 ];
 
-function autoTipo(codigo) {
-  const d = (codigo||'').charAt(0);
-  const map = {'1':'activo','2':'pasivo','3':'capital','4':'ingresos','5':'costo','6':'gastos','7':'otros-ing','8':'otros-gas'};
-  return map[d] || 'gastos';
+function autoTipo(c){
+  const m={'1':'activo','2':'pasivo','3':'capital','4':'ingresos','5':'costo','6':'gastos','7':'otros-ing','8':'otros-gas'};
+  return m[(c||'').charAt(0)]||'gastos';
+}
+
+/* ── Volver ── */
+function volverPortales(){
+  try{ window.parent.postMessage({action:'showPortals'},'*'); }catch(e){}
 }
 
 /* ── Empresa ── */
-function syncEmpresa() {
-  const n = v('e-nombre'), a = v('e-anio'), t = v('e-tipo');
-  document.getElementById('hdr-empresa-sub').textContent =
-    (n || 'Sin nombre') + ' · Período ' + (a||'') + (t==='rectificativa'?' · Rectificativa':'');
-  document.getElementById('bc-anio').textContent = a||'';
-  document.getElementById('er-anio').textContent = a||'';
+function syncEmpresa(){
+  const n=v('e-nombre'),a=v('e-anio'),t=v('e-tipo');
+  const rnc=v('e-rnc');
+  document.getElementById('hdr-sub').textContent=(n||'Sin nombre')+(rnc?' · RNC '+rnc:'')+' · '+a+(t==='rectificativa'?' · Rectificativa':'');
+  document.getElementById('bc-anio').textContent=a||'';
+  document.getElementById('er-anio').textContent=a||'';
+  // Print header
+  document.getElementById('ph-title').textContent='IR-2 — Declaración Jurada Renta Personas Jurídicas · '+(n||'');
+  document.getElementById('ph-sub').textContent='RNC: '+(rnc||'—')+' | Período: '+(a||'—')+(t==='rectificativa'?' | Rectificativa':'');
 }
 
-/* ── Balance de comprobación ── */
-function addRow(codigo='', desc='', debe=0, haber=0, tipo='') {
-  const id = ++rowId;
-  rows.push({ id, codigo, desc, debe: parseFloat(debe)||0, haber: parseFloat(haber)||0,
-    tipo: tipo || autoTipo(codigo) });
-  renderBC();
+/* ── Balance ── */
+function addRow(codigo='',desc='',debe=0,haber=0,tipo=''){
+  const id=++rowId;
+  rows.push({id,codigo,desc,debe:parseFloat(debe)||0,haber:parseFloat(haber)||0,tipo:tipo||autoTipo(codigo)});
+  renderBC(); autoSave();
 }
-
-function removeRow(id) {
-  rows = rows.filter(r => r.id !== id);
-  renderBC();
-}
-
-function renderBC() {
-  const tbody = document.getElementById('bc-body');
-  tbody.innerHTML = rows.map(r => `
+function removeRow(id){rows=rows.filter(r=>r.id!==id);renderBC();autoSave();}
+function renderBC(){
+  document.getElementById('bc-body').innerHTML=rows.map(r=>`
     <tr id="row-${r.id}">
-      <td><input type="text" value="${esc(r.codigo)}" placeholder="101" onchange="setField(${r.id},'codigo',this.value)" oninput="autoTipoField(${r.id},this.value)"></td>
-      <td><input type="text" value="${esc(r.desc)}" placeholder="Caja y bancos" onchange="setField(${r.id},'desc',this.value)"></td>
+      <td><input type="text" value="${esc(r.codigo)}" placeholder="401" onchange="setField(${r.id},'codigo',this.value)" oninput="autoTipoField(${r.id},this.value)"></td>
+      <td><input type="text" value="${esc(r.desc)}" placeholder="Descripción" onchange="setField(${r.id},'desc',this.value)"></td>
       <td><input type="number" value="${r.debe||''}" min="0" step="0.01" placeholder="0.00" onchange="setField(${r.id},'debe',parseFloat(this.value)||0)"></td>
       <td><input type="number" value="${r.haber||''}" min="0" step="0.01" placeholder="0.00" onchange="setField(${r.id},'haber',parseFloat(this.value)||0)"></td>
-      <td>
-        <select onchange="setField(${r.id},'tipo',this.value)">
-          ${TIPOS.map(t => `<option value="${t.v}"${t.v===r.tipo?' selected':''}>${t.l}</option>`).join('')}
-        </select>
-      </td>
+      <td><select onchange="setField(${r.id},'tipo',this.value)">${TIPOS.map(t=>`<option value="${t.v}"${t.v===r.tipo?' selected':''}>${t.l}</option>`).join('')}</select></td>
       <td><button class="rm-btn no-print" onclick="removeRow(${r.id})">✕</button></td>
     </tr>`).join('');
   recalcAll();
 }
-
-function autoTipoField(id, codigo) {
-  const tipo = autoTipo(codigo);
-  const r = rows.find(x => x.id === id);
-  if (r) { r.tipo = tipo; r.codigo = codigo; }
-  const sel = document.querySelector(`#row-${id} select`);
-  if (sel) sel.value = tipo;
+function autoTipoField(id,codigo){
+  const r=rows.find(x=>x.id===id);
+  if(r){r.tipo=autoTipo(codigo);r.codigo=codigo;}
+  const sel=document.querySelector(`#row-${id} select`);
+  if(sel)sel.value=autoTipo(codigo);
   recalcAll();
 }
+function setField(id,f,val){const r=rows.find(x=>x.id===id);if(r)r[f]=val;recalcAll();autoSave();}
 
-function setField(id, field, val) {
-  const r = rows.find(x => x.id === id);
-  if (r) r[field] = val;
-  recalcAll();
+/* ── Derivados ── */
+function derivados(){
+  const sum=(tipo,col)=>rows.filter(r=>r.tipo===tipo).reduce((a,r)=>a+(r[col]||0),0);
+  const totalDebe=rows.reduce((a,r)=>a+(r.debe||0),0);
+  const totalHaber=rows.reduce((a,r)=>a+(r.haber||0),0);
+  const ingresos=sum('ingresos','haber');
+  const costo=sum('costo','debe');
+  const gastos=sum('gastos','debe');
+  const otrosIng=sum('otros-ing','haber');
+  const otrosGas=sum('otros-gas','debe');
+  const ingresosBrutos=ingresos+otrosIng;
+  const utilidadBruta=ingresos-costo;
+  const utilidadOperativa=utilidadBruta-gastos;
+  const utilidadAntesISR=utilidadOperativa+otrosIng-otrosGas;
+  const totalND=ndRows.reduce((a,r)=>a+(r.monto||0),0);
+  const totalEX=exRows.reduce((a,r)=>a+(r.monto||0),0);
+  const totalPE=peRows.reduce((a,r)=>a+(r.monto||0),0);
+  const rni=Math.max(0,utilidadAntesISR+totalND-totalEX-totalPE);
+  const isrNormal=rni*0.27;
+  const isrMinimo=ingresosBrutos*0.015;
+  const isrBase=isrNormal>=isrMinimo?'normal':'minimo';
+  const isrAPagar=Math.max(isrNormal,isrMinimo);
+  const anticipos=parseFloat(document.getElementById('i-anticipos')?.value)||0;
+  const retenciones=parseFloat(document.getElementById('i-retenciones')?.value)||0;
+  const percibido=parseFloat(document.getElementById('i-percibido')?.value)||0;
+  const saldo=isrAPagar-anticipos-retenciones-percibido;
+  return{totalDebe,totalHaber,ingresos,costo,gastos,otrosIng,otrosGas,ingresosBrutos,
+    utilidadBruta,utilidadOperativa,utilidadAntesISR,totalND,totalEX,totalPE,rni,
+    isrNormal,isrMinimo,isrBase,isrAPagar,anticipos,retenciones,percibido,saldo};
 }
 
-function recalcAll() {
-  const d = derivados();
-  updateBC(d);
-  updateER(d);
-  updateConc(d);
-  updateISR(d);
-  updateReporte(d);
+function recalcAll(){
+  const d=derivados();
+  updateBC(d);updateER(d);updateConc(d);updateISR(d);updateReporte(d);
 }
 
-function derivados() {
-  const sum = (tipo, col) => rows.filter(r => r.tipo === tipo).reduce((a, r) => a + (r[col]||0), 0);
-  const totalDebe = rows.reduce((a, r) => a + (r.debe||0), 0);
-  const totalHaber = rows.reduce((a, r) => a + (r.haber||0), 0);
-
-  const ingresos = sum('ingresos','haber');
-  const costo = sum('costo','debe');
-  const gastos = sum('gastos','debe');
-  const otrosIng = sum('otros-ing','haber');
-  const otrosGas = sum('otros-gas','debe');
-  const ingresosBrutos = ingresos + otrosIng;
-
-  const utilidadBruta = ingresos - costo;
-  const utilidadOperativa = utilidadBruta - gastos;
-  const utilidadAntesISR = utilidadOperativa + otrosIng - otrosGas;
-
-  const totalND = ndRows.reduce((a,r) => a + (r.monto||0), 0);
-  const totalEX = exRows.reduce((a,r) => a + (r.monto||0), 0);
-  const totalPE = peRows.reduce((a,r) => a + (r.monto||0), 0);
-
-  const rni = Math.max(0, utilidadAntesISR + totalND - totalEX - totalPE);
-  const isrNormal = rni * 0.27;
-  const isrMinimo = ingresosBrutos * 0.015;
-  const isrBase = isrNormal >= isrMinimo ? 'normal' : 'minimo';
-  const isrAPagar = Math.max(isrNormal, isrMinimo);
-
-  const anticipos = parseFloat(document.getElementById('i-anticipos')?.value)||0;
-  const retenciones = parseFloat(document.getElementById('i-retenciones')?.value)||0;
-  const percibido = parseFloat(document.getElementById('i-percibido')?.value)||0;
-  const saldo = isrAPagar - anticipos - retenciones - percibido;
-
-  return { totalDebe, totalHaber,
-    ingresos, costo, gastos, otrosIng, otrosGas, ingresosBrutos,
-    utilidadBruta, utilidadOperativa, utilidadAntesISR,
-    totalND, totalEX, totalPE, rni,
-    isrNormal, isrMinimo, isrBase, isrAPagar,
-    anticipos, retenciones, percibido, saldo };
+function updateBC(d){
+  txt('bc-total-debe',fmt(d.totalDebe));
+  txt('bc-total-haber',fmt(d.totalHaber));
+  const el=document.getElementById('bc-alert');
+  if(!rows.length){el.innerHTML='';return;}
+  const diff=Math.abs(d.totalDebe-d.totalHaber);
+  el.innerHTML=diff<0.01
+    ?`<div class="alert alert-ok">✓ Balance cuadrado — Debe = Haber = ${fmtDOP(d.totalDebe)}</div>`
+    :`<div class="alert alert-err">⚠ Balance no cuadra — Diferencia: ${fmtDOP(diff)}</div>`;
 }
 
-/* ── Balance ── */
-function updateBC(d) {
-  txt('bc-total-debe', fmt(d.totalDebe));
-  txt('bc-total-haber', fmt(d.totalHaber));
-  const diff = Math.abs(d.totalDebe - d.totalHaber);
-  const alert = document.getElementById('bc-alert');
-  if (rows.length === 0) { alert.innerHTML = ''; return; }
-  if (diff < 0.01) {
-    alert.innerHTML = `<div class="alert alert-ok">✓ Balance cuadrado — Debe = Haber = ${fmt(d.totalDebe)}</div>`;
-  } else {
-    alert.innerHTML = `<div class="alert alert-err">⚠ Balance no cuadra — Diferencia: ${fmt(diff)}</div>`;
-  }
-}
-
-/* ── Estado de Resultados ── */
-function updateER(d) {
-  const el = document.getElementById('er-content');
-  el.innerHTML = `
-    <div class="res-line"><span class="lbl">Ingresos por ventas/servicios</span><span class="val">${fmtDOP(d.ingresos)}</span></div>
+function updateER(d){
+  const el=document.getElementById('er-content');
+  el.innerHTML=`
+    <div class="res-line"><span class="lbl">Ingresos por ventas / servicios</span><span class="val">${fmtDOP(d.ingresos)}</span></div>
     <div class="res-line"><span class="lbl indent">(−) Costo de ventas</span><span class="val">(${fmtDOP(d.costo)})</span></div>
-    <div class="res-line subtotal" style="font-weight:700;padding:8px 0"><span>Utilidad Bruta</span><span class="val ${d.utilidadBruta>=0?'pos':'neg'}">${fmtDOP(d.utilidadBruta)}</span></div>
+    <div class="res-line subtotal"><span style="font-weight:700">Utilidad Bruta</span><span class="val ${d.utilidadBruta>=0?'pos':'neg'}">${fmtDOP(d.utilidadBruta)}</span></div>
     <div class="res-line"><span class="lbl indent">(−) Gastos operativos</span><span class="val">(${fmtDOP(d.gastos)})</span></div>
-    <div class="res-line subtotal" style="font-weight:700;padding:8px 0"><span>Utilidad Operativa (EBIT)</span><span class="val ${d.utilidadOperativa>=0?'pos':'neg'}">${fmtDOP(d.utilidadOperativa)}</span></div>
+    <div class="res-line subtotal"><span style="font-weight:700">Utilidad Operativa (EBIT)</span><span class="val ${d.utilidadOperativa>=0?'pos':'neg'}">${fmtDOP(d.utilidadOperativa)}</span></div>
     <div class="res-line"><span class="lbl indent">(+) Otros ingresos</span><span class="val">${fmtDOP(d.otrosIng)}</span></div>
     <div class="res-line"><span class="lbl indent">(−) Otros gastos</span><span class="val">(${fmtDOP(d.otrosGas)})</span></div>
     <div class="res-line total"><span>UTILIDAD (PÉRDIDA) ANTES DE ISR</span><span class="val ${d.utilidadAntesISR>=0?'pos':'neg'}">${fmtDOP(d.utilidadAntesISR)}</span></div>
-    <div class="res-line" style="margin-top:8px;color:var(--fg3);font-size:12px">
+    <div class="res-line" style="margin-top:8px;color:var(--fg3);font-size:11.5px">
       <span>Ingresos Brutos Totales (base ISR mínimo)</span><span>${fmtDOP(d.ingresosBrutos)}</span>
     </div>`;
 }
 
-/* ── Conciliación ── */
-function updateConc(d) {
-  txt('c-utilidad', fmtDOP(d.utilidadAntesISR));
-  txt('c-total-nd', fmtDOP(d.totalND));
-  txt('c-total-ex', fmtDOP(d.totalEX));
-  txt('c-total-pe', fmtDOP(d.totalPE));
-  txt('c2-utilidad', fmtDOP(d.utilidadAntesISR));
-  txt('c2-nd', fmtDOP(d.totalND));
-  txt('c2-ex', fmtDOP(d.totalEX));
-  txt('c2-pe', fmtDOP(d.totalPE));
-  txt('c2-rni', fmtDOP(d.rni));
+function updateConc(d){
+  txt('c-utilidad',fmtDOP(d.utilidadAntesISR));
+  txt('c-total-nd',fmtDOP(d.totalND));
+  txt('c-total-ex',fmtDOP(d.totalEX));
+  txt('c-total-pe',fmtDOP(d.totalPE));
+  txt('c2-utilidad',fmtDOP(d.utilidadAntesISR));
+  txt('c2-nd',fmtDOP(d.totalND));
+  txt('c2-ex',fmtDOP(d.totalEX));
+  txt('c2-pe',fmtDOP(d.totalPE));
+  txt('c2-rni',fmtDOP(d.rni));
 }
 
-/* ── ISR ── */
-function recalcISR() { recalcAll(); }
+function recalcISR(){recalcAll();autoSave();}
 
-function updateISR(d) {
-  txt('i-rni', fmtDOP(d.rni));
-  txt('i-isr-normal', fmtDOP(d.isrNormal));
-  txt('i-ing-brutos', fmtDOP(d.ingresosBrutos));
-  txt('i-isr-min', fmtDOP(d.isrMinimo));
-  txt('i-isr-pagar', fmtDOP(d.isrAPagar));
-
-  const saldoEl = document.getElementById('i-saldo');
-  const saldoLbl = document.getElementById('saldo-lbl');
-  if (saldoEl) {
-    saldoEl.textContent = fmtDOP(Math.abs(d.saldo));
-    saldoEl.className = 'val ' + (d.saldo > 0.01 ? 'neg' : d.saldo < -0.01 ? 'pos' : '');
-    saldoLbl.textContent = d.saldo < -0.01 ? 'SALDO A FAVOR' : 'SALDO A PAGAR';
+function updateISR(d){
+  txt('i-rni',fmtDOP(d.rni));
+  txt('i-isr-normal',fmtDOP(d.isrNormal));
+  txt('i-ing-brutos',fmtDOP(d.ingresosBrutos));
+  txt('i-isr-min',fmtDOP(d.isrMinimo));
+  txt('i-isr-pagar',fmtDOP(d.isrAPagar));
+  const saldoEl=document.getElementById('i-saldo');
+  const saldoLbl=document.getElementById('saldo-lbl');
+  if(saldoEl){
+    saldoEl.textContent=fmtDOP(Math.abs(d.saldo));
+    saldoEl.className='val '+(d.saldo>0.01?'neg':d.saldo<-0.01?'pos':'');
+    saldoLbl.textContent=d.saldo<-0.01?'SALDO A FAVOR':'SALDO A PAGAR';
   }
-
-  const alertEl = document.getElementById('isr-base-alert');
-  if (alertEl) {
-    alertEl.innerHTML = d.isrBase === 'minimo'
-      ? `<div class="alert alert-warn">⚠ Se aplica el <b>ISR Mínimo Alternativo (1.5%)</b> porque el ISR normal (${fmtDOP(d.isrNormal)}) es menor al mínimo (${fmtDOP(d.isrMinimo)}).</div>`
-      : `<div class="alert alert-ok">✓ Se aplica el <b>ISR Normal (27%)</b> — Renta Neta Imponible: ${fmtDOP(d.rni)}</div>`;
+  const alertEl=document.getElementById('isr-base-alert');
+  if(alertEl){
+    alertEl.innerHTML=d.isrBase==='minimo'
+      ?`<div class="alert alert-warn">⚠ Se aplica el <b>ISR Mínimo Alternativo (1.5%)</b> — el ISR normal (${fmtDOP(d.isrNormal)}) es menor al mínimo (${fmtDOP(d.isrMinimo)}).</div>`
+      :`<div class="alert alert-ok">✓ Se aplica el <b>ISR Normal (27%)</b> — RNI: ${fmtDOP(d.rni)}</div>`;
   }
-
-  const tilesEl = document.getElementById('isr-tiles');
-  if (tilesEl) {
-    tilesEl.innerHTML = `
+  const tilesEl=document.getElementById('isr-tiles');
+  if(tilesEl){
+    tilesEl.innerHTML=`
       <div class="tile"><div class="tile-label">Renta Neta Imponible</div><div class="tile-val blue">${fmtDOP(d.rni)}</div></div>
       <div class="tile"><div class="tile-label">ISR a Pagar</div><div class="tile-val ${d.isrAPagar>0?'warn':''}">${fmtDOP(d.isrAPagar)}</div></div>
-      <div class="tile"><div class="tile-label">${d.saldo < -0.01 ? 'Saldo a Favor' : 'Saldo a Pagar'}</div><div class="tile-val ${d.saldo < -0.01 ? 'green' : d.saldo > 0.01 ? 'red' : ''}">${fmtDOP(Math.abs(d.saldo))}</div></div>
+      <div class="tile"><div class="tile-label">${d.saldo<-0.01?'Saldo a Favor':'Saldo a Pagar'}</div><div class="tile-val ${d.saldo<-0.01?'green':d.saldo>0.01?'red':''}">${fmtDOP(Math.abs(d.saldo))}</div></div>
       <div class="tile"><div class="tile-label">Ingresos Brutos</div><div class="tile-val">${fmtDOP(d.ingresosBrutos)}</div></div>`;
   }
 }
 
-/* ── Reporte Final ── */
-function updateReporte(d) {
-  const el = document.getElementById('reporte-content');
-  if (!el) return;
-  const nombre = v('e-nombre')||'—';
-  const rnc = v('e-rnc')||'—';
-  const anio = v('e-anio')||'—';
-  const tipo = v('e-tipo')==='rectificativa'?'Rectificativa':'Original';
-
-  el.innerHTML = `
+function updateReporte(d){
+  const el=document.getElementById('reporte-content');
+  if(!el)return;
+  const nombre=v('e-nombre')||'—',rnc=v('e-rnc')||'—',anio=v('e-anio')||'—',tipo=v('e-tipo')==='rectificativa'?'Rectificativa':'Original';
+  el.innerHTML=`
     <div class="card">
-      <div class="card-title">Declaración IR-2 — ${nombre}</div>
-      <div class="form-grid" style="margin-bottom:12px">
+      <div class="card-title">Identificación</div>
+      <div class="form-grid">
+        <div><span style="color:var(--fg3);font-size:11px">Razón Social</span><br><b>${nombre}</b></div>
         <div><span style="color:var(--fg3);font-size:11px">RNC</span><br><b>${rnc}</b></div>
-        <div><span style="color:var(--fg3);font-size:11px">Período Fiscal</span><br><b>${anio}</b></div>
-        <div><span style="color:var(--fg3);font-size:11px">Tipo</span><br><b>${tipo}</b></div>
+        <div><span style="color:var(--fg3);font-size:11px">Período</span><br><b>${anio}</b></div>
+        <div><span style="color:var(--fg3);font-size:11px">Declaración</span><br><b>${tipo}</b></div>
         <div><span style="color:var(--fg3);font-size:11px">Actividad</span><br><b>${v('e-actividad')||'—'}</b></div>
+        <div><span style="color:var(--fg3);font-size:11px">Representante</span><br><b>${v('e-rep')||'—'}</b></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">A. Estado de Resultados Contable</div>
+      <div class="card-title">A. Estado de Resultados</div>
       <div class="res-line"><span class="lbl">Ingresos operacionales</span><span class="val">${fmtDOP(d.ingresos)}</span></div>
       <div class="res-line"><span class="lbl">(−) Costo de ventas</span><span class="val">${fmtDOP(d.costo)}</span></div>
       <div class="res-line"><span class="lbl">(−) Gastos operativos</span><span class="val">${fmtDOP(d.gastos)}</span></div>
       <div class="res-line"><span class="lbl">(+) Otros ingresos</span><span class="val">${fmtDOP(d.otrosIng)}</span></div>
       <div class="res-line"><span class="lbl">(−) Otros gastos</span><span class="val">${fmtDOP(d.otrosGas)}</span></div>
-      <div class="res-line bold"><span>Utilidad (Pérdida) Contable antes de ISR</span><span class="val ${d.utilidadAntesISR>=0?'pos':'neg'}">${fmtDOP(d.utilidadAntesISR)}</span></div>
+      <div class="res-line bold"><span>Utilidad (Pérdida) antes de ISR</span><span class="val ${d.utilidadAntesISR>=0?'pos':'neg'}">${fmtDOP(d.utilidadAntesISR)}</span></div>
     </div>
     <div class="card">
       <div class="card-title">B. Conciliación Fiscal</div>
       <div class="res-line"><span class="lbl">Utilidad contable</span><span class="val">${fmtDOP(d.utilidadAntesISR)}</span></div>
       <div class="res-line"><span class="lbl">(+) Gastos no deducibles</span><span class="val">${fmtDOP(d.totalND)}</span></div>
       <div class="res-line"><span class="lbl">(−) Ingresos exentos</span><span class="val">${fmtDOP(d.totalEX)}</span></div>
-      <div class="res-line"><span class="lbl">(−) Pérdidas años anteriores</span><span class="val">${fmtDOP(d.totalPE)}</span></div>
+      <div class="res-line"><span class="lbl">(−) Pérdidas anteriores</span><span class="val">${fmtDOP(d.totalPE)}</span></div>
       <div class="res-line bold"><span>Renta Neta Imponible</span><span class="val">${fmtDOP(d.rni)}</span></div>
     </div>
     <div class="card">
@@ -639,38 +658,32 @@ function updateReporte(d) {
       <div class="res-line bold"><span>ISR a Pagar <small style="font-weight:400">(${d.isrBase==='minimo'?'ISR Mínimo aplicable':'ISR Normal aplicable'})</small></span><span class="val">${fmtDOP(d.isrAPagar)}</span></div>
     </div>
     <div class="card">
-      <div class="card-title">D. Saldo</div>
+      <div class="card-title">D. Saldo Final</div>
       <div class="res-line"><span class="lbl">ISR a Pagar</span><span class="val">${fmtDOP(d.isrAPagar)}</span></div>
       <div class="res-line"><span class="lbl">(−) Anticipos pagados</span><span class="val">${fmtDOP(d.anticipos)}</span></div>
       <div class="res-line"><span class="lbl">(−) Retenciones de ISR</span><span class="val">${fmtDOP(d.retenciones)}</span></div>
       <div class="res-line"><span class="lbl">(−) ISR percibido / créditos</span><span class="val">${fmtDOP(d.percibido)}</span></div>
       <div class="res-line total">
-        <span>${d.saldo < -0.01 ? 'SALDO A FAVOR' : 'SALDO A PAGAR'}</span>
-        <span class="val ${d.saldo < -0.01 ? 'pos' : d.saldo > 0.01 ? 'neg' : ''}">${fmtDOP(Math.abs(d.saldo))}</span>
+        <span>${d.saldo<-0.01?'SALDO A FAVOR':'SALDO A PAGAR'}</span>
+        <span class="val ${d.saldo<-0.01?'pos':d.saldo>0.01?'neg':''}">${fmtDOP(Math.abs(d.saldo))}</span>
       </div>
     </div>
-    <div class="hint no-print" style="margin-top:8px">Imprime o exporta este reporte con el botón Imprimir en la parte superior.</div>`;
+    <div class="card no-print">
+      <div class="card-title">Firma del Contador / Auditor</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:10px">
+        <div style="border-top:1px solid var(--bdr2);padding-top:8px;text-align:center;color:var(--fg3);font-size:12px">Firma del Representante Legal<br>${v('e-rep')||'____________________'}</div>
+        <div style="border-top:1px solid var(--bdr2);padding-top:8px;text-align:center;color:var(--fg3);font-size:12px">Firma del Contador Público Autorizado<br>CPA: ____________________</div>
+      </div>
+    </div>`;
 }
 
 /* ── Conciliación CRUD ── */
-function addND(desc='', monto=0) {
-  const id = ++rowId;
-  ndRows.push({ id, desc, monto: parseFloat(monto)||0 });
-  renderND();
-}
-function addEX(desc='', monto=0) {
-  const id = ++rowId;
-  exRows.push({ id, desc, monto: parseFloat(monto)||0 });
-  renderEX();
-}
-function addPE(anio='', monto=0) {
-  const id = ++rowId;
-  peRows.push({ id, anio, monto: parseFloat(monto)||0 });
-  renderPE();
-}
+function addND(desc='',monto=0){const id=++rowId;ndRows.push({id,desc,monto:parseFloat(monto)||0});renderND();autoSave();}
+function addEX(desc='',monto=0){const id=++rowId;exRows.push({id,desc,monto:parseFloat(monto)||0});renderEX();autoSave();}
+function addPE(anio='',monto=0){const id=++rowId;peRows.push({id,anio,monto:parseFloat(monto)||0});renderPE();autoSave();}
 
-function renderND() {
-  document.getElementById('nd-rows').innerHTML = ndRows.map(r => `
+function renderND(){
+  document.getElementById('nd-rows').innerHTML=ndRows.map(r=>`
     <div class="conc-row">
       <input type="text" value="${esc(r.desc)}" placeholder="Descripción del gasto no deducible" onchange="setND(${r.id},'desc',this.value)">
       <input type="number" value="${r.monto||''}" min="0" step="0.01" placeholder="0.00" onchange="setND(${r.id},'monto',parseFloat(this.value)||0)">
@@ -678,8 +691,8 @@ function renderND() {
     </div>`).join('');
   recalcAll();
 }
-function renderEX() {
-  document.getElementById('ex-rows').innerHTML = exRows.map(r => `
+function renderEX(){
+  document.getElementById('ex-rows').innerHTML=exRows.map(r=>`
     <div class="conc-row">
       <input type="text" value="${esc(r.desc)}" placeholder="Descripción ingreso exento" onchange="setEX(${r.id},'desc',this.value)">
       <input type="number" value="${r.monto||''}" min="0" step="0.01" placeholder="0.00" onchange="setEX(${r.id},'monto',parseFloat(this.value)||0)">
@@ -687,142 +700,155 @@ function renderEX() {
     </div>`).join('');
   recalcAll();
 }
-function renderPE() {
-  document.getElementById('pe-rows').innerHTML = peRows.map(r => `
+function renderPE(){
+  document.getElementById('pe-rows').innerHTML=peRows.map(r=>`
     <div class="conc-row">
-      <input type="text" value="${esc(r.anio)}" placeholder="Año (ej: 2022)" style="max-width:100px" onchange="setPE(${r.id},'anio',this.value)">
+      <input type="text" value="${esc(r.anio)}" placeholder="Año (ej: 2022)" style="max-width:90px" onchange="setPE(${r.id},'anio',this.value)">
       <input type="number" value="${r.monto||''}" min="0" step="0.01" placeholder="Monto pérdida" onchange="setPE(${r.id},'monto',parseFloat(this.value)||0)">
       <button class="rm-btn no-print" onclick="rmPE(${r.id})">✕</button>
     </div>`).join('');
   recalcAll();
 }
-function setND(id,f,v2){const r=ndRows.find(x=>x.id===id);if(r)r[f]=v2;recalcAll();}
-function setEX(id,f,v2){const r=exRows.find(x=>x.id===id);if(r)r[f]=v2;recalcAll();}
-function setPE(id,f,v2){const r=peRows.find(x=>x.id===id);if(r)r[f]=v2;recalcAll();}
-function rmND(id){ndRows=ndRows.filter(x=>x.id!==id);renderND();}
-function rmEX(id){exRows=exRows.filter(x=>x.id!==id);renderEX();}
-function rmPE(id){peRows=peRows.filter(x=>x.id!==id);renderPE();}
+function setND(id,f,v2){const r=ndRows.find(x=>x.id===id);if(r)r[f]=v2;recalcAll();autoSave();}
+function setEX(id,f,v2){const r=exRows.find(x=>x.id===id);if(r)r[f]=v2;recalcAll();autoSave();}
+function setPE(id,f,v2){const r=peRows.find(x=>x.id===id);if(r)r[f]=v2;recalcAll();autoSave();}
+function rmND(id){ndRows=ndRows.filter(x=>x.id!==id);renderND();autoSave();}
+function rmEX(id){exRows=exRows.filter(x=>x.id!==id);renderEX();autoSave();}
+function rmPE(id){peRows=peRows.filter(x=>x.id!==id);renderPE();autoSave();}
 
-/* ── Tabs ── */
-function switchTab(n) {
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
-  document.querySelectorAll('.section').forEach((s,i)=>s.classList.toggle('active',i===n));
-  if(n===5) recalcAll();
+/* ── Anticipos calculator ── */
+function calcAnticipo(){
+  const prev=parseFloat(document.getElementById('ant-isr-prev')?.value)||0;
+  const cuotas=Math.min(12,Math.max(0,parseInt(document.getElementById('ant-cuotas')?.value)||0));
+  const cuotaMens=prev/12;
+  const total=cuotaMens*cuotas;
+  const el=document.getElementById('ant-result');
+  if(el) el.textContent=`Anticipo calculado: ${fmtDOP(total)} (${cuotas} cuotas × ${fmtDOP(cuotaMens)}/mes)`;
+}
+function aplicarAnticipo(){
+  const prev=parseFloat(document.getElementById('ant-isr-prev')?.value)||0;
+  const cuotas=Math.min(12,Math.max(0,parseInt(document.getElementById('ant-cuotas')?.value)||0));
+  const total=(prev/12)*cuotas;
+  sv('i-anticipos',total.toFixed(2));
+  recalcISR();
 }
 
-/* ── Import/Export CSV ── */
-function importarCSV(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const lines = e.target.result.split('\n').filter(l=>l.trim());
-    lines.forEach((line, i) => {
-      if (i===0 && line.toLowerCase().includes('codigo')) return;
-      const cols = line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
-      if (cols.length >= 4) addRow(cols[0],cols[1],cols[2],cols[3],cols[4]||'');
+/* ── Presets ── */
+function togglePreset(id){
+  document.querySelectorAll('.preset-menu').forEach(m=>{if(m.id!==id)m.classList.remove('open');});
+  document.getElementById(id).classList.toggle('open');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.preset-wrap'))document.querySelectorAll('.preset-menu').forEach(m=>m.classList.remove('open'));
+});
+
+/* ── Tabs ── */
+function switchTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.section').forEach((s,i)=>s.classList.toggle('active',i===n));
+  if(n===5)recalcAll();
+}
+
+/* ── CSV Import ── */
+function importarCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    lines.forEach((line,i)=>{
+      if(i===0&&line.toLowerCase().includes('codigo'))return;
+      const cols=line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+      if(cols.length>=4)addRow(cols[0],cols[1],cols[2],cols[3],cols[4]||'');
     });
   };
   reader.readAsText(file);
   input.value='';
 }
 
-/* ── Ejemplo precargado ── */
-function addFilasEjemplo() {
-  if (rows.length > 0 && !confirm('Esto reemplazará el balance actual. ¿Continuar?')) return;
-  rows = []; rowId = 0;
-  const ejemplos = [
-    ['101','Caja y Bancos',2500000,0,'activo'],
-    ['102','Cuentas por Cobrar',1800000,0,'activo'],
-    ['103','Inventario',3200000,0,'activo'],
-    ['104','Activos Fijos Netos',5000000,0,'activo'],
-    ['201','Cuentas por Pagar',0,1200000,'pasivo'],
-    ['202','Préstamos Bancarios',0,4000000,'pasivo'],
-    ['301','Capital Social',0,4000000,'capital'],
-    ['302','Utilidades Retenidas',0,1500000,'capital'],
+/* ── Ejemplo ── */
+function addFilasEjemplo(){
+  if(rows.length>0&&!confirm('Esto reemplazará el balance actual. ¿Continuar?'))return;
+  rows=[];rowId=0;
+  const ej=[
+    ['101','Caja y Bancos',2500000,0,'activo'],['102','Cuentas por Cobrar',1800000,0,'activo'],
+    ['103','Inventario',3200000,0,'activo'],['104','Activos Fijos Netos',5000000,0,'activo'],
+    ['201','Cuentas por Pagar',0,1200000,'pasivo'],['202','Préstamos Bancarios',0,4000000,'pasivo'],
+    ['301','Capital Social',0,4000000,'capital'],['302','Utilidades Retenidas',0,1500000,'capital'],
     ['303','Utilidad del Ejercicio',0,1800000,'capital'],
-    ['401','Ventas Netas',0,12000000,'ingresos'],
-    ['501','Costo de Ventas',7200000,0,'costo'],
-    ['601','Sueldos y Salarios',1500000,0,'gastos'],
-    ['602','Alquiler de Local',480000,0,'gastos'],
-    ['603','Servicios Públicos',120000,0,'gastos'],
-    ['604','Publicidad y Mercadeo',200000,0,'gastos'],
-    ['605','Depreciaciones',300000,0,'gastos'],
-    ['606','Gastos Administrativos',400000,0,'gastos'],
-    ['701','Ingresos Financieros',0,50000,'otros-ing'],
-    ['801','Gastos Financieros (Intereses)',250000,0,'otros-gas'],
+    ['401','Ventas Netas',0,12000000,'ingresos'],['501','Costo de Ventas',7200000,0,'costo'],
+    ['601','Sueldos y Salarios',1500000,0,'gastos'],['602','Alquiler de Local',480000,0,'gastos'],
+    ['603','Servicios Públicos',120000,0,'gastos'],['604','Publicidad',200000,0,'gastos'],
+    ['605','Depreciaciones',300000,0,'gastos'],['606','Gastos Administrativos',400000,0,'gastos'],
+    ['701','Ingresos Financieros',0,50000,'otros-ing'],['801','Gastos Financieros',250000,0,'otros-gas'],
   ];
-  ejemplos.forEach(e => addRow(...e));
-  ndRows=[{id:++rowId,desc:'Multas y recargos DGII',monto:15000},
-          {id:++rowId,desc:'Gastos sin soporte fiscal (NCF)',monto:85000}];
+  ej.forEach(e=>addRow(...e));
+  ndRows=[{id:++rowId,desc:'Multas y recargos DGII',monto:15000},{id:++rowId,desc:'Gastos sin soporte fiscal (NCF)',monto:85000}];
   renderND();
+  sv('ant-isr-prev',486000); calcAnticipo();
+  autoSave();
 }
 
-/* ── Persistencia ── */
-function guardarLocal() {
-  try {
-    localStorage.setItem('ir2_data', JSON.stringify({
-      rows, ndRows, exRows, peRows, rowId,
-      empresa: {
-        nombre:v('e-nombre'),rnc:v('e-rnc'),anio:v('e-anio'),
-        tipo:v('e-tipo'),actividad:v('e-actividad'),
-        rep:v('e-rep'),cedula:v('e-cedula'),cargo:v('e-cargo')
-      },
-      calculos: {
-        anticipos: document.getElementById('i-anticipos')?.value||0,
-        retenciones: document.getElementById('i-retenciones')?.value||0,
-        percibido: document.getElementById('i-percibido')?.value||0
-      }
-    }));
-    alert('Datos guardados localmente.');
-  } catch(e) { alert('No se pudo guardar: '+e.message); }
+/* ── Auto-save ── */
+function autoSave(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    try{
+      localStorage.setItem('ir2_data',JSON.stringify({
+        rows,ndRows,exRows,peRows,rowId,
+        empresa:{nombre:v('e-nombre'),rnc:v('e-rnc'),anio:v('e-anio'),tipo:v('e-tipo'),actividad:v('e-actividad'),rep:v('e-rep'),cedula:v('e-cedula'),cargo:v('e-cargo')},
+        calculos:{anticipos:document.getElementById('i-anticipos')?.value||0,retenciones:document.getElementById('i-retenciones')?.value||0,percibido:document.getElementById('i-percibido')?.value||0,antIsrPrev:document.getElementById('ant-isr-prev')?.value||0,antCuotas:document.getElementById('ant-cuotas')?.value||12}
+      }));
+      showSaveBadge();
+    }catch(e){}
+  },800);
+}
+function showSaveBadge(){
+  const b=document.getElementById('save-badge');
+  if(!b)return;
+  b.classList.add('show');
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>b.classList.remove('show'),2200);
 }
 
-function cargarLocal() {
-  try {
-    const saved = localStorage.getItem('ir2_data');
-    if (!saved) return;
-    const d = JSON.parse(saved);
-    rows = d.rows||[]; ndRows = d.ndRows||[]; exRows = d.exRows||[]; peRows = d.peRows||[];
-    rowId = d.rowId||0;
-    if (d.empresa) {
-      sv('e-nombre',d.empresa.nombre);sv('e-rnc',d.empresa.rnc);
-      sv('e-anio',d.empresa.anio);sv('e-tipo',d.empresa.tipo);
-      sv('e-actividad',d.empresa.actividad);sv('e-rep',d.empresa.rep);
-      sv('e-cedula',d.empresa.cedula);sv('e-cargo',d.empresa.cargo);
-    }
-    if (d.calculos) {
-      sv('i-anticipos',d.calculos.anticipos);
-      sv('i-retenciones',d.calculos.retenciones);
-      sv('i-percibido',d.calculos.percibido);
-    }
-    renderBC(); renderND(); renderEX(); renderPE(); syncEmpresa();
-  } catch(e) {}
+/* ── Load ── */
+function cargarLocal(){
+  try{
+    const saved=localStorage.getItem('ir2_data');
+    if(!saved)return;
+    const d=JSON.parse(saved);
+    rows=d.rows||[];ndRows=d.ndRows||[];exRows=d.exRows||[];peRows=d.peRows||[];rowId=d.rowId||0;
+    if(d.empresa){sv('e-nombre',d.empresa.nombre);sv('e-rnc',d.empresa.rnc);sv('e-anio',d.empresa.anio);sv('e-tipo',d.empresa.tipo);sv('e-actividad',d.empresa.actividad);sv('e-rep',d.empresa.rep);sv('e-cedula',d.empresa.cedula);sv('e-cargo',d.empresa.cargo);}
+    if(d.calculos){sv('i-anticipos',d.calculos.anticipos);sv('i-retenciones',d.calculos.retenciones);sv('i-percibido',d.calculos.percibido);sv('ant-isr-prev',d.calculos.antIsrPrev);sv('ant-cuotas',d.calculos.antCuotas);}
+    renderBC();renderND();renderEX();renderPE();syncEmpresa();calcAnticipo();
+  }catch(e){}
 }
 
-function limpiarTodo() {
-  if (!confirm('¿Borrar todos los datos y empezar de nuevo?')) return;
-  rows=[]; ndRows=[]; exRows=[]; peRows=[]; rowId=0;
+function limpiarTodo(){
+  if(!confirm('¿Borrar todos los datos y comenzar de nuevo?'))return;
+  rows=[];ndRows=[];exRows=[];peRows=[];rowId=0;
   ['e-nombre','e-rnc','e-actividad','e-rep','e-cedula','e-cargo'].forEach(id=>sv(id,''));
-  sv('e-anio', new Date().getFullYear());
-  sv('e-tipo','original');
-  sv('i-anticipos',0); sv('i-retenciones',0); sv('i-percibido',0);
+  sv('e-anio',new Date().getFullYear());sv('e-tipo','original');
+  sv('i-anticipos',0);sv('i-retenciones',0);sv('i-percibido',0);
+  sv('ant-isr-prev',0);sv('ant-cuotas',12);
   localStorage.removeItem('ir2_data');
-  renderBC(); renderND(); renderEX(); renderPE(); syncEmpresa();
+  renderBC();renderND();renderEX();renderPE();syncEmpresa();calcAnticipo();
 }
+
+/* ── Imprimir ── */
+function imprimirReporte(){switchTab(5);setTimeout(()=>window.print(),200);}
 
 /* ── Utilidades ── */
-function v(id) { return (document.getElementById(id)||{}).value||''; }
-function sv(id,val) { const el=document.getElementById(id); if(el) el.value=val||''; }
-function txt(id, t) { const el=document.getElementById(id); if(el) el.textContent=t; }
-function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-function fmt(n) { return Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function fmtDOP(n) { return 'RD$ '+fmt(n); }
+function v(id){return(document.getElementById(id)||{}).value||'';}
+function sv(id,val){const el=document.getElementById(id);if(el)el.value=val||'';}
+function txt(id,t){const el=document.getElementById(id);if(el)el.textContent=t;}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function fmt(n){return Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtDOP(n){return'RD$ '+fmt(n);}
 
 /* ── Init ── */
 cargarLocal();
 syncEmpresa();
-if (rows.length === 0) recalcAll();
+if(rows.length===0)recalcAll();
 </script>
 </body>
 </html>

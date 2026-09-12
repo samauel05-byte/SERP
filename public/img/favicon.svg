@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Cloud -->
+  <path d="M24 20H10a5 5 0 0 1-.5-9.975A7 7 0 0 1 23 13.5a4.5 4.5 0 0 1 1 8.5z" fill="#3d8bff"/>
+  <!-- Key body -->
+  <circle cx="11" cy="24" r="3.5" stroke="#80b8ff" stroke-width="2" fill="none"/>
+  <!-- Key stem -->
+  <line x1="14.2" y1="21.8" x2="22" y2="14" stroke="#80b8ff" stroke-width="2" stroke-linecap="round"/>
+  <!-- Key teeth -->
+  <line x1="20" y1="16" x2="22" y2="18" stroke="#80b8ff" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="17.5" y1="18.5" x2="19.5" y2="20.5" stroke="#80b8ff" stroke-width="1.8" stroke-linecap="round"/>
+</svg>
