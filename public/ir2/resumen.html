@@ -145,12 +145,12 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 
 <!-- ── Tabs ── -->
 <div class="tabs" id="tabs">
-  <div class="tab active" onclick="switchTab(0)">606-607</div>
-  <div class="tab" onclick="switchTab(1)">Datos Terceros</div>
-  <div class="tab" onclick="switchTab(2)">TSS e INFOTEP</div>
-  <div class="tab" onclick="switchTab(3)">Anticipos</div>
-  <div class="tab" onclick="switchTab(4)">Resumen</div>
-  <div class="tab" onclick="switchTab(5)">IR-13</div>
+  <div class="tab active" onclick="switchTab(0)">607</div>
+  <div class="tab" onclick="switchTab(1)">606</div>
+  <div class="tab" onclick="switchTab(2)">Datos de Terceros</div>
+  <div class="tab" onclick="switchTab(3)">606 - 607</div>
+  <div class="tab" onclick="switchTab(4)">TSS e INFOTEP</div>
+  <div class="tab" onclick="switchTab(5)">Resumen Estimación</div>
 </div>
 
 <!-- ── Content ── -->
@@ -158,31 +158,18 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 
 <!-- ════ TAB 0: 606-607 ════ -->
 <div class="section active" id="sec-0">
-  <div class="section-hdr"><span class="section-lbl">Ventas 607 & Compras 606 — Por Mes</span></div>
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th rowspan="2">MES</th>
-          <th class="grp-v num" colspan="2">607 · VENTAS</th>
-          <th class="grp-c num" colspan="3">606 · COMPRAS</th>
-        </tr>
-        <tr>
-          <th class="grp-v num">Monto Facturado</th>
-          <th class="grp-v num">ITBIS Facturado</th>
-          <th class="grp-c num">Monto Facturado</th>
-          <th class="grp-c num">ITBIS por Adelantar</th>
-          <th class="grp-c num">ITBIS al Costo</th>
-        </tr>
-      </thead>
-      <tbody id="tbl-606607"></tbody>
-      <tfoot id="tbl-606607-foot"></tfoot>
-    </table>
-  </div>
+  <div class="section-hdr"><span class="section-lbl">607 — Ventas DGII</span><button class="btn-add" onclick="add607()">+ Agregar fila</button></div>
+  <div class="tbl-wrap"><table><thead><tr><th>NCF</th><th>RNC / Cédula / Pasaporte</th><th>Tipo ingreso</th><th>Fecha comprobante</th><th class="num">Monto facturado</th><th class="num">ITBIS facturado</th><th class="num">Retención renta</th><th></th></tr></thead><tbody id="tbl-607"></tbody></table></div>
 </div>
 
-<!-- ════ TAB 1: Datos Terceros ════ -->
+<!-- ════ TAB 1: 606 ════ -->
 <div class="section" id="sec-1">
+  <div class="section-hdr"><span class="section-lbl">606 — Compras y Gastos DGII</span><button class="btn-add" onclick="add606()">+ Agregar fila</button></div>
+  <div class="tbl-wrap"><table><thead><tr><th>NCF</th><th>RNC / Cédula</th><th>Tipo gasto</th><th>Fecha comprobante</th><th class="num">Servicios</th><th class="num">Bienes</th><th class="num">Total facturado</th><th class="num">ITBIS facturado</th><th class="num">ITBIS por adelantar</th><th class="num">ITBIS al costo</th><th></th></tr></thead><tbody id="tbl-606"></tbody></table></div>
+</div>
+
+<!-- ════ TAB 2: Datos de terceros ════ -->
+<div class="section" id="sec-2">
   <div class="section-hdr">
     <span class="section-lbl">Datos de Terceros</span>
     <button class="btn-add" onclick="addTercero()">+ Agregar fila</button>
@@ -212,8 +199,33 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
   <div class="hint" style="margin-top:8px">Datos obtenidos de DGII → Datos de Terceros</div>
 </div>
 
-<!-- ════ TAB 2: TSS e INFOTEP ════ -->
-<div class="section" id="sec-2">
+<!-- ════ TAB 3: 606-607 ════ -->
+<div class="section" id="sec-3">
+  <div class="section-hdr"><span class="section-lbl">Ventas 607 & Compras 606 — Por Mes</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2">MES</th>
+          <th class="grp-v num" colspan="2">607 · VENTAS</th>
+          <th class="grp-c num" colspan="3">606 · COMPRAS</th>
+        </tr>
+        <tr>
+          <th class="grp-v num">Monto Facturado</th>
+          <th class="grp-v num">ITBIS Facturado</th>
+          <th class="grp-c num">Monto Facturado</th>
+          <th class="grp-c num">ITBIS por Adelantar</th>
+          <th class="grp-c num">ITBIS al Costo</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-606607"></tbody>
+      <tfoot id="tbl-606607-foot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ════ TAB 4: TSS e INFOTEP ════ -->
+<div class="section" id="sec-4">
   <div class="section-hdr"><span class="section-lbl">TSS — Aportes por Mes</span></div>
   <div class="tbl-wrap" style="margin-bottom:14px">
     <table>
@@ -250,29 +262,8 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
   </div>
 </div>
 
-<!-- ════ TAB 3: Anticipos ════ -->
-<div class="section" id="sec-3">
-  <div class="section-hdr"><span class="section-lbl">Anticipos IR-3 / R-17 — Por Mes</span></div>
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>MES</th>
-          <th>Período IR-3</th>
-          <th class="num">Impt. Pago IR-3</th>
-          <th>Período R-17</th>
-          <th class="num">Impt. Pago R-17</th>
-          <th class="num calc">Total Anticipo</th>
-        </tr>
-      </thead>
-      <tbody id="tbl-anticipos"></tbody>
-      <tfoot id="tbl-anticipos-foot"></tfoot>
-    </table>
-  </div>
-</div>
-
-<!-- ════ TAB 4: Resumen Estimación ════ -->
-<div class="section" id="sec-4">
+<!-- ════ TAB 5: Resumen Estimación ════ -->
+<div class="section" id="sec-5">
   <div class="section-hdr"><span class="section-lbl">Resumen Estimación Fiscal — <span id="res-anio-lbl">2025</span></span></div>
 
   <div class="tiles" id="tiles-res"></div>
@@ -323,34 +314,6 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
   </div>
 </div>
 
-<!-- ════ TAB 5: IR-13 ════ -->
-<div class="section" id="sec-5">
-  <div class="section-hdr">
-    <span class="section-lbl">Declaración IR-13</span>
-    <button class="btn-add" onclick="addIr13()">+ Agregar fila</button>
-  </div>
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Año Fiscal</th>
-          <th>Período</th>
-          <th>Fecha</th>
-          <th>Tipo Declaración</th>
-          <th class="num">Renta Neta</th>
-          <th class="num">ISR Determinado</th>
-          <th class="num">ISR Pagado</th>
-          <th class="num">Saldo</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="tbl-ir13"></tbody>
-    </table>
-  </div>
-  <div class="hint" style="margin-top:8px">Datos obtenidos de DGII → Declaraciones → IR-13</div>
-</div>
-
 </div><!-- /content -->
 
 <script>
@@ -392,10 +355,23 @@ function switchTab(i){
   document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
   document.querySelectorAll('.section').forEach((s,j)=>s.classList.toggle('active',j===i));
   currentTab = i;
-  if(i===4) renderResumen();
+  if(i===5) renderResumen();
 }
 
-// ── Build 606-607 table ───────────────────────────────────
+// ── DGII source tables ────────────────────────────────────
+function renderDgiiRows(key, target, columns){
+  const tbody=document.getElementById(target), rows=data[key]||[];
+  if(!rows.length){ tbody.innerHTML=`<tr><td colspan="${columns.length+2}" style="text-align:center;padding:20px;color:var(--fg3)">Sin registros DGII.</td></tr>`; return; }
+  tbody.innerHTML=rows.map((r,i)=>`<tr>${columns.map(c=>`<td><input type="${c.type||'text'}" value="${r[c.key]||''}" placeholder="${c.placeholder||''}" data-key="${key}" data-i="${i}" data-f="${c.key}" ${c.type==='number'?'min="0" step="0.01"':''} oninput="onDgii(this)" style="width:${c.width||'120px'};${c.type==='number'?'text-align:right':''}"></td>`).join('')}<td><button class="btn-danger" onclick="delDgii('${key}',${i})">✕</button></td></tr>`).join('');
+}
+function onDgii(el){ const {key,i,f}=el.dataset; data[key][i][f]=el.type==='number'?(parseFloat(el.value)||0):el.value; scheduleAutoSave(); }
+function delDgii(key,i){ data[key].splice(i,1); key==='ventas607'?build607():build606(); scheduleAutoSave(); }
+function build607(){ renderDgiiRows('ventas607','tbl-607',[{key:'ncf',placeholder:'B0100000001'},{key:'rnc',placeholder:'RNC/Cédula'},{key:'tipo_ingreso',placeholder:'01',width:'80px'},{key:'fecha',type:'date',width:'135px'},{key:'monto',type:'number'},{key:'itbis',type:'number'},{key:'retencion_renta',type:'number'}]); }
+function add607(){ if(!data.ventas607)data.ventas607=[]; data.ventas607.push({ncf:'',rnc:'',tipo_ingreso:'',fecha:'',monto:0,itbis:0,retencion_renta:0}); build607(); }
+function build606(){ renderDgiiRows('compras606','tbl-606',[{key:'ncf',placeholder:'B0100000001'},{key:'rnc',placeholder:'RNC/Cédula'},{key:'tipo_gasto',placeholder:'01',width:'80px'},{key:'fecha',type:'date',width:'135px'},{key:'servicios',type:'number'},{key:'bienes',type:'number'},{key:'total',type:'number'},{key:'itbis',type:'number'},{key:'adelantar',type:'number'},{key:'costo',type:'number'}]); }
+function add606(){ if(!data.compras606)data.compras606=[]; data.compras606.push({ncf:'',rnc:'',tipo_gasto:'',fecha:'',servicios:0,bienes:0,total:0,itbis:0,adelantar:0,costo:0}); build606(); }
+
+// ── Consolidado 606-607 ───────────────────────────────────
 function build606607(){
   const tbody = document.getElementById('tbl-606607');
   tbody.innerHTML = MESES.map((mes,i)=>{
@@ -741,11 +717,11 @@ function scheduleAutoSave(){
 
 // ── Build all tabs ─────────────────────────────────────────
 function buildAll(){
+  build607();
+  build606();
   build606607();
   buildTerceros();
   buildTSS();
-  buildAnticipos();
-  buildIr13();
   // fill extra fields
   document.getElementById('infotep-anual').value = data.infotep||'';
   document.getElementById('r-bancos').value = data.saldo_bancos||'';
@@ -753,7 +729,7 @@ function buildAll(){
   document.getElementById('r-inv').value = data.inventario||'';
   document.getElementById('r-invini').value = data.inventario_ini||'';
   document.getElementById('r-capital').value = data.capital||'';
-  if(currentTab===4) renderResumen();
+  if(currentTab===5) renderResumen();
 }
 
 // ── Init ──────────────────────────────────────────────────
