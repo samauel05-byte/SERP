@@ -626,7 +626,7 @@ const INST = {
              directOpen:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
-             uf:'usuario', pf:'contrasena', directOpen:true },
+             uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
              url:'https://sisaril.mt.gob.do',
              uf:'usuario', pf:'contrasena', directOpen:true },
@@ -1299,10 +1299,7 @@ async function enterCompany(credId) {
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
-  const directSubtitle = instKey==='trabajo'
-    ? 'Min. Trabajo · 3 campos — ver instrucciones abajo'
-    : (inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name);
-  document.getElementById('ch-sub').textContent=directSubtitle;
+  document.getElementById('ch-sub').textContent=inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name;
 
   // TSS has RNC/Cédula + Usuario + Contraseña (suir.gob.do form)
   const isTSS = instKey==='tss';
@@ -1337,15 +1334,7 @@ async function enterCompany(credId) {
   document.getElementById('ch-copy-user').textContent='Copiar';
   document.getElementById('ch-copy-pass').textContent='Copiar';
 
-  // Portal-specific hint (OVI / Min. Trabajo has 3 form fields, username goes in first two)
-  const hintRow = document.getElementById('ch-row-hint');
-  const hintText = document.getElementById('ch-hint-text');
-  if (instKey === 'trabajo') {
-    hintText.innerHTML = '📋 El formulario OVI tiene 3 casillas:<br><strong>1ª RNC/Cédula</strong> → pega <em>Usuario</em><br><strong>2ª Nombre de usuario</strong> → pega <em>Usuario</em> otra vez<br><strong>3ª Contraseña</strong> → pega <em>Clave</em>';
-    hintRow.hidden = false;
-  } else {
-    hintRow.hidden = true;
-  }
+  document.getElementById('ch-row-hint').hidden = true;
 
   // DGII card codes row
   const codesRow = document.getElementById('ch-row-dgii-codes');
