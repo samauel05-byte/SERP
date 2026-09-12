@@ -155,31 +155,48 @@ export default {
         return new Response('Portal no permitido', { status: 403 });
       }
 
-      try {
-        const portalRes = await fetch(targetUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
-          },
-          redirect: 'follow',
-        });
+      // Cache the raw login page HTML (without autofill script) for 2 minutes
+      // so repeat opens of slow government portals are nearly instant.
+      const cacheStorage = caches.default;
+      const cacheKey = new Request('https://cache.proxy/' + encodeURIComponent(targetUrl));
+      let html;
+      const cached = await cacheStorage.match(cacheKey);
+      if (cached) {
+        html = await cached.text();
+      } else {
+        try {
+          const portalRes = await fetch(targetUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
+            },
+            redirect: 'follow',
+          });
+          html = await portalRes.text();
 
-        let html = await portalRes.text();
-        const origin = target.origin;
-        const hostname = target.hostname;
-
-        // Insert <base> tag so all relative URLs resolve against the portal origin
-        if (html.match(/<head(\s[^>]*)?>/i)) {
-          html = html.replace(/<head(\s[^>]*)?>/i, `<head$1><base href="${origin}/">`);
-        } else {
-          html = `<base href="${origin}/">` + html;
+          // Cache raw HTML (before autofill injection) for 2 minutes
+          const origin2 = target.origin;
+          let cachedHtml = html;
+          if (cachedHtml.match(/<head(\s[^>]*)?>/i)) {
+            cachedHtml = cachedHtml.replace(/<head(\s[^>]*)?>/i, `<head$1><base href="${origin2}/">`);
+          } else {
+            cachedHtml = `<base href="${origin2}/">` + cachedHtml;
+          }
+          cachedHtml = cachedHtml.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
+            try { return pre + new URL(action, targetUrl).href + post; } catch { return m; }
+          });
+          await cacheStorage.put(cacheKey, new Response(cachedHtml, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=120' }
+          }));
+          html = cachedHtml;
+        } catch(e) {
+          return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
         }
+      }
 
-        // Make form action attributes absolute (so form POSTs go to the real portal)
-        html = html.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
-          try { return pre + new URL(action, targetUrl).href + post; } catch { return m; }
-        });
+      try {
+        const hostname = target.hostname;
 
         // Autofill script: reads credentials from URL hash, fills form, auto-submits
         // hostname is injected at request time so each portal gets its own config
@@ -196,8 +213,9 @@ export default {
     'dgii.gov.do':               { user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
     'www.tss.gob.do':            { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
     'tss.gob.do':                { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
-    'sisaril.mt.gob.do':         { user:['usuario','user','username'], pass:['password','clave'] },
-    'www.mt.gob.do':             { user:['usuario','user','username'], pass:['password','clave'] },
+    'ovi.mt.gob.do':             { user:['usuario','user','username'], pass:['contrasena','clave','password'], tarjeta:['tarjeta','token','codigo'] },
+    'sisaril.mt.gob.do':         { user:['usuario','user','username'], pass:['contrasena','clave','password'], tarjeta:['tarjeta','token','codigo'] },
+    'www.mt.gob.do':             { user:['usuario','user','username'], pass:['contrasena','clave','password'], tarjeta:['tarjeta','token','codigo'] },
     'www.cardnet.com.do':        { user:['usuario','user','username','login'], pass:['password','clave'] },
     'cardnet.com.do':            { user:['usuario','user','username','login'], pass:['password','clave'] },
   };
@@ -230,6 +248,9 @@ export default {
     if(cfg && cfg.extra && p.cedula){
       fill(document.querySelector('[name="'+cfg.extra+'"]'), p.cedula);
     }
+    if(cfg && cfg.tarjeta && p.tarjeta){
+      fill(q(cfg.tarjeta), p.tarjeta);
+    }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
     setTimeout(function(){
@@ -240,7 +261,7 @@ export default {
         pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));
         pEl.dispatchEvent(new KeyboardEvent('keypress',{key:'Enter',keyCode:13,bubbles:true}));
       }
-    }, 1500);
+    }, 800);
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run);
