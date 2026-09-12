@@ -638,7 +638,7 @@ const INST = {
              directOpen:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
-             uf:'usuario', pf:'contrasena', directOpen:true },
+             uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
              url:'https://sisaril.mt.gob.do',
              uf:'usuario', pf:'contrasena', directOpen:true },
@@ -1311,10 +1311,7 @@ async function enterCompany(credId) {
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
-  const directSubtitle = instKey==='trabajo'
-    ? 'Min. Trabajo · 3 campos — ver guía abajo'
-    : (inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name);
-  document.getElementById('ch-sub').textContent=directSubtitle;
+  document.getElementById('ch-sub').textContent = inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name;
 
   // TSS has RNC/Cédula + Usuario + Contraseña (suir.gob.do form)
   const isTSS = instKey==='tss';
@@ -1349,9 +1346,7 @@ async function enterCompany(credId) {
   document.getElementById('ch-copy-user').textContent='Copiar';
   document.getElementById('ch-copy-pass').textContent='Copiar';
 
-  // OVI (Min. Trabajo) is a React SPA — cannot autofill through proxy.
-  // Show 3 labeled copy buttons matching the form fields exactly.
-  document.getElementById('ch-row-ovi').hidden = (instKey !== 'trabajo');
+  document.getElementById('ch-row-ovi').hidden = true;
 
   // DGII card codes row
   const codesRow = document.getElementById('ch-row-dgii-codes');

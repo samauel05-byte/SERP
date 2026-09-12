@@ -50,6 +50,8 @@ const ALLOWED_HOSTS = [
   'www.sisalril.gov.do',
 ];
 const CORS_ORIGIN = 'https://direct-save.vercel.app';
+const WORKER_ORIGIN = 'https://portal-rd-relay.samauel05.workers.dev';
+const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do']);
 
 const SUBMIT_HTML = `<!doctype html>
 <html lang="es">
@@ -200,6 +202,117 @@ export default {
 
       try {
         const hostname = target.hostname;
+        const isSPA = SPA_PROXY_HOSTS.has(hostname);
+
+        // SPA portals (React): bypass cache, inject fetch/XHR interceptor, forward cookies
+        if (isSPA) {
+          let spaRes;
+          let spaHtml;
+          try {
+            spaRes = await fetch(targetUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
+              },
+              redirect: 'follow',
+            });
+            spaHtml = await spaRes.text();
+          } catch(e) {
+            return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
+          }
+
+          // Inject base href so relative URLs in HTML load from OVI
+          const spaOrigin = target.origin;
+          if (/<head(\s[^>]*)?>/i.test(spaHtml)) {
+            spaHtml = spaHtml.replace(/<head(\s[^>]*)?>/i, (m, a) => `<head${a||''}><base href="${spaOrigin}/">`);
+          } else {
+            spaHtml = `<base href="${spaOrigin}/">` + spaHtml;
+          }
+
+          // Inject fetch/XHR interceptor at top of <head> so it runs before React loads
+          const interceptor = `<script>(function(){
+  var R='${WORKER_ORIGIN}';
+  var O='${spaOrigin}';
+  function proxyUrl(u){
+    if(!u) return null;
+    var s=String(u);
+    if(s.charAt(0)==='/') return R+'/api-proxy?url='+encodeURIComponent(O+s);
+    if(s.indexOf(O)===0) return R+'/api-proxy?url='+encodeURIComponent(s);
+    return null;
+  }
+  var _f=window.fetch;
+  window.fetch=function(input,init){
+    var url=typeof input==='string'?input:(input&&input.url?input.url:String(input));
+    var p=proxyUrl(url);
+    if(p) return _f(p,Object.assign({},init||{},{credentials:'include'}));
+    return _f.apply(this,arguments);
+  };
+  var _X=window.XMLHttpRequest;
+  function XHRProxy(){
+    var x=new _X();
+    var _o=x.open.bind(x);
+    x.open=function(m,u){
+      var p=proxyUrl(String(u));
+      return _o(m,p||u,arguments[2],arguments[3],arguments[4]);
+    };
+    return x;
+  }
+  XHRProxy.prototype=_X.prototype;
+  window.XMLHttpRequest=XHRProxy;
+})();<\/script>`;
+          spaHtml = spaHtml.replace(/<head(\s[^>]*)?>/i, (m) => m + interceptor);
+
+          // Inject autofill script — waitAndRun polls until React renders the form
+          const spaAutofill = `<script>
+(function(){
+  var hash=location.hash.slice(1);
+  if(!hash) return;
+  var p; try{p=JSON.parse(decodeURIComponent(atob(hash)));}catch(e){return;}
+  function fill(el,val){
+    if(!el||val===undefined) return;
+    try{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,val);}catch(e){}
+    el.value=val;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+    el.dispatchEvent(new Event('blur',{bubbles:true}));
+  }
+  function run(){
+    var uEl=document.querySelector('[name="usuario"],[name="user"],[name="username"]')||document.querySelector('input[type="text"],input[type="email"]');
+    var pEl=document.querySelector('[name="contrasena"],[name="clave"],[name="password"]')||document.querySelector('input[type="password"]');
+    fill(uEl,p.user||'');
+    fill(pEl,p.pass||'');
+    var btn=document.querySelector('button[type="submit"],input[type="submit"]');
+    setTimeout(function(){
+      if(btn){btn.click();}
+      else if(pEl){pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));}
+    },800);
+  }
+  function waitAndRun(n){
+    if(document.querySelector('input[type="password"]')){run();return;}
+    if(n>0) setTimeout(function(){waitAndRun(n-1);},400);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){waitAndRun(30);});
+  else waitAndRun(30);
+})();
+<\/script>`;
+          spaHtml = spaHtml.includes('</body>') ? spaHtml.replace('</body>', spaAutofill + '</body>') : spaHtml + spaAutofill;
+
+          // Forward Set-Cookie headers from OVI (strip Domain so they store on workers.dev)
+          const spaRespHeaders = new Headers({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+          let spaCookies = [];
+          try { spaCookies = spaRes.headers.getAll('set-cookie'); } catch(e) {
+            const c = spaRes.headers.get('set-cookie');
+            if (c) spaCookies = [c];
+          }
+          for (const cookie of spaCookies) {
+            let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '');
+            c = c.replace(/;\s*[Ss]ame[Ss]ite=None/gi, '; SameSite=Lax');
+            if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
+            spaRespHeaders.append('Set-Cookie', c);
+          }
+          return new Response(spaHtml, { headers: spaRespHeaders });
+        }
 
         // Autofill script: reads credentials from URL hash, fills form, auto-submits
         // hostname is injected at request time so each portal gets its own config
@@ -296,6 +409,83 @@ export default {
         });
       } catch(e) {
         return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
+      }
+    }
+
+    // /api-proxy — server-side proxy for SPA API calls to avoid CORS
+    // Browser (at workers.dev) sends same-origin requests here; we forward to the real portal
+    if (reqUrl.pathname === '/api-proxy') {
+      const targetUrl = reqUrl.searchParams.get('url');
+      if (!targetUrl) return new Response('Missing url', { status: 400 });
+
+      let target;
+      try { target = new URL(targetUrl); } catch { return new Response('URL inválida', { status: 400 }); }
+
+      if (!ALLOWED_HOSTS.some(h => target.hostname === h || target.hostname.endsWith('.' + h))) {
+        return new Response('Portal no permitido', { status: 403 });
+      }
+
+      // Forward browser headers to OVI, replacing host/origin/referer with OVI's values
+      const fwdHeaders = {};
+      const skip = new Set(['host','origin','referer','cf-ray','cf-connecting-ip','cf-ipcountry','cf-visitor','x-forwarded-for','x-real-ip','x-forwarded-proto','cdn-loop']);
+      for (const [k, v] of request.headers.entries()) {
+        if (!skip.has(k.toLowerCase())) fwdHeaders[k] = v;
+      }
+      fwdHeaders['Host'] = target.host;
+      fwdHeaders['Origin'] = target.origin;
+      fwdHeaders['Referer'] = target.origin + '/';
+      fwdHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
+
+      let body = null;
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        body = await request.arrayBuffer();
+      }
+
+      try {
+        const apiRes = await fetch(targetUrl, {
+          method: request.method,
+          headers: fwdHeaders,
+          body,
+          redirect: 'manual',
+        });
+
+        const respHeaders = new Headers();
+        const skipResp = new Set(['content-encoding','transfer-encoding','connection','content-security-policy','x-frame-options','strict-transport-security']);
+
+        for (const [k, v] of apiRes.headers.entries()) {
+          const kl = k.toLowerCase();
+          if (skipResp.has(kl) || kl === 'set-cookie') continue;
+          if (kl === 'location') {
+            try {
+              const absLoc = new URL(v, targetUrl).href;
+              const locHost = new URL(absLoc).hostname;
+              if (ALLOWED_HOSTS.some(h => locHost === h || locHost.endsWith('.' + h))) {
+                respHeaders.set('Location', WORKER_ORIGIN + '/api-proxy?url=' + encodeURIComponent(absLoc));
+              } else {
+                respHeaders.set('Location', v);
+              }
+            } catch { respHeaders.set('Location', v); }
+          } else {
+            respHeaders.append(k, v);
+          }
+        }
+
+        // Rewrite Set-Cookie: strip Domain so cookies store on workers.dev, fix SameSite
+        let setCookies = [];
+        try { setCookies = apiRes.headers.getAll('set-cookie'); } catch(e) {
+          const c = apiRes.headers.get('set-cookie');
+          if (c) setCookies = [c];
+        }
+        for (const cookie of setCookies) {
+          let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '');
+          c = c.replace(/;\s*[Ss]ame[Ss]ite=None/gi, '; SameSite=Lax');
+          if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
+          respHeaders.append('Set-Cookie', c);
+        }
+
+        return new Response(apiRes.body, { status: apiRes.status, headers: respHeaders });
+      } catch(e) {
+        return new Response(`Proxy error: ${e.message}`, { status: 502 });
       }
     }
 
