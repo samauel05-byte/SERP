@@ -275,8 +275,14 @@ export default {
     }, 800);
   }
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run);
-  else setTimeout(run, 600);
+  // Poll until the password field appears (handles SPAs that render the form after JS loads)
+  function waitAndRun(remaining) {
+    var pEl = document.querySelector('input[type="password"]');
+    if (pEl) { run(); return; }
+    if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 400);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(20); });
+  else waitAndRun(20);
 })();
 <\/script>`;
 
