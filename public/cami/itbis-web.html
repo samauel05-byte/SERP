@@ -1834,7 +1834,7 @@ function getCardConsolidation(s7) {
   const reports=Object.values(CARD_STATE).filter(Boolean);
   const reportGross=r2(reports.reduce((n,r)=>n+(r.totalSujetoRetencion||r.monto||0),0));
   const reportBase=r2(reports.reduce((n,r)=>n+(r.baseGravable||0),0));
-  const reportItbis=r2(reports.reduce((n,r)=>n+(r.itbisTarjeta||0),0));
+  const reportItbis=r2(reports.reduce((n,r)=>n+(r.itbis>0?r.itbis:r.itbisTarjeta||0),0));
   const reportPaymentGross=r2(reportGross+reportItbis);
   const card607=r2(s7.paymentSummary?.card||0);
   const overlapConfirmed=true;
@@ -1927,8 +1927,9 @@ function updateIT1() {
     alertEl.hidden=false;
     alertEl.innerHTML=`<div class="alert warn">Hay un posible <strong>saldo a favor</strong>. Verifica el saldo anterior en la DGII e ingrésalo.</div>`;
   }else{alertEl.hidden=true;}
+  const cardItbisNote=card.reportItbis>0?(card.additionalItbis>0?`+${fmtM(card.additionalItbis)} tarjetas fuera del 607`:`tarjetas validadas con CardNET/Azul (${fmtM(card.reportItbis)})`): '';
   const taxRows=[
-    {lbl:'ITBIS de ventas',always:true, sign:'+',amt:debito},
+    {lbl:'ITBIS de ventas',always:true, sign:'+',amt:debito,source:cardItbisNote},
     {lbl:'ITBIS Crédito (compras)',          always:false,sign:'−',amt:credito},
     {lbl:'ITBIS Retenido por clientes (607)',always:false,sign:'−',amt:s7.totRet},
     {lbl:'ITBIS Retenido por tarjetas',always:false,sign:'−',amt:cardRet},
