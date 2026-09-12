@@ -107,25 +107,15 @@ select option{background:var(--surf2)}
 <!-- TAB 0: GASTOS NCF -->
 <div class="section active" id="s0">
   <div class="sec-hdr">
-    <span class="sec-lbl">Gastos NCF — Comprobantes de Gastos</span>
-    <button class="btn-add" onclick="addRow('gastos')">+ Agregar</button>
+    <span class="sec-lbl">Gastos NCF — Resumen por tipo de gasto</span>
+    <button class="btn-add" onclick="addRow('gastos')">+ Agregar tipo de gasto</button>
   </div>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
-        <th>#</th>
         <th class="gG">Tipo Gasto</th>
-        <th class="gG">RNC/Cédula Proveedor</th>
-        <th class="gG">Nombre Proveedor</th>
-        <th class="gG">NCF</th>
-        <th class="gG">Fecha NCF</th>
-        <th class="gG c">Mes</th>
-        <th class="gG r">Monto Servicios</th>
-        <th class="gG r">Monto Bienes</th>
-        <th class="gG r">Total Facturado</th>
-        <th class="gG r">ITBIS Facturado</th>
-        <th class="gG r">ITBIS Retenido</th>
-        <th class="gG">Forma Pago</th>
+        <th class="gG r">Monto</th>
+        <th class="gG r">Cantidad NCF</th>
         <th></th>
       </tr></thead>
       <tbody id="b-gastos"></tbody>
@@ -289,29 +279,20 @@ let RNC='',NOMBRE='',ANIO=new Date().getFullYear();
 const MODS={
   gastos:{
     label:'Gastos NCF',
-    empty:{tipo_gasto:'',rnc:'',nombre:'',ncf:'',fecha:'',mes:'',mserv:0,mbienes:0,mtotal:0,itbis:0,itbis_ret:0,fpago:''},
-    nums:new Set(['mserv','mbienes','mtotal','itbis','itbis_ret']),
+    empty:{tipo_gasto:'',monto:0,cantidad_ncf:0},
+    nums:new Set(['monto','cantidad_ncf']),
     render(r,i){
       return`<tr>
-        <td class="n">${i+1}</td>
-        <td>${inp(r,'tipo_gasto',i,'gastos',60)}</td>
-        <td>${inp(r,'rnc',i,'gastos',100)}</td>
-        <td>${inp(r,'nombre',i,'gastos',160)}</td>
-        <td>${inp(r,'ncf',i,'gastos',120)}</td>
-        <td>${inp(r,'fecha',i,'gastos',90)}</td>
-        <td>${inp(r,'mes',i,'gastos',45)}</td>
-        <td>${ninp(r,'mserv',i,'gastos')}</td>
-        <td>${ninp(r,'mbienes',i,'gastos')}</td>
-        <td>${ninp(r,'mtotal',i,'gastos')}</td>
-        <td>${ninp(r,'itbis',i,'gastos')}</td>
-        <td>${ninp(r,'itbis_ret',i,'gastos')}</td>
-        <td>${inp(r,'fpago',i,'gastos',60)}</td>
+        <td>${inp(r,'tipo_gasto',i,'gastos',260)}</td>
+        <td>${ninp(r,'monto',i,'gastos',150)}</td>
+        <td>${ninp(r,'cantidad_ncf',i,'gastos',120)}</td>
         <td><button class="btn-danger" onclick="delRow('gastos',${i})">✕</button></td>
       </tr>`;
     },
     foot(rows){
-      const tots=['mserv','mbienes','mtotal','itbis','itbis_ret'].map(k=>rows.reduce((s,r)=>s+n(r[k]),0));
-      return`<tr><td class="lbl" colspan="7">TOTALES (${rows.length})</td>${tots.map(v=>`<td>${f(v)}</td>`).join('')}<td></td><td></td></tr>`;
+      const monto=rows.reduce((s,r)=>s+n(r.monto),0);
+      const cantidad=rows.reduce((s,r)=>s+n(r.cantidad_ncf),0);
+      return`<tr><td class="lbl">TOTALES</td><td>${f(monto)}</td><td>${cantidad.toLocaleString('es-DO')}</td><td></td></tr>`;
     }
   },
   inmuebles:{
@@ -462,6 +443,16 @@ let DATA={};
 const MODKEYS=Object.keys(MODS);
 MODKEYS.forEach(k=>DATA[k]=[]);
 
+// Convierte los registros detallados guardados anteriormente al nuevo resumen anual.
+// Así la información ya registrada sigue apareciendo al cambiar el formato.
+function normalizeGastos(){
+  DATA.gastos=(DATA.gastos||[]).map(r=>({
+    tipo_gasto:r.tipo_gasto||'Sin clasificar',
+    monto:r.monto ?? r.mtotal ?? (n(r.mserv)+n(r.mbienes)),
+    cantidad_ncf:r.cantidad_ncf ?? (r.ncf ? 1 : 0)
+  }));
+}
+
 /* ── Navigation ── */
 let cur=0;
 const MODMAP=MODKEYS; // index → mod key
@@ -490,13 +481,6 @@ function onCell(el){
   const{i,f:fld,m:mod}=el.dataset;
   const isNum=(MODS[mod]?.nums||new Set()).has(fld);
   DATA[mod][i][fld]=isNum?n(el.value):el.value;
-  // auto-calc totals for gastos
-  if(mod==='gastos'&&(fld==='mserv'||fld==='mbienes')){
-    DATA[mod][i].mtotal=n(DATA[mod][i].mserv)+n(DATA[mod][i].mbienes);
-    const tr=el.closest('tr');const inputs=tr.querySelectorAll('input');
-    // update mtotal input (index 9)
-    inputs[9].value=DATA[mod][i].mtotal||'';
-  }
   // auto-calc ret adquirencia
   if(mod==='retenciones'&&(fld==='monto_ventas'||fld==='pct_ret')){
     DATA[mod][i].monto_retenido=Math.round(n(DATA[mod][i].monto_ventas)*n(DATA[mod][i].pct_ret))/100;
@@ -521,7 +505,7 @@ async function load(){
   if(!tk||!RNC){renderAll();return;}
   try{
     const r=await fetch(`${API}?rnc=${encodeURIComponent(RNC)}&anio=${ANIO}&tipo=dgii-modulos`,{headers:{Authorization:'Bearer '+tk}});
-    if(r.ok){const j=await r.json();if(j.record?.data){Object.assign(DATA,j.record.data);}}
+    if(r.ok){const j=await r.json();if(j.record?.data){Object.assign(DATA,j.record.data);normalizeGastos();}}
   }catch{}
   renderAll();
 }
