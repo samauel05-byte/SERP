@@ -10,36 +10,36 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:      #0e0b0b;
-  --bg2:     #181010;
-  --surface: #1f1414;
-  --border:  rgba(160,40,40,.3);
-  --border2: rgba(220,50,50,.25);
-  --text:    #ede8e8;
-  --text2:   #a89898;
-  --text3:   #6e5858;
-  --p1:      #7f1d1d;
-  --accent:  #b91c1c;
-  --accent2: #dc2626;
-  --accent3: #f87171;
+  --bg:      #070d1a;
+  --bg2:     #0b1528;
+  --surface: #0f1e38;
+  --border:  rgba(30,90,200,.28);
+  --border2: rgba(50,130,255,.32);
+  --text:    #e8f0ff;
+  --text2:   #7a9bc0;
+  --text3:   #3a5878;
+  --p1:      #003898;
+  --accent:  #0060e0;
+  --accent2: #3d8bff;
+  --accent3: #80b8ff;
   --green:   #20BD5A;
   --danger:  #ef4444;
   --warn:    #f59e0b;
   --r:       1.25rem;
   --rl:      1.75rem;
   --sc:      0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
-  --glow:    0 0 24px rgba(185,28,28,.3);
+  --glow:    0 0 24px rgba(0,96,224,.35);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
 body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 20% 10%,rgba(127,29,29,.22) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 80% 80%,rgba(185,28,28,.14) 0%,transparent 70%);pointer-events:none;z-index:0}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 20% 10%,rgba(0,56,152,.22) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 80% 80%,rgba(0,96,224,.14) 0%,transparent 70%);pointer-events:none;z-index:0}
 .layer{display:flex;flex-direction:column;min-height:100vh;position:relative;z-index:1}
 
 /* header */
-.hdr{background:rgba(20,12,12,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);height:60px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+.hdr{background:rgba(4,9,22,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);height:60px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
 .hdr-brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:-.3px;background:linear-gradient(135deg,#ede8e8 0%,var(--accent3) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.brand-ico{width:30px;height:30px;background:linear-gradient(135deg,var(--p1),var(--accent));border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 12px rgba(185,28,28,.5)}
+.brand-ico{width:30px;height:30px;background:linear-gradient(135deg,var(--p1),var(--accent));border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 12px rgba(0,100,224,.5)}
 .brand-ico svg{color:#fff}
 .hdr-right{display:flex;align-items:center;gap:8px}
 .sync-pill{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text3);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:100px;padding:4px 12px}
@@ -113,10 +113,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* auth */
 .auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1}
-.auth-card{background:linear-gradient(145deg,rgba(31,20,20,.97) 0%,rgba(24,16,16,.97) 100%);border:1px solid var(--border);border-radius:var(--rl);padding:40px 34px;width:100%;max-width:390px;box-shadow:var(--sc);position:relative;overflow:hidden}
-.auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(220,50,50,.45) 50%,transparent 100%)}
+.auth-card{background:linear-gradient(145deg,rgba(15,30,56,.97) 0%,rgba(11,21,40,.97) 100%);border:1px solid var(--border);border-radius:var(--rl);padding:40px 34px;width:100%;max-width:390px;box-shadow:var(--sc);position:relative;overflow:hidden}
+.auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(61,139,255,.55) 50%,transparent 100%)}
 .auth-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px}
-.auth-logo-ico{width:44px;height:44px;background:linear-gradient(135deg,var(--p1),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(185,28,28,.45)}
+.auth-logo-ico{width:44px;height:44px;background:linear-gradient(135deg,var(--p1),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(0,96,224,.45)}
 .auth-logo-ico svg{color:#fff}
 .auth-logo-txt{font-size:22px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,#ede8e8 0%,var(--accent3) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .auth-logo-slogan{font-size:10px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);text-align:center;margin-top:-20px;margin-bottom:22px;font-family:'Plus Jakarta Sans',sans-serif}
@@ -135,7 +135,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal{background:linear-gradient(145deg,#0d1a2e 0%,#0d1222 100%);border:1px solid var(--border);border-radius:var(--rl);width:100%;max-width:450px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6);position:relative}
-.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(220,50,50,.45),transparent)}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(61,139,255,.55),transparent)}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:22px 22px 0}
 .modal-ttl{font-size:15px;font-weight:700}
 .modal-body{padding:18px 22px}
