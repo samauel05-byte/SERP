@@ -699,7 +699,7 @@ function renderResumen(){
 }
 
 // ── Input change handlers ─────────────────────────────────
-function onHdrChange(){
+function updateFicha(){
   data.ficha = {
     tipo_declaracion:document.getElementById('h-tipo').value,
     actividad_economica:document.getElementById('h-actividad').value.trim(),
@@ -707,6 +707,9 @@ function onHdrChange(){
     cedula_representante:document.getElementById('h-cedula').value.trim(),
     cargo_representante:document.getElementById('h-cargo').value.trim(),
   };
+}
+function onHdrChange(){
+  updateFicha();
   scheduleAutoSave();
 }
 
@@ -716,7 +719,7 @@ function onAnioChange(){
 
 function onInputChange(){
   data.infotep = n(document.getElementById('infotep-anual').value);
-  onHdrChange();
+  updateFicha();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
@@ -760,7 +763,7 @@ async function save(){
   if(!rnc) return;
   // collect extra fields
   data.infotep = n(document.getElementById('infotep-anual').value);
-  onHdrChange();
+  updateFicha();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
