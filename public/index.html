@@ -552,7 +552,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <button class="cred-copy" id="ch-copy-user" onclick="chCopy('user')">Copiar</button>
   </div>
   <div class="cred-row" id="ch-row-cedula" hidden>
-    <span class="cred-label">Cédula</span>
+    <span class="cred-label" id="ch-label-cedula">Cédula</span>
     <span class="cred-val" id="ch-cedula"></span>
     <button class="cred-copy" id="ch-copy-cedula" onclick="chCopy('cedula')">Copiar</button>
   </div>
@@ -601,7 +601,8 @@ const INST = {
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',
              url:'https://www.tss.gob.do/Tss/Account/LogIn',
              uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
-             aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' } },
+             aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' },
+             directOpen:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
              uf:'usuario', pf:'contrasena', directOpen:true },
@@ -1223,11 +1224,13 @@ async function enterCompany(credId) {
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
-  document.getElementById('ch-sub').textContent=inst.name;
+  document.getElementById('ch-sub').textContent=inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name;
 
-  // TSS has RNC/Cédula + Cédula + CLASS labels
+  // TSS has RNC/Cédula + Usuario + Contraseña (suir.gob.do form)
   const isTSS = instKey==='tss';
   document.getElementById('ch-label-user').textContent = isTSS ? 'RNC o Cédula' : 'Usuario';
+  const cedulaLabelEl = document.getElementById('ch-label-cedula');
+  if (cedulaLabelEl) cedulaLabelEl.textContent = isTSS ? 'Usuario' : 'Cédula';
   document.getElementById('ch-user').textContent=_chUser;
 
   // Cédula row (TSS only)
