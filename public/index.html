@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Direct</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -219,11 +220,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <!-- Setup -->
 <div id="view-setup" class="layer auth-wrap" hidden>
   <div class="auth-card">
-    <div class="auth-logo">
-      <div class="auth-logo-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
-      <span class="auth-logo-txt">Direct</span>
+    <div class="auth-logo" style="margin-bottom:18px">
+      <img src="/img/direct-logo.png" alt="Direct" style="width:100%;max-width:280px;border-radius:8px">
     </div>
-    <p class="auth-logo-slogan">Plataforma multifuncional para contables</p>
     <p class="auth-ttl">Crear cuenta de administrador</p>
     <p class="auth-sub">Primera configuración — crea tu cuenta de acceso. No podrás recuperar esta contraseña si la olvidas.</p>
     <div class="field"><label>Usuario</label><input id="setup-username" type="text" placeholder="Ej: admin" autocomplete="username"></div>
@@ -236,11 +235,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <!-- Login -->
 <div id="view-login" class="layer auth-wrap" hidden>
   <div class="auth-card">
-    <div class="auth-logo">
-      <div class="auth-logo-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
-      <span class="auth-logo-txt">Direct</span>
+    <div class="auth-logo" style="margin-bottom:18px">
+      <img src="/img/direct-logo.png" alt="Direct" style="width:100%;max-width:280px;border-radius:8px">
     </div>
-    <p class="auth-logo-slogan">Plataforma multifuncional para contables</p>
     <p class="auth-ttl">Bienvenido de vuelta</p>
     <p class="auth-sub">Introduce tus credenciales para acceder al sistema.</p>
     <div class="field"><label>Usuario</label><input id="login-username" type="text" placeholder="Tu usuario" autocomplete="username"></div>
@@ -383,6 +380,32 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </header>
   <iframe id="nala-frame" src="" style="width:100%;height:calc(100vh - 56px);border:none;display:block;"></iframe>
+</div>
+
+<!-- IR-2 -->
+<div id="view-ir2" class="layer" hidden>
+  <header class="hdr">
+    <div class="hdr-brand">
+      <div class="brand-ico" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+      Direct
+    </div>
+    <div class="hdr-right">
+      <button class="back-btn" style="margin:0" onclick="showPortals()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Volver
+      </button>
+      <button class="icon-btn" title="Cerrar sesión" onclick="lockVault()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </button>
+    </div>
+  </header>
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 56px);padding:24px;text-align:center;gap:16px">
+    <div style="width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;margin-bottom:8px">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
+    <div style="font-size:22px;font-weight:700;color:var(--fg)">IR-2</div>
+    <div style="font-size:15px;color:var(--fg2);max-width:320px;line-height:1.6">Aún en creación, pronto estará disponible para ustedes.</div>
+  </div>
 </div>
 
 <!-- CAMI -->
@@ -615,6 +638,7 @@ const INST = {
              uf:'usuario', pf:'contrasena' },
   cami:    { name:'CAMI',        desc:'Análisis 606/607 e IT-1',                    grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Chat IA · Facturas 606/607',                 grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
+  ir2:     { name:'IR-2',        desc:'Balance de comprobación y declaración de renta', grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
 };
 
 let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
@@ -801,7 +825,7 @@ function lockVault() {
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-companies','view-users','view-cami','view-nala'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-companies','view-users','view-cami','view-nala','view-ir2'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 function showPortals() {
@@ -964,6 +988,10 @@ function openNala() {
   show('view-nala');
 }
 
+function openIr2() {
+  show('view-ir2');
+}
+
 
 function openPortal(instKey) {
   activePortal=instKey;
@@ -987,6 +1015,7 @@ function renderPortalGrid() {
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
+  if (currentUser?.access_cami) allowed.push('ir2');
   for (const [key,inst] of Object.entries(INST)) {
     if (!allowed.includes(key)) continue;
     const isTool=!!inst.tool;
@@ -996,11 +1025,11 @@ function renderPortalGrid() {
     card.className='p-card'+toolClass;
     const logoKey=key==='sirla'?'sisaril':key;
     const logoHtml=LOGOS[logoKey]?`<div class="p-logo" style="background:#fff;padding:4px">${LOGOS[logoKey]}</div>`:`<div class="p-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px'}">${inst.abbr}</div>`;
-    const toolFn=key==='nala'?'openNala()':'openCami()';
+    const toolFn=key==='nala'?'openNala()':key==='ir2'?'openIr2()':'openCami()';
     const bottomHtml=isTool
       ?`<button class="p-enter-btn" onclick="${toolFn}">ABRIR →</button>`
       :`<button class="p-enter-btn" onclick="openPortal('${key}')">VER EMPRESAS →</button>`;
-    const countLabel=key==='nala'?'Agente IA':'Herramienta local';
+    const countLabel=key==='nala'?'Agente IA':key==='ir2'?'Próximamente':'Herramienta local';
     const countHtml=isTool
       ?`<span class="p-count has">● ${countLabel}</span>`
       :`<span class="p-count ${cos.length>0?'has':'empty'}">${cos.length>0?`● ${cos.length} empresa${cos.length>1?'s':''}` :'○ Sin empresas'}</span>`;
