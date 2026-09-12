@@ -1,5 +1,13 @@
+import auth from '../../lib/auth.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const session = await auth.authenticate(req);
+  if (!session) return res.status(401).json({ error: 'No autorizado' });
+  if (session.role !== 'admin' && !session.access_nala) {
+    return res.status(403).json({ error: 'Sin acceso a NALA' });
+  }
 
   const { base64, mimeType, pdfText, mode } = req.body || {};
   if (!base64 && !pdfText) return res.status(400).json({ error: 'archivo requerido' });

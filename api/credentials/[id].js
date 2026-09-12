@@ -4,6 +4,7 @@ const { authenticate } = require('../../lib/auth');
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
+  if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
   const { id } = req.query;
   try {
     if (req.method === 'PUT') {

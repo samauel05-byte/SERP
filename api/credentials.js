@@ -4,12 +4,16 @@ const { authenticate } = require('../lib/auth');
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
+  if (session.role !== 'admin' && !session.access_direct) {
+    return res.status(403).json({ error: 'Sin acceso a Direct' });
+  }
   try {
     if (req.method === 'GET') {
-      const credentials = await db.getCredentials();
+      const credentials = await db.getCredentials(session.role === 'admin' ? null : session.portals_direct);
       return res.json({ ok: true, credentials });
     }
     if (req.method === 'POST') {
+      if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
       const { credentials } = req.body || {};
       if (!Array.isArray(credentials) || credentials.length === 0) {
         return res.status(400).json({ error: 'Se requiere un array de credenciales' });
