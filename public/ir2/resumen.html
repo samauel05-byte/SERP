@@ -112,6 +112,7 @@ select option{background:var(--surf2)}
 .identity-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--acc3);padding-bottom:8px;margin-bottom:11px;border-bottom:1px solid rgba(61,139,255,.28)}
 .identity-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}.identity-grid.small{grid-template-columns:1fr 1fr 1fr}.identity-grid .field label{color:var(--acc3);font-weight:600}
 .tax-note{font-size:11px;color:var(--fg2);padding:0 4px 12px}
+.optional-note{font-size:11px;color:var(--fg2);padding:8px 0}
 
 .tbl-actions{display:flex;justify-content:flex-end;margin-bottom:8px}
 
@@ -141,9 +142,10 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
     <div class="hdr-title">Datos DGII · Resumen Estimación</div>
   </div>
   <div class="hdr-right">
-    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(1)">Inmuebles</button>
-    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(3)">Vehículos</button>
-    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(5)">Importaciones</button>
+    <button class="btn btn-primary btn-sm" onclick="openDgiiSection(0)">Gastos NCF · obligatorio</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(1)">Inmuebles · opcional</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(3)">Vehículos · opcional</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(5)">Importaciones · opcional</button>
     <button class="btn btn-outline btn-sm" onclick="openAnexos()">Anexos DGII</button>
     <button class="btn btn-primary btn-sm" onclick="save()">Guardar</button>
     <span class="save-badge" id="save-badge">✓ Guardado</span>
@@ -234,6 +236,7 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 <div class="section" id="sec-3">
   <div class="section-hdr"><span class="section-lbl">Ventas 607 & Compras 606 — Por Mes</span></div>
   <div class="hint" style="margin-bottom:8px">Se consolida automáticamente con los archivos 606 y 607 cargados para el año seleccionado.</div>
+  <div class="optional-note">Gastos NCF es obligatorio para la estimación. Inmuebles, Vehículos y Pagos de Importación en DGA son datos opcionales.</div>
   <div class="tbl-wrap">
     <table>
       <thead>
