@@ -216,8 +216,8 @@ export default {
     'dgii.gov.do':               { user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
     'www.tss.gob.do':            { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
     'tss.gob.do':                { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
-    'suir.gob.do':               { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
-    'www.suir.gob.do':           { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
+    'suir.gob.do':               { user:['rnc','rncCedula','cedula_empresa','codigoEmpresa'], extra:['username','email','usuario','correo','nombre_usuario'], pass:['password','contrasena','clave'], extraFallbackNth:1 },
+    'www.suir.gob.do':           { user:['rnc','rncCedula','cedula_empresa','codigoEmpresa'], extra:['username','email','usuario','correo','nombre_usuario'], pass:['password','contrasena','clave'], extraFallbackNth:1 },
     'ovi.mt.gob.do':             { user:['usuario','user','username'], pass:['contrasena','clave','password'], tarjeta:['tarjeta','token','codigo'] },
     'sisaril.mt.gob.do':         { user:['usuario','user','username'], pass:['contrasena','clave','password'], tarjeta:['tarjeta','token','codigo'] },
     'www.mt.gob.do':             { user:['usuario','user','username'], pass:['contrasena','clave','password'], tarjeta:['tarjeta','token','codigo'] },
@@ -246,12 +246,18 @@ export default {
     var uEl = cfg ? q(cfg.user) : null;
     var pEl = cfg ? q(cfg.pass) : null;
     // Generic fallback if portal-specific selectors don't match
-    if(!uEl) uEl = document.querySelector('input[type="text"]');
+    if(!uEl) uEl = document.querySelector('input[type="text"],input[type="email"]');
     if(!pEl) pEl = document.querySelector('input[type="password"]');
     fill(uEl, p.user||'');
     fill(pEl, p.pass||'');
     if(cfg && cfg.extra && p.cedula){
-      fill(document.querySelector('[name="'+cfg.extra+'"]'), p.cedula);
+      var extraEl = Array.isArray(cfg.extra) ? q(cfg.extra) : document.querySelector('[name="'+cfg.extra+'"]');
+      // Fallback: nth visible non-password input (for modern forms)
+      if(!extraEl && cfg.extraFallbackNth !== undefined){
+        var vis = Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=password])'));
+        extraEl = vis[cfg.extraFallbackNth] || null;
+      }
+      fill(extraEl, p.cedula);
     }
     if(cfg && cfg.tarjeta && p.tarjeta){
       fill(q(cfg.tarjeta), p.tarjeta);
