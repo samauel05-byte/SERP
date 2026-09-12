@@ -1,11 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <!-- Cloud -->
-  <path d="M24 20H10a5 5 0 0 1-.5-9.975A7 7 0 0 1 23 13.5a4.5 4.5 0 0 1 1 8.5z" fill="#3d8bff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80">
+  <defs>
+    <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00CFFF"/>
+      <stop offset="50%" stop-color="#0088FF"/>
+      <stop offset="100%" stop-color="#0022DD"/>
+    </linearGradient>
+    <linearGradient id="kg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#A8D8FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cloud shape: filled thick ring via two layered cloud paths -->
+  <!-- Outer cloud -->
+  <path d="M82 52H22C11.5 52 3 43.5 3 33S11.5 14 22 14c1.2 0 2.4.1 3.5.4C28.8 7.4 35.8 3 44 3c10 0 18.3 6.9 20.4 16.2C66 18.5 67.7 18 69.5 18 77.5 18 84 24.5 84 32.5c0 .5 0 1-.1 1.5H85c5.5 0 10 4.5 10 10S90.5 52 85 52h-3z" fill="url(#cg)"/>
+  <!-- Inner cutout (transparent hole) -->
+  <path d="M79 44H25c-5.5 0-10-4.5-10-10s4.5-10 10-10h1.5C27.2 18 32.5 13 39 13c5.5 0 10.2 3.5 12 8.5C52.5 20.5 54 20 55.5 20c6 0 11 4.4 11.5 10.2.5 0 1-.2 1.5-.2 4.4 0 8 3.6 8 8s-3.6 8-8 8h11z" fill="white" opacity="0"/>
+
+  <!-- Re-draw as a cleaner thick-stroke cloud -->
+  <!-- Use clip approach: outer filled minus inner filled -->
+  <path d="M83 50H22C12.6 50 5 42.4 5 33S12.6 16 22 16c1.5 0 2.9.2 4.3.6C29.1 9.2 36 4 44 4c9.5 0 17.5 6.5 19.8 15.4C65.2 19.1 67 19 69 19c7.7 0 14 6.3 14 14 0 .3 0 .7-.1 1H84c5 0 9 4 9 9s-4 9-9 9h-1z" fill="url(#cg)"/>
+  <path d="M78 42H24c-5 0-9-4-9-9s4-9 9-9h2c.3-5.5 4.8-10 10.5-10 4.2 0 7.8 2.4 9.7 6C47 19.4 48 19 49 19c.9 0 1.8.2 2.6.5C53 15.6 57.1 12.5 62 12.5c6.6 0 12 5.4 12 12v1c.3-.1.7-.1 1-.1 3.9 0 7 3.1 7 7s-3.1 7-7 7h3z" fill="white"/>
+
   <!-- Key body -->
-  <circle cx="11" cy="24" r="3.5" stroke="#80b8ff" stroke-width="2" fill="none"/>
-  <!-- Key stem -->
-  <line x1="14.2" y1="21.8" x2="22" y2="14" stroke="#80b8ff" stroke-width="2" stroke-linecap="round"/>
-  <!-- Key teeth -->
-  <line x1="20" y1="16" x2="22" y2="18" stroke="#80b8ff" stroke-width="1.8" stroke-linecap="round"/>
-  <line x1="17.5" y1="18.5" x2="19.5" y2="20.5" stroke="#80b8ff" stroke-width="1.8" stroke-linecap="round"/>
+  <ellipse cx="30" cy="62" rx="13" ry="13" fill="url(#kg)" opacity="0.95"/>
+  <ellipse cx="30" cy="62" rx="5.5" ry="5.5" fill="url(#cg)" opacity="0.9"/>
+  <!-- Key shaft -->
+  <rect x="42" y="58" width="44" height="8" rx="4" fill="url(#kg)" opacity="0.95"/>
+  <!-- Key teeth (pointing down) -->
+  <rect x="76" y="63" width="5" height="9" rx="2" fill="url(#kg)" opacity="0.95"/>
+  <rect x="65" y="63" width="5" height="7" rx="2" fill="url(#kg)" opacity="0.95"/>
+  <!-- Key tip arrow -->
+  <path d="M86 58l7 4-7 4z" fill="url(#kg)" opacity="0.95"/>
 </svg>
