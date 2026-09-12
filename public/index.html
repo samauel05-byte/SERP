@@ -1364,15 +1364,18 @@ async function enterCompany(credId) {
   } else {
     actions.innerHTML=`<button class="cred-btn cred-btn-dismiss" style="flex:none;width:100%" onclick="closeCredHelper()">Cerrar</button><small style="color:var(--muted);font-size:11px;text-align:center;flex:1">Configura la URL del portal en ⚙️</small>`;
   }
-  document.getElementById('cred-helper').hidden=false;
-
   // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
   // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs)
   if (newTab && loginUrl && !inst?.directOpen) {
     autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, newTab);
+    // Portal auto-launched — no need to show the credential panel
+    return;
   }
+
+  // Only show credential panel when the user needs to copy manually (directOpen portals)
+  document.getElementById('cred-helper').hidden=false;
 }
 
 function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existingTab=null) {
