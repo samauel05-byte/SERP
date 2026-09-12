@@ -584,6 +584,22 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <span class="cred-val" id="ch-tarjeta"></span>
     <button class="cred-copy" id="ch-copy-tarjeta" onclick="chCopy('tarjeta')">Copiar</button>
   </div>
+  <div id="ch-row-ovi" hidden>
+    <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Pega en cada casilla del formulario</div>
+    <div class="cred-row" style="margin-bottom:6px">
+      <span class="cred-label" style="flex:1;font-size:12px">1ª RNC/Cédula</span>
+      <button class="cred-copy" id="ch-ovi-copy1" onclick="chCopyOvi(1)">Copiar</button>
+    </div>
+    <div class="cred-row" style="margin-bottom:6px">
+      <span class="cred-label" style="flex:1;font-size:12px">2ª Nombre de usuario</span>
+      <button class="cred-copy" id="ch-ovi-copy2" onclick="chCopyOvi(2)">Copiar</button>
+    </div>
+    <div class="cred-row" style="margin-bottom:0">
+      <span class="cred-label" style="flex:1;font-size:12px">3ª Contraseña</span>
+      <button class="cred-copy" id="ch-ovi-copy3" onclick="chCopyOvi(3)">Copiar</button>
+    </div>
+  </div>
   <div id="ch-row-dgii-codes" hidden>
     <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
     <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Tarjeta de códigos DGII</div>
@@ -622,7 +638,7 @@ const INST = {
              directOpen:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
-             uf:'usuario', pf:'contrasena', directOpen:true },
+             uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
              url:'https://sisaril.mt.gob.do',
              uf:'usuario', pf:'contrasena', directOpen:true },
@@ -1295,7 +1311,7 @@ async function enterCompany(credId) {
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
-  document.getElementById('ch-sub').textContent=inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name;
+  document.getElementById('ch-sub').textContent = inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name;
 
   // TSS has RNC/Cédula + Usuario + Contraseña (suir.gob.do form)
   const isTSS = instKey==='tss';
@@ -1330,6 +1346,8 @@ async function enterCompany(credId) {
   document.getElementById('ch-copy-user').textContent='Copiar';
   document.getElementById('ch-copy-pass').textContent='Copiar';
 
+  document.getElementById('ch-row-ovi').hidden = true;
+
   // DGII card codes row
   const codesRow = document.getElementById('ch-row-dgii-codes');
   if (_chDgiiCodes.length) {
@@ -1346,15 +1364,18 @@ async function enterCompany(credId) {
   } else {
     actions.innerHTML=`<button class="cred-btn cred-btn-dismiss" style="flex:none;width:100%" onclick="closeCredHelper()">Cerrar</button><small style="color:var(--muted);font-size:11px;text-align:center;flex:1">Configura la URL del portal en ⚙️</small>`;
   }
-  document.getElementById('cred-helper').hidden=false;
-
   // Auto-copy RNC/username to clipboard
   try { await navigator.clipboard.writeText(_chUser); } catch {}
 
   // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs)
   if (newTab && loginUrl && !inst?.directOpen) {
     autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, newTab);
+    // Portal auto-launched — no need to show the credential panel
+    return;
   }
+
+  // Only show credential panel when the user needs to copy manually (directOpen portals)
+  document.getElementById('cred-helper').hidden=false;
 }
 
 function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existingTab=null) {
@@ -1412,6 +1433,19 @@ async function chCopy(which) {
   const btn=document.getElementById(btnId);
   try { await navigator.clipboard.writeText(val); btn.textContent='✓'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='Copiar'; btn.classList.remove('copied'); },1800); }
   catch { toast('No se pudo copiar','warn'); }
+}
+
+async function chCopyOvi(field) {
+  // field 1 & 2 = username (RNC goes in both), field 3 = password
+  const val = field === 3 ? _chPass : _chUser;
+  const btnId = 'ch-ovi-copy' + field;
+  const btn = document.getElementById(btnId);
+  try {
+    await navigator.clipboard.writeText(val);
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1800);
+  } catch { toast('No se pudo copiar','warn'); }
 }
 
 function chLaunch() {
