@@ -1035,7 +1035,10 @@ function openIr2() {
 function openDgiiModulos() {
   const frame = document.getElementById('dgii-modulos-frame');
   if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('dgii')) {
-    const co = currentCompany;
+    // The module can be opened from the dashboard without a selected company.
+    // Use an optional global context when one is available, but never block the
+    // iframe load because that context has not been initialized.
+    const co = window.currentCompany || null;
     const params = co ? `?rnc=${encodeURIComponent(co.rnc||'')}&anio=${new Date().getFullYear()}&nombre=${encodeURIComponent(co.nombre||'')}` : '';
     frame.src = '/dgii/index.html' + params;
   }
