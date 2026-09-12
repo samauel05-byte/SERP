@@ -107,6 +107,11 @@ select option{background:var(--surf2)}
 .res-line.sub{padding-left:28px}
 .res-line.total{background:var(--surf2);font-weight:700}
 .hint{font-size:11px;color:var(--fg3);margin-top:6px}
+.identity-wrap{padding:14px 14px 0;background:var(--bg)}
+.identity-card{background:#102342;border:1px solid #1d4d8d;border-radius:12px;padding:15px;margin-bottom:12px}
+.identity-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--acc3);padding-bottom:8px;margin-bottom:11px;border-bottom:1px solid rgba(61,139,255,.28)}
+.identity-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}.identity-grid.small{grid-template-columns:1fr 1fr 1fr}.identity-grid .field label{color:var(--acc3);font-weight:600}
+.tax-note{font-size:11px;color:var(--fg2);padding:0 4px 12px}
 
 .tbl-actions{display:flex;justify-content:flex-end;margin-bottom:8px}
 
@@ -132,18 +137,36 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 <!-- ── Header ── -->
 <div class="hdr">
   <div class="hdr-left">
-    <a class="back-btn" href="/ir2/">← IR-2</a>
+    <button class="back-btn" type="button" onclick="goBack()">← Volver</button>
     <div class="hdr-title">Datos DGII · Resumen Estimación</div>
   </div>
   <div class="hdr-right">
-    <input class="inp-hdr inp-rnc" id="h-rnc" type="text" placeholder="RNC" maxlength="11" oninput="onHdrChange()">
-    <input class="inp-hdr inp-nombre" id="h-nombre" type="text" placeholder="Nombre empresa" oninput="onHdrChange()">
-    <input class="inp-hdr inp-nombre" id="h-representante" type="text" placeholder="Representante legal" oninput="onHdrChange()">
-    <select class="inp-hdr inp-anio" id="h-anio" onchange="onAnioChange()"></select>
     <button class="btn btn-outline btn-sm" onclick="openAnexos()">Anexos DGII</button>
     <button class="btn btn-primary btn-sm" onclick="save()">Guardar</button>
     <span class="save-badge" id="save-badge">✓ Guardado</span>
   </div>
+</div>
+
+<div class="identity-wrap">
+  <div class="identity-card">
+    <div class="identity-title">IDENTIFICACIÓN DEL CONTRIBUYENTE</div>
+    <div class="identity-grid">
+      <div class="field"><label>Razón Social / Nombre Comercial</label><input id="h-nombre" type="text" placeholder="Empresa, S.R.L." oninput="onHdrChange()"></div>
+      <div class="field"><label>RNC (sin guiones)</label><input id="h-rnc" type="text" maxlength="11" placeholder="000000000" oninput="onHdrChange()"></div>
+      <div class="field"><label>Período Fiscal (Año)</label><select id="h-anio" onchange="onAnioChange()"></select></div>
+      <div class="field"><label>Tipo de Declaración</label><select id="h-tipo" onchange="onHdrChange()"><option>Original</option><option>Rectificativa</option></select></div>
+      <div class="field"><label>Actividad Económica</label><input id="h-actividad" type="text" placeholder="Comercio al por mayor" oninput="onHdrChange()"></div>
+    </div>
+  </div>
+  <div class="identity-card">
+    <div class="identity-title">REPRESENTANTE LEGAL</div>
+    <div class="identity-grid small">
+      <div class="field"><label>Nombre Completo</label><input id="h-representante" type="text" placeholder="Nombre del representante" oninput="onHdrChange()"></div>
+      <div class="field"><label>Cédula</label><input id="h-cedula" type="text" placeholder="000-0000000-0" oninput="onHdrChange()"></div>
+      <div class="field"><label>Cargo</label><input id="h-cargo" type="text" placeholder="Gerente General" oninput="onHdrChange()"></div>
+    </div>
+  </div>
+  <div class="tax-note">💡 Tasa ISR vigente: 27% sobre Renta Neta Imponible. ISR Mínimo Alternativo: 1.5% sobre ingresos brutos. Se aplica el mayor de los dos.</div>
 </div>
 
 <!-- ── Tabs ── -->
@@ -341,6 +364,10 @@ function fmtDOP(v){ return 'RD$ ' + fmt(v); }
 
 function getToken(){
   try { return sessionStorage.getItem('dtoken') || parent?.sessionStorage?.getItem('dtoken') || null; } catch { return null; }
+}
+function goBack(){
+  if(history.length > 1) history.back();
+  else location.href='/ir2/';
 }
 
 // ── Header year selector ──────────────────────────────────
@@ -673,6 +700,13 @@ function renderResumen(){
 
 // ── Input change handlers ─────────────────────────────────
 function onHdrChange(){
+  data.ficha = {
+    tipo_declaracion:document.getElementById('h-tipo').value,
+    actividad_economica:document.getElementById('h-actividad').value.trim(),
+    representante_legal:document.getElementById('h-representante').value.trim(),
+    cedula_representante:document.getElementById('h-cedula').value.trim(),
+    cargo_representante:document.getElementById('h-cargo').value.trim(),
+  };
   scheduleAutoSave();
 }
 
@@ -682,7 +716,7 @@ function onAnioChange(){
 
 function onInputChange(){
   data.infotep = n(document.getElementById('infotep-anual').value);
-  data.representante_legal = document.getElementById('h-representante').value.trim();
+  onHdrChange();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
@@ -704,7 +738,12 @@ async function loadData(){
     if(json.ok && json.record){
       data = json.record.data || {};
       document.getElementById('h-nombre').value = json.record.nombre || '';
-      document.getElementById('h-representante').value = data.representante_legal || '';
+      const ficha=data.ficha||{};
+      document.getElementById('h-tipo').value=ficha.tipo_declaracion||'Original';
+      document.getElementById('h-actividad').value=ficha.actividad_economica||'';
+      document.getElementById('h-representante').value=ficha.representante_legal||data.representante_legal||'';
+      document.getElementById('h-cedula').value=ficha.cedula_representante||'';
+      document.getElementById('h-cargo').value=ficha.cargo_representante||'';
     } else {
       data = {};
     }
@@ -721,7 +760,7 @@ async function save(){
   if(!rnc) return;
   // collect extra fields
   data.infotep = n(document.getElementById('infotep-anual').value);
-  data.representante_legal = document.getElementById('h-representante').value.trim();
+  onHdrChange();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
