@@ -388,6 +388,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div id="view-ir2" class="layer" hidden style="padding:0">
   <iframe id="ir2-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
 </div>
+<div id="view-dgii-modulos" class="layer" hidden style="padding:0">
+  <iframe id="dgii-modulos-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
+</div>
 
 <!-- CAMI -->
 <div id="view-cami" class="layer" hidden>
@@ -659,6 +662,7 @@ const INST = {
   cami:    { name:'CAMI',        desc:'Acceso contable · Análisis 606/607 e IT-1',   grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Acceso contable · Chat IA Facturas 606/607',  grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
+  'dgii-modulos': { name:'Módulos DGII', desc:'Gastos NCF · Inmuebles · Adquirencia · Vehículos · 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
 };
 
 let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
@@ -846,7 +850,7 @@ function lockVault() {
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-companies','view-users','view-cami','view-nala','view-ir2'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 function showPortals() {
@@ -1017,6 +1021,16 @@ function openIr2() {
   show('view-ir2');
 }
 
+function openDgiiModulos() {
+  const frame = document.getElementById('dgii-modulos-frame');
+  if (!frame.src || frame.src === 'about:blank') {
+    const co = currentCompany;
+    const params = co ? `?rnc=${encodeURIComponent(co.rnc||'')}&anio=${new Date().getFullYear()}&nombre=${encodeURIComponent(co.nombre||'')}` : '';
+    frame.src = '/dgii/index.html' + params;
+  }
+  show('view-dgii-modulos');
+}
+
 window.addEventListener('message', e => {
   if (e.data && e.data.action === 'showPortals') showPortals();
 });
@@ -1045,11 +1059,13 @@ function renderPortalGrid() {
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
   if (currentUser?.access_cami) allowed.push('ir2');
+  if (currentUser?.access_cami) allowed.push('dgii-modulos');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Accesos contables',        keys:['cami','nala','ir2'] },
+    { label:'Módulos DGII',             keys:['dgii-modulos'] },
   ];
 
   function makeCard(key,inst){
@@ -1060,11 +1076,11 @@ function renderPortalGrid() {
     card.className='p-card'+toolClass;
     const logoKey=key==='sirla'?'sisaril':key;
     const logoHtml=LOGOS[logoKey]?`<div class="p-logo" style="background:#fff;padding:4px">${LOGOS[logoKey]}</div>`:`<div class="p-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px'}">${inst.abbr}</div>`;
-    const toolFn=key==='nala'?'openNala()':key==='ir2'?'openIr2()':'openCami()';
+    const toolFn=key==='nala'?'openNala()':key==='ir2'?'openIr2()':key==='dgii-modulos'?'openDgiiModulos()':'openCami()';
     const bottomHtml=isTool
       ?`<button class="p-enter-btn" onclick="${toolFn}">ABRIR →</button>`
       :`<button class="p-enter-btn" onclick="openPortal('${key}')">VER EMPRESAS →</button>`;
-    const countLabel=key==='nala'?'Agente IA':key==='ir2'?'Declaración IR-2':'Herramienta local';
+    const countLabel=key==='nala'?'Agente IA':key==='ir2'?'Declaración IR-2':key==='dgii-modulos'?'6 módulos activos':'Herramienta local';
     const countHtml=isTool
       ?`<span class="p-count has">● ${countLabel}</span>`
       :`<span class="p-count ${cos.length>0?'has':'empty'}">${cos.length>0?`● ${cos.length} empresa${cos.length>1?'s':''}` :'○ Sin empresas'}</span>`;

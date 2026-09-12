@@ -40,15 +40,22 @@ CREATE POLICY "deny_jwt" ON direct_profiles FOR ALL USING (false);
 CREATE POLICY "deny_jwt" ON direct_credentials FOR ALL USING (false);
 CREATE POLICY "deny_jwt" ON direct_config FOR ALL USING (false);
 
--- 6. IR-2 Resumen DGII table
+-- 6. IR-2 / DGII modules table (tipo distinguishes ir2 from other DGII modules)
 CREATE TABLE IF NOT EXISTS ir2_resumen (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   rnc         TEXT NOT NULL,
   anio        INTEGER NOT NULL,
   nombre      TEXT NOT NULL DEFAULT '',
+  tipo        TEXT NOT NULL DEFAULT 'ir2',
   data        JSONB NOT NULL DEFAULT '{}',
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(rnc, anio)
+  UNIQUE(rnc, anio, tipo)
 );
 ALTER TABLE ir2_resumen ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "deny_jwt" ON ir2_resumen FOR ALL USING (false);
+
+-- Migration: add tipo column to existing ir2_resumen table (run if table already exists)
+-- ALTER TABLE ir2_resumen ADD COLUMN IF NOT EXISTS tipo TEXT NOT NULL DEFAULT 'ir2';
+-- UPDATE ir2_resumen SET tipo = 'ir2' WHERE tipo IS NULL OR tipo = '';
+-- ALTER TABLE ir2_resumen DROP CONSTRAINT IF EXISTS ir2_resumen_rnc_anio_key;
+-- ALTER TABLE ir2_resumen ADD CONSTRAINT ir2_resumen_rnc_anio_tipo_key UNIQUE (rnc, anio, tipo);
