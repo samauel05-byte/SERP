@@ -687,11 +687,6 @@ tbody tr:nth-child(even){background:var(--surface-2);}
       <span>IT-1 Declaración</span>
       <span class="nav-badge" id="badge-it1">○</span>
     </div>
-    <div class="nav-item" data-nav="ir2">
-      <div class="ni-icon">IR2</div>
-      <span>IR-2 Declaración</span>
-      <span class="nav-badge" id="badge-ir2">○</span>
-    </div>
   </div>
 
   <div class="currency-box">
@@ -926,7 +921,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         <div class="field-grp"><label class="field-lbl" for="in-rnc">RNC / Cédula</label><input class="field-inp" id="in-rnc" autocomplete="off" placeholder="131000000"></div>
         <div class="field-grp"><label class="field-lbl" for="in-razon">Razón social / Nombre</label><input class="field-inp" id="in-razon" autocomplete="organization" placeholder="Nombre del contribuyente"></div>
         <div class="field-grp"><label class="field-lbl" for="in-periodo">Período</label><input class="field-inp" id="in-periodo" type="month"></div>
-        <div class="field-grp"><label class="field-lbl" for="in-tipo-declaracion">Formulario</label><select class="field-inp" id="in-tipo-declaracion"><option value="IT-1">IT-1 mensual</option><option value="IR-2">IR-2 anual</option></select></div>
+        <div class="field-grp"><label class="field-lbl" for="in-tipo-declaracion">Formulario</label><select class="field-inp" id="in-tipo-declaracion"><option value="IT-1">IT-1 mensual</option></select></div>
       </div>
       <div class="field-help" style="margin-top:10px;">RNC, razón social y período se colocarán automáticamente en el Anexo A y en el IT-1 oficial.</div>
     </div>
@@ -2324,7 +2319,6 @@ document.querySelectorAll('.ir2-input,#ir2-rnc,#ir2-razon,#ir2-inicio,#ir2-fin')
 $('btn-xls-ir2').addEventListener('click',exportIR2Draft);$('btn-rst-ir2').addEventListener('click',resetIR2);
 
 ['in-saldo','in-importaciones','in-abonos','in-b02-count','in-b02-taxable','in-b02-exempt','in-b02-itbis','in-sale-cash','in-sale-transfer','in-sale-credit','in-sale-other'].forEach(id=>{$(id).addEventListener('input',()=>{updateIT1();renderSalesConsolidated();});});
-$('in-tipo-declaracion').addEventListener('change',e=>{if(e.target.value==='IR-2'){document.querySelector('[data-nav="ir2"]').click();showToast('IR-2 anual: carga el balance de comprobación del ejercicio.');}});
 $('btn-it1-dgii').addEventListener('click',exportIT1DGII);
 renderCardTotal();
 </script>
