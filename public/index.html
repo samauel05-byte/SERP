@@ -535,6 +535,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
+<!-- Modal: ver duplicados -->
+<div id="modal-dupes" class="modal-bg" hidden>
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr">
+      <span class="modal-ttl">Duplicados detectados</span>
+      <button class="icon-btn" onclick="closeDupeModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="dupe-modal-body"></div>
+    <div class="modal-ftr">
+      <button class="btn btn-ghost" onclick="closeDupeModal()">Cerrar</button>
+      <button class="btn btn-pri" id="dupe-del-all-btn" onclick="cleanAllDupes()">Eliminar todos los anteriores</button>
+    </div>
+  </div>
+</div>
+
 <div class="notif-wrap" id="notif-wrap"></div>
 
 <!-- Credential helper panel -->
@@ -552,7 +569,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <button class="cred-copy" id="ch-copy-user" onclick="chCopy('user')">Copiar</button>
   </div>
   <div class="cred-row" id="ch-row-cedula" hidden>
-    <span class="cred-label">Cédula</span>
+    <span class="cred-label" id="ch-label-cedula">Cédula</span>
     <span class="cred-val" id="ch-cedula"></span>
     <button class="cred-copy" id="ch-copy-cedula" onclick="chCopy('cedula')">Copiar</button>
   </div>
@@ -601,7 +618,8 @@ const INST = {
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',
              url:'https://www.tss.gob.do/Tss/Account/LogIn',
              uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
-             aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' } },
+             aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' },
+             directOpen:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
              uf:'usuario', pf:'contrasena', directOpen:true },
@@ -628,6 +646,7 @@ const INST = {
 };
 
 let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
+let _dupeGroups = [];
 let activePortal = null;
 let sessionToken = null, currentUser = null, vaultSecret = null;
 
@@ -1094,26 +1113,22 @@ async function renderCompaniesView() {
     decoded.push({cred, plain});
   }
 
-  // Deduplicate: group by normalized company name, keep newest
-  const seen=new Map(); // normalizedName → {cred, plain}
-  const dupeIds=[];
+  // Group by normalized company name, sort each group newest first
+  const groups=new Map();
   for (const {cred, plain} of decoded) {
     const key=(plain.companyName||'').trim().toLowerCase();
-    const existing=seen.get(key);
-    if (!existing) {
-      seen.set(key, {cred, plain});
-    } else {
-      // Keep whichever has a later updated_at; push the other to dupes
-      if ((cred.updated_at||0) > (existing.cred.updated_at||0)) {
-        dupeIds.push(existing.cred.id);
-        seen.set(key, {cred, plain});
-      } else {
-        dupeIds.push(cred.id);
-      }
-    }
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({cred, plain});
   }
-
-  const unique=[...seen.values()];
+  // Sort each group newest-first; split into unique list and dupe groups
+  const unique=[];
+  _dupeGroups=[];
+  let dupeCount=0;
+  for (const entries of groups.values()) {
+    entries.sort((a,b)=>(b.cred.updated_at||0)-(a.cred.updated_at||0));
+    unique.push(entries[0]);
+    if (entries.length>1) { _dupeGroups.push(entries); dupeCount+=entries.length-1; }
+  }
 
   // reset search
   const searchWrap=document.getElementById('company-search-wrap');
@@ -1129,10 +1144,10 @@ async function renderCompaniesView() {
     dupeBanner.style.cssText='background:var(--warn,#f59e0b22);border:1px solid var(--warn,#f59e0b);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:10px;margin-bottom:8px';
     list.parentElement.insertBefore(dupeBanner, list);
   }
-  if (dupeIds.length > 0) {
+  if (dupeCount > 0) {
     dupeBanner.hidden=false;
-    dupeBanner.innerHTML=`<span style="flex:1">⚠️ Se detectaron <strong>${dupeIds.length}</strong> duplicados.</span>
-      <button class="btn btn-pri" style="font-size:12px;padding:5px 12px" onclick="cleanDupes(${JSON.stringify(dupeIds)})">Limpiar duplicados</button>`;
+    dupeBanner.innerHTML=`<span style="flex:1">⚠️ <strong>${dupeCount}</strong> duplicado${dupeCount>1?'s':''} detectado${dupeCount>1?'s':''}</span>
+      <button class="btn btn-pri" style="font-size:12px;padding:5px 12px" onclick="showDupeModal()">Ver →</button>`;
   } else {
     dupeBanner.hidden=true;
   }
@@ -1165,14 +1180,71 @@ function filterCompanies(q) {
   });
 }
 
-async function cleanDupes(ids) {
-  if (!ids.length) return;
-  if (!confirm(`¿Eliminar ${ids.length} entradas duplicadas? Esta acción no se puede deshacer.`)) return;
-  let deleted=0;
+function _fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(typeof ts === 'number' && ts < 1e12 ? ts*1000 : ts);
+  return d.toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function showDupeModal() {
+  const body = document.getElementById('dupe-modal-body');
+  if (!_dupeGroups.length) { closeDupeModal(); return; }
+  let html = `<p style="font-size:13px;color:var(--text2);margin-bottom:14px">Empresas con más de un registro guardado. El primero de cada grupo es el más reciente.</p>`;
+  for (const group of _dupeGroups) {
+    const name = group[0].plain.companyName || '(sin nombre)';
+    html += `<div style="margin-bottom:16px">
+      <p style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin:0 0 6px">${name}</p>`;
+    group.forEach((entry, i) => {
+      const isNewest = i === 0;
+      const badge = isNewest
+        ? `<span style="background:rgba(34,197,94,.15);color:#22c55e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.4px">MÁS RECIENTE</span>`
+        : `<span style="background:rgba(245,158,11,.12);color:#f59e0b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.4px">DUPLICADO</span>`;
+      const dateStr = _fmtDate(entry.cred.updated_at);
+      const user = entry.plain.username || '—';
+      html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">${badge}<span style="font-size:11px;color:var(--text3)">${dateStr}</span></div>
+          <div style="font-size:13px;color:var(--text);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user}</div>
+        </div>
+        ${isNewest
+          ? `<span style="font-size:12px;color:var(--text3);white-space:nowrap">Conservar</span>`
+          : `<button class="btn" style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);font-size:12px;padding:5px 12px;border-radius:7px;white-space:nowrap" onclick="deleteOneDupe('${entry.cred.id}')">Eliminar</button>`}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  body.innerHTML = html;
+  document.getElementById('modal-dupes').hidden = false;
+}
+
+function closeDupeModal() {
+  document.getElementById('modal-dupes').hidden = true;
+}
+
+async function deleteOneDupe(id) {
+  try {
+    await A.del(`/api/credentials/${id}`);
+    credentials = credentials.filter(c => c.id !== id);
+    toast('Entrada eliminada','ok');
+    await renderCompaniesView();
+    // Refresh modal with updated groups (or close if no more dupes)
+    if (_dupeGroups.length > 0) showDupeModal(); else closeDupeModal();
+    renderPortalGrid();
+  } catch(e) {
+    toast('Error al eliminar: ' + e.message,'err');
+  }
+}
+
+async function cleanAllDupes() {
+  const ids = _dupeGroups.flatMap(g => g.slice(1).map(e => e.cred.id));
+  if (!ids.length) { closeDupeModal(); return; }
+  if (!confirm(`¿Eliminar ${ids.length} entrada${ids.length>1?'s':''} duplicada${ids.length>1?'s':''}? Solo se conservará la más reciente de cada empresa. Esta acción no se puede deshacer.`)) return;
+  let deleted = 0;
   for (const id of ids) {
     try { await A.del(`/api/credentials/${id}`); credentials=credentials.filter(c=>c.id!==id); deleted++; } catch {}
   }
-  toast(`${deleted} duplicados eliminados`,'ok');
+  toast(`${deleted} duplicado${deleted>1?'s':''} eliminado${deleted>1?'s':''}`,'ok');
+  closeDupeModal();
   await renderCompaniesView();
   renderPortalGrid();
 }
@@ -1223,11 +1295,13 @@ async function enterCompany(credId) {
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
-  document.getElementById('ch-sub').textContent=inst.name;
+  document.getElementById('ch-sub').textContent=inst?.directOpen ? inst.name+' · Copia y pega cada campo' : inst.name;
 
-  // TSS has RNC/Cédula + Cédula + CLASS labels
+  // TSS has RNC/Cédula + Usuario + Contraseña (suir.gob.do form)
   const isTSS = instKey==='tss';
   document.getElementById('ch-label-user').textContent = isTSS ? 'RNC o Cédula' : 'Usuario';
+  const cedulaLabelEl = document.getElementById('ch-label-cedula');
+  if (cedulaLabelEl) cedulaLabelEl.textContent = isTSS ? 'Usuario' : 'Cédula';
   document.getElementById('ch-user').textContent=_chUser;
 
   // Cédula row (TSS only)
