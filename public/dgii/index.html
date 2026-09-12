@@ -108,7 +108,10 @@ select option{background:var(--surf2)}
 <div class="section active" id="s0">
   <div class="sec-hdr">
     <span class="sec-lbl">Gastos NCF — Resumen por tipo de gasto</span>
-    <button class="btn-add" onclick="addRow('gastos')">+ Agregar tipo de gasto</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn-add" onclick="addRow('gastos')">+ Agregar tipo de gasto</button>
+      <button class="btn-add" onclick="goAnexoJ()">Llenar Anexo J</button>
+    </div>
   </div>
   <div class="tbl-wrap">
     <table>
@@ -512,15 +515,25 @@ async function load(){
 
 async function saveAll(){
   const tk=token();
-  if(!tk||!RNC){alert('No hay sesión activa');return;}
+  if(!tk||!RNC){alert('No hay sesión activa');return false;}
   try{
-    await fetch(API,{
+    const response=await fetch(API,{
       method:'POST',
       headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json'},
       body:JSON.stringify({rnc:RNC,anio:ANIO,nombre:NOMBRE,tipo:'dgii-modulos',data:DATA})
     });
+    if(!response.ok) throw new Error('No se pudo guardar la información');
     showBadge();
+    return true;
   }catch(e){alert('Error guardando: '+e.message);}
+  return false;
+}
+
+async function goAnexoJ(){
+  if(await saveAll()){
+    const q=new URLSearchParams({rnc:RNC,nombre:NOMBRE,anio:ANIO,anexo:'J',origen:'gastos'});
+    location.href='/ir2/anexos.html?'+q;
+  }
 }
 
 function showBadge(){const b=document.getElementById('sbadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000);}
