@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IR-2 · Datos DGII</title>
+<script src="/cami/vendor/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
@@ -137,7 +138,9 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
   <div class="hdr-right">
     <input class="inp-hdr inp-rnc" id="h-rnc" type="text" placeholder="RNC" maxlength="11" oninput="onHdrChange()">
     <input class="inp-hdr inp-nombre" id="h-nombre" type="text" placeholder="Nombre empresa" oninput="onHdrChange()">
+    <input class="inp-hdr inp-nombre" id="h-representante" type="text" placeholder="Representante legal" oninput="onHdrChange()">
     <select class="inp-hdr inp-anio" id="h-anio" onchange="onAnioChange()"></select>
+    <button class="btn btn-outline btn-sm" onclick="openAnexos()">Anexos DGII</button>
     <button class="btn btn-primary btn-sm" onclick="save()">Guardar</button>
     <span class="save-badge" id="save-badge">✓ Guardado</span>
   </div>
@@ -158,13 +161,15 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 
 <!-- ════ TAB 0: 606-607 ════ -->
 <div class="section active" id="sec-0">
-  <div class="section-hdr"><span class="section-lbl">607 — Ventas DGII</span><button class="btn-add" onclick="add607()">+ Agregar fila</button></div>
+  <div class="section-hdr"><span class="section-lbl">607 — Ventas DGII</span><div style="display:flex;gap:7px"><button class="btn btn-outline btn-sm" onclick="document.getElementById('file-607').click()">Subir 607</button><button class="btn-add" onclick="add607()">+ Agregar fila</button></div></div>
+  <input id="file-607" type="file" accept=".xlsx,.xls,.xlsm" hidden onchange="importDgiiFile(this,'607')">
   <div class="tbl-wrap"><table><thead><tr><th>NCF</th><th>RNC / Cédula / Pasaporte</th><th>Tipo ingreso</th><th>Fecha comprobante</th><th class="num">Monto facturado</th><th class="num">ITBIS facturado</th><th class="num">Retención renta</th><th></th></tr></thead><tbody id="tbl-607"></tbody></table></div>
 </div>
 
 <!-- ════ TAB 1: 606 ════ -->
 <div class="section" id="sec-1">
-  <div class="section-hdr"><span class="section-lbl">606 — Compras y Gastos DGII</span><button class="btn-add" onclick="add606()">+ Agregar fila</button></div>
+  <div class="section-hdr"><span class="section-lbl">606 — Compras y Gastos DGII</span><div style="display:flex;gap:7px"><button class="btn btn-outline btn-sm" onclick="document.getElementById('file-606').click()">Subir 606</button><button class="btn-add" onclick="add606()">+ Agregar fila</button></div></div>
+  <input id="file-606" type="file" accept=".xlsx,.xls,.xlsm" hidden onchange="importDgiiFile(this,'606')">
   <div class="tbl-wrap"><table><thead><tr><th>NCF</th><th>RNC / Cédula</th><th>Tipo gasto</th><th>Fecha comprobante</th><th class="num">Servicios</th><th class="num">Bienes</th><th class="num">Total facturado</th><th class="num">ITBIS facturado</th><th class="num">ITBIS por adelantar</th><th class="num">ITBIS al costo</th><th></th></tr></thead><tbody id="tbl-606"></tbody></table></div>
 </div>
 
@@ -202,6 +207,7 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 <!-- ════ TAB 3: 606-607 ════ -->
 <div class="section" id="sec-3">
   <div class="section-hdr"><span class="section-lbl">Ventas 607 & Compras 606 — Por Mes</span></div>
+  <div class="hint" style="margin-bottom:8px">Se consolida automáticamente con los archivos 606 y 607 cargados para el año seleccionado.</div>
   <div class="tbl-wrap">
     <table>
       <thead>
@@ -370,6 +376,30 @@ function build607(){ renderDgiiRows('ventas607','tbl-607',[{key:'ncf',placeholde
 function add607(){ if(!data.ventas607)data.ventas607=[]; data.ventas607.push({ncf:'',rnc:'',tipo_ingreso:'',fecha:'',monto:0,itbis:0,retencion_renta:0}); build607(); }
 function build606(){ renderDgiiRows('compras606','tbl-606',[{key:'ncf',placeholder:'B0100000001'},{key:'rnc',placeholder:'RNC/Cédula'},{key:'tipo_gasto',placeholder:'01',width:'80px'},{key:'fecha',type:'date',width:'135px'},{key:'servicios',type:'number'},{key:'bienes',type:'number'},{key:'total',type:'number'},{key:'itbis',type:'number'},{key:'adelantar',type:'number'},{key:'costo',type:'number'}]); }
 function add606(){ if(!data.compras606)data.compras606=[]; data.compras606.push({ncf:'',rnc:'',tipo_gasto:'',fecha:'',servicios:0,bienes:0,total:0,itbis:0,adelantar:0,costo:0}); build606(); }
+function syncDgiiSummary(){
+  const year=String(document.getElementById('h-anio')?.value||''); if(!year) return;
+  if(!data.m) data.m={};
+  MESES.forEach(m=>data.m[m]={...(data.m[m]||{}),v_monto:0,v_itbis:0,c_total:0,c_adelantar:0,c_costo:0});
+  const month=d=>MESES[Number(String(d||'').slice(5,7))-1];
+  (data.ventas607||[]).filter(r=>String(r.fecha||'').startsWith(year)).forEach(r=>{const m=month(r.fecha);if(m){data.m[m].v_monto+=n(r.monto);data.m[m].v_itbis+=n(r.itbis)}});
+  (data.compras606||[]).filter(r=>String(r.fecha||'').startsWith(year)).forEach(r=>{const m=month(r.fecha);if(m){data.m[m].c_total+=n(r.total)||n(r.servicios)+n(r.bienes);data.m[m].c_adelantar+=n(r.adelantar);data.m[m].c_costo+=n(r.costo)}});
+}
+function openAnexos(){
+  const q=new URLSearchParams({rnc:document.getElementById('h-rnc').value,nombre:document.getElementById('h-nombre').value,anio:document.getElementById('h-anio').value});
+  location.href='/ir2/anexos.html?'+q;
+}
+function importDgiiFile(input,type){
+  const file=input.files?.[0]; if(!file||!window.XLSX)return;
+  const reader=new FileReader(); reader.onload=e=>{try{
+    const wb=XLSX.read(e.target.result,{type:'array',cellDates:true}), rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    const hi=rows.findIndex(r=>r.some(v=>String(v).toLowerCase().includes('ncf'))), h=rows[hi].map(v=>String(v).toLowerCase());
+    const val=(r,...names)=>r[h.findIndex(x=>names.some(n=>x.includes(n)))]||'';
+    const date=v=>v instanceof Date?v.toISOString().slice(0,10):String(v||'');
+    const key=type==='607'?'ventas607':'compras606'; if(!data[key])data[key]=[];
+    rows.slice(hi+1).filter(r=>r.some(Boolean)).forEach(r=>{const x=type==='607'?{ncf:val(r,'número comprobante','ncf'),rnc:val(r,'rnc/cédula'),fecha:date(val(r,'fecha comprobante')),monto:n(val(r,'monto facturado')),itbis:n(val(r,'itbis facturado'))}:{ncf:val(r,'ncf'),rnc:val(r,'rnc o cédula'),fecha:date(val(r,'fecha comprobante')),servicios:n(val(r,'servicios')),bienes:n(val(r,'bienes')),total:n(val(r,'total monto')),itbis:n(val(r,'itbis facturado')),adelantar:n(val(r,'por adelantar')),costo:n(val(r,'llevado al costo'))};if(x.ncf||x.rnc)data[key].push(x)});
+    syncDgiiSummary();buildAll();scheduleAutoSave();alert('Archivo '+type+' importado');
+  }catch(err){alert('No se pudo importar: '+err.message)} input.value=''};reader.readAsArrayBuffer(file);
+}
 
 // ── Consolidado 606-607 ───────────────────────────────────
 function build606607(){
@@ -652,6 +682,7 @@ function onAnioChange(){
 
 function onInputChange(){
   data.infotep = n(document.getElementById('infotep-anual').value);
+  data.representante_legal = document.getElementById('h-representante').value.trim();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
@@ -673,6 +704,7 @@ async function loadData(){
     if(json.ok && json.record){
       data = json.record.data || {};
       document.getElementById('h-nombre').value = json.record.nombre || '';
+      document.getElementById('h-representante').value = data.representante_legal || '';
     } else {
       data = {};
     }
@@ -689,6 +721,7 @@ async function save(){
   if(!rnc) return;
   // collect extra fields
   data.infotep = n(document.getElementById('infotep-anual').value);
+  data.representante_legal = document.getElementById('h-representante').value.trim();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
@@ -717,6 +750,7 @@ function scheduleAutoSave(){
 
 // ── Build all tabs ─────────────────────────────────────────
 function buildAll(){
+  syncDgiiSummary();
   build607();
   build606();
   build606607();
@@ -744,6 +778,7 @@ function init(){
   const params = new URLSearchParams(location.search);
   if(params.get('rnc')) document.getElementById('h-rnc').value = params.get('rnc');
   if(params.get('nombre')) document.getElementById('h-nombre').value = params.get('nombre');
+  if(params.get('representante')) document.getElementById('h-representante').value = params.get('representante');
   if(params.get('anio')){
     document.getElementById('h-anio').value = params.get('anio');
   }
