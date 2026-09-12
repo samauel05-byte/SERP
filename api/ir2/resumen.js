@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const { rnc, anio } = req.query;
+      const { rnc, anio, tipo = 'ir2' } = req.query;
       if (!rnc) return res.status(400).json({ error: 'rnc requerido' });
 
       if (anio) {
@@ -16,14 +16,16 @@ module.exports = async (req, res) => {
           .select('*')
           .eq('rnc', rnc)
           .eq('anio', parseInt(anio))
+          .eq('tipo', tipo)
           .maybeSingle();
         if (error) throw error;
         return res.json({ ok: true, record: data || null });
       } else {
         const { data, error } = await supabase
           .from('ir2_resumen')
-          .select('rnc, anio, nombre, updated_at')
+          .select('rnc, anio, nombre, tipo, updated_at')
           .eq('rnc', rnc)
+          .eq('tipo', tipo)
           .order('anio', { ascending: false });
         if (error) throw error;
         return res.json({ ok: true, records: data || [] });
@@ -31,14 +33,14 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { rnc, anio, nombre, data } = req.body || {};
+      const { rnc, anio, nombre, data, tipo = 'ir2' } = req.body || {};
       if (!rnc || !anio) return res.status(400).json({ error: 'rnc y anio requeridos' });
 
       const { data: saved, error } = await supabase
         .from('ir2_resumen')
         .upsert(
-          { rnc, anio: parseInt(anio), nombre: nombre || '', data: data || {}, updated_at: new Date().toISOString() },
-          { onConflict: 'rnc,anio' }
+          { rnc, anio: parseInt(anio), nombre: nombre || '', tipo, data: data || {}, updated_at: new Date().toISOString() },
+          { onConflict: 'rnc,anio,tipo' }
         )
         .select()
         .single();
@@ -47,13 +49,14 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'DELETE') {
-      const { rnc, anio } = req.query;
+      const { rnc, anio, tipo = 'ir2' } = req.query;
       if (!rnc || !anio) return res.status(400).json({ error: 'rnc y anio requeridos' });
       const { error } = await supabase
         .from('ir2_resumen')
         .delete()
         .eq('rnc', rnc)
-        .eq('anio', parseInt(anio));
+        .eq('anio', parseInt(anio))
+        .eq('tipo', tipo);
       if (error) throw error;
       return res.json({ ok: true });
     }

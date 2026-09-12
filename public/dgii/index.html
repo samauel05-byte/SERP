@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Módulos DGII · SAVE</title>
+<style>
+:root{
+  --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
+  --bdr:rgba(30,90,200,.22);--bdr2:rgba(50,130,255,.32);
+  --fg:#e8f0ff;--fg2:#7a9bc0;--fg3:#3a5878;
+  --acc:#0060e0;--acc2:#3d8bff;--acc3:#80b8ff;
+  --green:#20BD5A;--red:#ef4444;--warn:#f59e0b;--purple:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);font-size:12px;min-height:100dvh;display:flex;flex-direction:column}
+
+/* HDR */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:48px;background:var(--bg2);border-bottom:1px solid var(--bdr);gap:8px;position:sticky;top:0;z-index:60;flex-shrink:0}
+.hdr-l{display:flex;align-items:center;gap:8px}
+.logo{font-size:10px;font-weight:700;color:var(--fg3);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--bdr);border-radius:5px;padding:3px 7px}
+.hdr-title{font-size:13px;font-weight:700;color:var(--acc3)}
+.hdr-r{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.rnc-tag{font-size:11px;color:var(--fg2);background:var(--surf);border:1px solid var(--bdr);border-radius:5px;padding:3px 9px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.anio-badge{font-size:11px;font-weight:700;color:var(--acc2);background:rgba(0,96,224,.15);border:1px solid rgba(61,139,255,.3);border-radius:5px;padding:3px 9px}
+.save-badge{font-size:10px;color:var(--green);opacity:0;transition:opacity .4s}
+.save-badge.show{opacity:1}
+.btn{padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit}
+.btn-save{background:rgba(32,189,90,.12);border:1px solid rgba(32,189,90,.35);color:var(--green)}
+
+/* TABS */
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 14px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:10px 13px;font-size:11px;font-weight:700;color:var(--fg3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .12s;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+.tab.active{color:var(--acc2);border-bottom-color:var(--acc2)}
+.tab:hover:not(.active){color:var(--fg2)}
+
+/* CONTENT */
+.content{padding:14px;flex:1;overflow:hidden;display:flex;flex-direction:column}
+.section{display:none;flex-direction:column;height:100%;overflow:hidden}
+.section.active{display:flex}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0;flex-wrap:wrap;gap:8px}
+.sec-lbl{font-size:10px;font-weight:700;color:var(--acc3);text-transform:uppercase;letter-spacing:.07em}
+
+/* TABLE */
+.tbl-wrap{overflow:auto;border-radius:9px;border:1px solid var(--bdr);flex:1}
+table{width:max-content;min-width:100%;border-collapse:collapse;font-size:11px}
+thead th{background:var(--surf2);color:var(--fg2);font-weight:600;padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:2}
+thead th.r{text-align:right}
+thead th.c{text-align:center}
+thead th:first-child,tbody td:first-child,tfoot td:first-child{position:sticky;left:0;z-index:3;background:var(--surf2)}
+tbody td:first-child{background:var(--surf)!important}
+tbody tr:hover td:first-child{background:var(--surf2)!important}
+thead th:first-child{z-index:4}
+tbody tr{border-bottom:1px solid var(--bdr)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.014)}
+tbody td{padding:4px 8px;vertical-align:middle;white-space:nowrap}
+tbody td.n{color:var(--fg3);text-align:center;font-size:10px}
+tbody td.r{text-align:right;font-variant-numeric:tabular-nums}
+tfoot{position:sticky;bottom:0;z-index:2}
+tfoot td{background:var(--surf2);font-weight:700;padding:7px 10px;border-top:2px solid var(--bdr2);font-variant-numeric:tabular-nums;text-align:right;color:var(--acc3)}
+tfoot td.lbl{text-align:left;color:var(--fg2);font-size:11px}
+
+/* col colors */
+thead th.gG{background:rgba(32,189,90,.08);color:var(--green)}
+thead th.gB{background:rgba(61,139,255,.08);color:var(--acc3)}
+thead th.gW{background:rgba(245,158,11,.08);color:var(--warn)}
+thead th.gP{background:rgba(167,139,250,.08);color:var(--purple)}
+
+/* inputs */
+inp,sel{padding:3px 6px;border-radius:5px;border:1px solid var(--bdr);background:var(--surf);color:var(--fg);font-size:11px;outline:none;font-family:inherit;width:100%}
+inp[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+inp:focus,sel:focus{border-color:var(--acc2)}
+sel option{background:var(--surf2)}
+
+.btn-add{background:rgba(32,189,90,.09);border:1px solid rgba(32,189,90,.32);color:var(--green);padding:4px 11px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit}
+.btn-danger{background:transparent;border:none;color:var(--red);padding:0 5px;cursor:pointer;font-size:13px;font-family:inherit;line-height:1}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="logo">SAVE</div>
+    <div class="hdr-title">Módulos DGII</div>
+  </div>
+  <div class="hdr-r">
+    <span class="save-badge" id="sbadge">✓ Guardado</span>
+    <span class="rnc-tag" id="rnc-tag">—</span>
+    <span class="anio-badge" id="anio-badge">—</span>
+    <button class="btn btn-save" onclick="saveAll()">Guardar</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="sw(0)">Gastos NCF</div>
+  <div class="tab" onclick="sw(1)">Inmuebles</div>
+  <div class="tab" onclick="sw(2)">Ret. Adquirencia</div>
+  <div class="tab" onclick="sw(3)">Vehículos</div>
+  <div class="tab" onclick="sw(4)">Envíos 606</div>
+  <div class="tab" onclick="sw(5)">Pagos DGA</div>
+</div>
+
+<div class="content">
+
+<!-- TAB 0: GASTOS NCF -->
+<div class="section active" id="s0">
+  <div class="sec-hdr">
+    <span class="sec-lbl">Gastos NCF — Comprobantes de Gastos</span>
+    <button class="btn-add" onclick="addRow('gastos')">+ Agregar</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th class="gG">Tipo Gasto</th>
+        <th class="gG">RNC/Cédula Proveedor</th>
+        <th class="gG">Nombre Proveedor</th>
+        <th class="gG">NCF</th>
+        <th class="gG">Fecha NCF</th>
+        <th class="gG c">Mes</th>
+        <th class="gG r">Monto Servicios</th>
+        <th class="gG r">Monto Bienes</th>
+        <th class="gG r">Total Facturado</th>
+        <th class="gG r">ITBIS Facturado</th>
+        <th class="gG r">ITBIS Retenido</th>
+        <th class="gG">Forma Pago</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="b-gastos"></tbody>
+      <tfoot id="f-gastos"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 1: INMUEBLES -->
+<div class="section" id="s1">
+  <div class="sec-hdr">
+    <span class="sec-lbl">Inmuebles — Registro de Propiedades DGII</span>
+    <button class="btn-add" onclick="addRow('inmuebles')">+ Agregar</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th class="gB">Matrícula</th>
+        <th class="gB">Tipo Inmueble</th>
+        <th class="gB">Descripción / Dirección</th>
+        <th class="gB c">Municipio</th>
+        <th class="gB c">Provincia</th>
+        <th class="gB r">Avalúo Catastral</th>
+        <th class="gB c">Año Avalúo</th>
+        <th class="gB c">Status DGII</th>
+        <th class="gB">Observaciones</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="b-inmuebles"></tbody>
+      <tfoot id="f-inmuebles"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 2: RETENCIONES ADQUIRENCIA -->
+<div class="section" id="s2">
+  <div class="sec-hdr">
+    <span class="sec-lbl">Retenciones Compañías Adquirencia</span>
+    <button class="btn-add" onclick="addRow('retenciones')">+ Agregar</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th class="gW">Período</th>
+        <th class="gW">Compañía Adquirente</th>
+        <th class="gW c">Tipo Tarjeta</th>
+        <th class="gW r">Monto Ventas</th>
+        <th class="gW r">% Retención</th>
+        <th class="gW r">Monto Retenido</th>
+        <th class="gW">Nro. Certificado</th>
+        <th class="gW">Fecha Certificado</th>
+        <th class="gW c">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="b-retenciones"></tbody>
+      <tfoot id="f-retenciones"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 3: VEHICULOS -->
+<div class="section" id="s3">
+  <div class="sec-hdr">
+    <span class="sec-lbl">Vehículos — Registro DGII</span>
+    <button class="btn-add" onclick="addRow('vehiculos')">+ Agregar</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th class="gP">Placa</th>
+        <th class="gP">Marca</th>
+        <th class="gP">Modelo</th>
+        <th class="gP c">Año</th>
+        <th class="gP">Color</th>
+        <th class="gP">Tipo Vehículo</th>
+        <th class="gP">VIN / Chasis</th>
+        <th class="gP r">Avalúo DGII</th>
+        <th class="gP c">Status DGII</th>
+        <th class="gP">Venc. Marbete</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="b-vehiculos"></tbody>
+      <tfoot id="f-vehiculos"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 4: CONSULTA ENVÍOS 606 -->
+<div class="section" id="s4">
+  <div class="sec-hdr">
+    <span class="sec-lbl">Consulta Envíos 606 — Histórico de Declaraciones</span>
+    <button class="btn-add" onclick="addRow('envios606')">+ Agregar</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th class="gG">Período</th>
+        <th class="gG c">Tipo</th>
+        <th class="gG">Fecha Envío</th>
+        <th class="gG c">Estado</th>
+        <th class="gG r">Nro. Registros</th>
+        <th class="gG r">Total Monto</th>
+        <th class="gG r">Total ITBIS</th>
+        <th class="gG r">Total Retención</th>
+        <th class="gG">Referencia DGII</th>
+        <th class="gG">Observaciones</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="b-envios606"></tbody>
+      <tfoot id="f-envios606"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 5: PAGOS DGA -->
+<div class="section" id="s5">
+  <div class="sec-hdr">
+    <span class="sec-lbl">Pagos de Importación en DGA</span>
+    <button class="btn-add" onclick="addRow('pagos-dga')">+ Agregar</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th class="gB">Nro. DUA</th>
+        <th class="gB">Fecha DUA</th>
+        <th class="gB">País Origen</th>
+        <th class="gB">Descripción Mercancía</th>
+        <th class="gB c">HS Code</th>
+        <th class="gB r">Valor CIF (USD)</th>
+        <th class="gB r">T.C.</th>
+        <th class="gB r">Valor CIF (RD$)</th>
+        <th class="gB r">Arancel %</th>
+        <th class="gB r">Monto Arancel</th>
+        <th class="gB r">ITBIS</th>
+        <th class="gB r">ISC</th>
+        <th class="gB r">Otros Impuestos</th>
+        <th class="gB r">Total Pagado</th>
+        <th class="gB">Fecha Pago</th>
+        <th class="gB c">Status</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="b-pagos-dga"></tbody>
+      <tfoot id="f-pagos-dga"></tfoot>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+const API='/api/ir2/resumen';
+const token=()=>sessionStorage.getItem('dtoken')||'';
+let RNC='',NOMBRE='',ANIO=new Date().getFullYear();
+
+/* ── Module definitions ── */
+const MODS={
+  gastos:{
+    label:'Gastos NCF',
+    empty:{tipo_gasto:'',rnc:'',nombre:'',ncf:'',fecha:'',mes:'',mserv:0,mbienes:0,mtotal:0,itbis:0,itbis_ret:0,fpago:''},
+    nums:new Set(['mserv','mbienes','mtotal','itbis','itbis_ret']),
+    render(r,i){
+      return`<tr>
+        <td class="n">${i+1}</td>
+        <td>${inp(r,'tipo_gasto',i,'gastos',60)}</td>
+        <td>${inp(r,'rnc',i,'gastos',100)}</td>
+        <td>${inp(r,'nombre',i,'gastos',160)}</td>
+        <td>${inp(r,'ncf',i,'gastos',120)}</td>
+        <td>${inp(r,'fecha',i,'gastos',90)}</td>
+        <td>${inp(r,'mes',i,'gastos',45)}</td>
+        <td>${ninp(r,'mserv',i,'gastos')}</td>
+        <td>${ninp(r,'mbienes',i,'gastos')}</td>
+        <td>${ninp(r,'mtotal',i,'gastos')}</td>
+        <td>${ninp(r,'itbis',i,'gastos')}</td>
+        <td>${ninp(r,'itbis_ret',i,'gastos')}</td>
+        <td>${inp(r,'fpago',i,'gastos',60)}</td>
+        <td><button class="btn-danger" onclick="delRow('gastos',${i})">✕</button></td>
+      </tr>`;
+    },
+    foot(rows){
+      const tots=['mserv','mbienes','mtotal','itbis','itbis_ret'].map(k=>rows.reduce((s,r)=>s+n(r[k]),0));
+      return`<tr><td class="lbl" colspan="7">TOTALES (${rows.length})</td>${tots.map(v=>`<td>${f(v)}</td>`).join('')}<td></td><td></td></tr>`;
+    }
+  },
+  inmuebles:{
+    label:'Inmuebles',
+    empty:{matricula:'',tipo:'',descripcion:'',municipio:'',provincia:'',avaluo:0,anio_avaluo:'',status:'',obs:''},
+    nums:new Set(['avaluo']),
+    render(r,i){
+      return`<tr>
+        <td class="n">${i+1}</td>
+        <td>${inp(r,'matricula',i,'inmuebles',120)}</td>
+        <td>${inp(r,'tipo',i,'inmuebles',90)}</td>
+        <td>${inp(r,'descripcion',i,'inmuebles',200)}</td>
+        <td>${inp(r,'municipio',i,'inmuebles',100)}</td>
+        <td>${inp(r,'provincia',i,'inmuebles',90)}</td>
+        <td>${ninp(r,'avaluo',i,'inmuebles')}</td>
+        <td>${inp(r,'anio_avaluo',i,'inmuebles',50)}</td>
+        <td>${inp(r,'status',i,'inmuebles',70)}</td>
+        <td>${inp(r,'obs',i,'inmuebles',150)}</td>
+        <td><button class="btn-danger" onclick="delRow('inmuebles',${i})">✕</button></td>
+      </tr>`;
+    },
+    foot(rows){
+      const tot=rows.reduce((s,r)=>s+n(r.avaluo),0);
+      return`<tr><td class="lbl" colspan="6">TOTALES (${rows.length} propiedades)</td><td>${f(tot)}</td><td colspan="3"></td></tr>`;
+    }
+  },
+  retenciones:{
+    label:'Ret. Adquirencia',
+    empty:{periodo:'',compania:'',tipo_tarjeta:'',monto_ventas:0,pct_ret:1.5,monto_retenido:0,cert:'',fecha_cert:'',status:''},
+    nums:new Set(['monto_ventas','pct_ret','monto_retenido']),
+    render(r,i){
+      return`<tr>
+        <td class="n">${i+1}</td>
+        <td>${inp(r,'periodo',i,'retenciones',70)}</td>
+        <td>${inp(r,'compania',i,'retenciones',130)}</td>
+        <td>${inp(r,'tipo_tarjeta',i,'retenciones',70)}</td>
+        <td>${ninp(r,'monto_ventas',i,'retenciones')}</td>
+        <td>${ninp(r,'pct_ret',i,'retenciones',50)}</td>
+        <td>${ninp(r,'monto_retenido',i,'retenciones')}</td>
+        <td>${inp(r,'cert',i,'retenciones',120)}</td>
+        <td>${inp(r,'fecha_cert',i,'retenciones',90)}</td>
+        <td>${inp(r,'status',i,'retenciones',70)}</td>
+        <td><button class="btn-danger" onclick="delRow('retenciones',${i})">✕</button></td>
+      </tr>`;
+    },
+    foot(rows){
+      const tv=rows.reduce((s,r)=>s+n(r.monto_ventas),0);
+      const tr=rows.reduce((s,r)=>s+n(r.monto_retenido),0);
+      return`<tr><td class="lbl" colspan="4">TOTALES (${rows.length})</td><td>${f(tv)}</td><td></td><td>${f(tr)}</td><td colspan="3"></td></tr>`;
+    }
+  },
+  vehiculos:{
+    label:'Vehículos',
+    empty:{placa:'',marca:'',modelo:'',anio:'',color:'',tipo:'',vin:'',avaluo:0,status:'',venc_marbete:''},
+    nums:new Set(['avaluo']),
+    render(r,i){
+      return`<tr>
+        <td class="n">${i+1}</td>
+        <td>${inp(r,'placa',i,'vehiculos',70)}</td>
+        <td>${inp(r,'marca',i,'vehiculos',90)}</td>
+        <td>${inp(r,'modelo',i,'vehiculos',90)}</td>
+        <td>${inp(r,'anio',i,'vehiculos',45)}</td>
+        <td>${inp(r,'color',i,'vehiculos',70)}</td>
+        <td>${inp(r,'tipo',i,'vehiculos',90)}</td>
+        <td>${inp(r,'vin',i,'vehiculos',140)}</td>
+        <td>${ninp(r,'avaluo',i,'vehiculos')}</td>
+        <td>${inp(r,'status',i,'vehiculos',70)}</td>
+        <td>${inp(r,'venc_marbete',i,'vehiculos',90)}</td>
+        <td><button class="btn-danger" onclick="delRow('vehiculos',${i})">✕</button></td>
+      </tr>`;
+    },
+    foot(rows){
+      const tot=rows.reduce((s,r)=>s+n(r.avaluo),0);
+      return`<tr><td class="lbl" colspan="8">TOTALES (${rows.length} vehículos)</td><td>${f(tot)}</td><td colspan="2"></td></tr>`;
+    }
+  },
+  'envios606':{
+    label:'Envíos 606',
+    empty:{periodo:'',tipo:'Ordinario',fecha_envio:'',estado:'',nro_reg:0,total_monto:0,total_itbis:0,total_ret:0,ref_dgii:'',obs:''},
+    nums:new Set(['nro_reg','total_monto','total_itbis','total_ret']),
+    render(r,i){
+      return`<tr>
+        <td class="n">${i+1}</td>
+        <td>${inp(r,'periodo',i,'envios606',70)}</td>
+        <td>${inp(r,'tipo',i,'envios606',90)}</td>
+        <td>${inp(r,'fecha_envio',i,'envios606',90)}</td>
+        <td>${inp(r,'estado',i,'envios606',80)}</td>
+        <td>${ninp(r,'nro_reg',i,'envios606',55)}</td>
+        <td>${ninp(r,'total_monto',i,'envios606')}</td>
+        <td>${ninp(r,'total_itbis',i,'envios606')}</td>
+        <td>${ninp(r,'total_ret',i,'envios606')}</td>
+        <td>${inp(r,'ref_dgii',i,'envios606',110)}</td>
+        <td>${inp(r,'obs',i,'envios606',160)}</td>
+        <td><button class="btn-danger" onclick="delRow('envios606',${i})">✕</button></td>
+      </tr>`;
+    },
+    foot(rows){
+      const tm=rows.reduce((s,r)=>s+n(r.total_monto),0);
+      const ti=rows.reduce((s,r)=>s+n(r.total_itbis),0);
+      const tr=rows.reduce((s,r)=>s+n(r.total_ret),0);
+      return`<tr><td class="lbl" colspan="5">TOTALES (${rows.length} envíos)</td><td></td><td>${f(tm)}</td><td>${f(ti)}</td><td>${f(tr)}</td><td colspan="2"></td></tr>`;
+    }
+  },
+  'pagos-dga':{
+    label:'Pagos DGA',
+    empty:{dua:'',fecha_dua:'',pais:'',descripcion:'',hs_code:'',valor_usd:0,tc:0,valor_rd:0,arancel_pct:0,arancel:0,itbis:0,isc:0,otros:0,total:0,fecha_pago:'',status:''},
+    nums:new Set(['valor_usd','tc','valor_rd','arancel_pct','arancel','itbis','isc','otros','total']),
+    render(r,i){
+      return`<tr>
+        <td class="n">${i+1}</td>
+        <td>${inp(r,'dua',i,'pagos-dga',110)}</td>
+        <td>${inp(r,'fecha_dua',i,'pagos-dga',90)}</td>
+        <td>${inp(r,'pais',i,'pagos-dga',90)}</td>
+        <td>${inp(r,'descripcion',i,'pagos-dga',180)}</td>
+        <td>${inp(r,'hs_code',i,'pagos-dga',70)}</td>
+        <td>${ninp(r,'valor_usd',i,'pagos-dga')}</td>
+        <td>${ninp(r,'tc',i,'pagos-dga',60)}</td>
+        <td>${ninp(r,'valor_rd',i,'pagos-dga')}</td>
+        <td>${ninp(r,'arancel_pct',i,'pagos-dga',55)}</td>
+        <td>${ninp(r,'arancel',i,'pagos-dga')}</td>
+        <td>${ninp(r,'itbis',i,'pagos-dga')}</td>
+        <td>${ninp(r,'isc',i,'pagos-dga')}</td>
+        <td>${ninp(r,'otros',i,'pagos-dga')}</td>
+        <td>${ninp(r,'total',i,'pagos-dga')}</td>
+        <td>${inp(r,'fecha_pago',i,'pagos-dga',90)}</td>
+        <td>${inp(r,'status',i,'pagos-dga',70)}</td>
+        <td><button class="btn-danger" onclick="delRow('pagos-dga',${i})">✕</button></td>
+      </tr>`;
+    },
+    foot(rows){
+      const tv=rows.reduce((s,r)=>s+n(r.valor_rd),0);
+      const ta=rows.reduce((s,r)=>s+n(r.arancel),0);
+      const ti=rows.reduce((s,r)=>s+n(r.itbis),0);
+      const tt=rows.reduce((s,r)=>s+n(r.total),0);
+      return`<tr><td class="lbl" colspan="8">TOTALES (${rows.length} DUA)</td><td>${f(tv)}</td><td></td><td>${f(ta)}</td><td>${f(ti)}</td><td></td><td></td><td>${f(tt)}</td><td colspan="2"></td></tr>`;
+    }
+  }
+};
+
+/* ── helpers ── */
+function n(v){return parseFloat(v)||0}
+function f(v){return n(v).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function inp(r,fld,i,mod,w=100){return`<inp type="text" value="${(r[fld]||'').toString().replace(/"/g,'&quot;')}" data-i="${i}" data-f="${fld}" data-m="${mod}" oninput="onCell(this)" style="min-width:${w}px">`}
+function ninp(r,fld,i,mod,w=90){return`<inp type="number" min="0" step="0.01" value="${r[fld]||''}" data-i="${i}" data-f="${fld}" data-m="${mod}" oninput="onCell(this)" style="min-width:${w}px;text-align:right">`}
+
+/* ── Data ── */
+let DATA={};
+const MODKEYS=Object.keys(MODS);
+MODKEYS.forEach(k=>DATA[k]=[]);
+
+/* ── Navigation ── */
+let cur=0;
+const MODMAP=MODKEYS; // index → mod key
+function sw(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.querySelectorAll('.section').forEach((s,j)=>s.classList.toggle('active',j===i));
+  cur=i;
+}
+
+/* ── Render ── */
+function renderMod(mod){
+  const m=MODS[mod],rows=DATA[mod]||[];
+  const tb=document.getElementById('b-'+mod);
+  if(!tb)return;
+  if(!rows.length){
+    tb.innerHTML=`<tr><td colspan="30" style="text-align:center;padding:18px;color:var(--fg3)">Sin registros — presione + Agregar</td></tr>`;
+  }else{
+    tb.innerHTML=rows.map((r,i)=>m.render(r,i)).join('');
+  }
+  const ft=document.getElementById('f-'+mod);
+  if(ft)ft.innerHTML=m.foot(rows);
+}
+function renderAll(){MODKEYS.forEach(renderMod);}
+
+function onCell(el){
+  const{i,f:fld,m:mod}=el.dataset;
+  const isNum=(MODS[mod]?.nums||new Set()).has(fld);
+  DATA[mod][i][fld]=isNum?n(el.value):el.value;
+  // auto-calc totals for gastos
+  if(mod==='gastos'&&(fld==='mserv'||fld==='mbienes')){
+    DATA[mod][i].mtotal=n(DATA[mod][i].mserv)+n(DATA[mod][i].mbienes);
+    const tr=el.closest('tr');const inputs=tr.querySelectorAll('inp');
+    // update mtotal input (index 9)
+    inputs[9].value=DATA[mod][i].mtotal||'';
+  }
+  // auto-calc ret adquirencia
+  if(mod==='retenciones'&&(fld==='monto_ventas'||fld==='pct_ret')){
+    DATA[mod][i].monto_retenido=Math.round(n(DATA[mod][i].monto_ventas)*n(DATA[mod][i].pct_ret))/100;
+    el.closest('tr').querySelectorAll('inp')[6].value=DATA[mod][i].monto_retenido||'';
+  }
+  // auto-calc pagos-dga total
+  if(mod==='pagos-dga'&&['arancel','itbis','isc','otros'].includes(fld)){
+    const r=DATA[mod][i];
+    r.total=n(r.arancel)+n(r.itbis)+n(r.isc)+n(r.otros);
+    el.closest('tr').querySelectorAll('inp')[14].value=r.total||'';
+  }
+  renderMod(mod);
+}
+
+function addRow(mod){DATA[mod].push({...MODS[mod].empty});renderMod(mod);}
+function delRow(mod,i){DATA[mod].splice(i,1);renderMod(mod);}
+
+/* ── API ── */
+async function load(){
+  const tk=token();
+  document.getElementById('anio-badge').textContent=ANIO;
+  if(!tk||!RNC){renderAll();return;}
+  try{
+    const r=await fetch(`${API}?rnc=${encodeURIComponent(RNC)}&anio=${ANIO}&tipo=dgii-modulos`,{headers:{Authorization:'Bearer '+tk}});
+    if(r.ok){const j=await r.json();if(j.record?.data){Object.assign(DATA,j.record.data);}}
+  }catch{}
+  renderAll();
+}
+
+async function saveAll(){
+  const tk=token();
+  if(!tk||!RNC){alert('No hay sesión activa');return;}
+  try{
+    await fetch(API,{
+      method:'POST',
+      headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json'},
+      body:JSON.stringify({rnc:RNC,anio:ANIO,nombre:NOMBRE,tipo:'dgii-modulos',data:DATA})
+    });
+    showBadge();
+  }catch(e){alert('Error guardando: '+e.message);}
+}
+
+function showBadge(){const b=document.getElementById('sbadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000);}
+
+/* ── Init ── */
+(function init(){
+  const p=new URLSearchParams(location.search);
+  RNC=p.get('rnc')||'';
+  ANIO=parseInt(p.get('anio'))||new Date().getFullYear();
+  NOMBRE=p.get('nombre')||'';
+  document.getElementById('rnc-tag').textContent=RNC?(NOMBRE?`${NOMBRE} · ${RNC}`:RNC):'Sin RNC';
+  load();
+})();
+</script>
+</body>
+</html>
