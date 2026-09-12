@@ -197,6 +197,7 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
           <th>Nombre</th>
           <th>Año Fiscal</th>
           <th>Período</th>
+          <th>Fecha comprobante</th>
           <th>Tipo NCF</th>
           <th>Tipo Costo/Gasto</th>
           <th class="num">Monto Facturado</th>
@@ -438,7 +439,7 @@ function renderTerceros(){
   const tbody = document.getElementById('tbl-terceros');
   const rows = data.terceros || [];
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--fg3)">Sin registros. Haz clic en "+ Agregar fila".</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--fg3)">Sin registros. Haz clic en "+ Agregar fila".</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map((r,i)=>`<tr>
@@ -448,6 +449,7 @@ function renderTerceros(){
     <td><input type="text" value="${r.nombre||''}" placeholder="Razón social" data-i="${i}" data-f="nombre" oninput="onT(this)" style="width:160px"></td>
     <td><input type="number" value="${r.anio||''}" placeholder="${new Date().getFullYear()}" data-i="${i}" data-f="anio" oninput="onT(this)" style="width:65px"></td>
     <td><input type="text" value="${r.periodo||''}" placeholder="01" data-i="${i}" data-f="periodo" oninput="onT(this)" style="width:50px"></td>
+    <td><input type="date" value="${r.fecha_comprobante||''}" data-i="${i}" data-f="fecha_comprobante" onchange="onT(this)" style="width:135px"></td>
     <td><select data-i="${i}" data-f="tipo_ncf" onchange="onT(this)" style="width:60px"><option value="">-</option>${TIPO_NCF.map(t=>`<option${r.tipo_ncf===t?' selected':''}>${t}</option>`).join('')}</select></td>
     <td><select data-i="${i}" data-f="tipo_costo" onchange="onT(this)" style="width:60px"><option value="">-</option>${TIPO_COSTO.map(t=>`<option${r.tipo_costo===t?' selected':''}>${t}</option>`).join('')}</select></td>
     <td><input type="number" min="0" step="0.01" value="${r.monto||''}" placeholder="0.00" data-i="${i}" data-f="monto" oninput="onT(this)" style="width:110px;text-align:right"></td>
@@ -466,7 +468,7 @@ function onT(el){
 
 function addTercero(){
   if(!data.terceros) data.terceros = [];
-  data.terceros.push({ncf:'',rnc:'',nombre:'',anio:new Date().getFullYear(),periodo:'',tipo_ncf:'',tipo_costo:'',monto:0,itbis_ret:0,itbis_fac:0});
+  data.terceros.push({ncf:'',rnc:'',nombre:'',anio:new Date().getFullYear(),periodo:'',fecha_comprobante:'',tipo_ncf:'',tipo_costo:'',monto:0,itbis_ret:0,itbis_fac:0});
   renderTerceros();
 }
 
@@ -637,6 +639,9 @@ function renderResumen(){
   const isrEst = Math.max(0, beneficio * 0.27);
   const anticipos = MESES.reduce((s,mes)=>s+n((data.m?.[mes]||{}).ant_impt_ir3)+n((data.m?.[mes]||{}).ant_impt_r17),0);
   const porPagar = Math.max(0, isrEst - anticipos);
+  // The source IR-2 workbook uses the higher of one twelfth of the ISR and
+  // 1.5% of annual sales divided by twelve to estimate the next advance.
+  const nuevosAnticipos = Math.max(isrEst / 12, (totVentas * 0.015) / 12);
   document.getElementById('tiles-res').innerHTML = [
     {lbl:'Ingresos Totales', val:totVentas, cls:''},
     {lbl:'Gastos NCF Total', val:totGastos, cls:''},
@@ -657,7 +662,7 @@ function renderResumen(){
     <div class="res-line sub"><span class="lbl">ISR Liquidado (27%)</span><span class="val warn">${fmtDOP(isrEst)}</span></div>
     <div class="res-line sub"><span class="lbl">(−) Anticipos Pagados</span><span class="val">${fmtDOP(anticipos)}</span></div>
     <div class="res-line total"><span class="lbl">Impuesto a Pagar</span><span class="val ${porPagar>0?'neg':'pos'}">${fmtDOP(porPagar)}</span></div>
-    <div class="res-line"><span class="lbl">Nuevos Anticipos</span><span class="val warn">${fmtDOP(Math.max(0,isrEst/4))}</span></div>`;
+    <div class="res-line"><span class="lbl">Nuevos Anticipos mensuales</span><span class="val warn">${fmtDOP(nuevosAnticipos)}</span></div>`;
 }
 
 // ── Input change handlers ─────────────────────────────────
