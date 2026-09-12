@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IR-2 · Datos DGII</title>
+<style>
+:root{
+  --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
+  --bdr:rgba(30,90,200,.28);--bdr2:rgba(50,130,255,.32);
+  --fg:#e8f0ff;--fg2:#7a9bc0;--fg3:#3a5878;
+  --acc:#0060e0;--acc2:#3d8bff;--acc3:#80b8ff;
+  --green:#20BD5A;--red:#ef4444;--warn:#f59e0b;
+  --hdr-h:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);font-size:13px;min-height:100dvh;display:flex;flex-direction:column}
+
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:var(--hdr-h);background:var(--bg2);border-bottom:1px solid var(--bdr);gap:10px;position:sticky;top:0;z-index:50;flex-shrink:0}
+.hdr-left{display:flex;align-items:center;gap:10px;min-width:0}
+.back-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid var(--bdr2);background:transparent;color:var(--acc3);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;text-decoration:none}
+.back-btn:hover{background:var(--surf)}
+.hdr-title{font-size:14px;font-weight:700;color:var(--acc3)}
+.hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.inp-hdr{padding:5px 9px;border-radius:7px;border:1px solid var(--bdr2);background:var(--surf);color:var(--fg);font-size:12px;outline:none}
+.inp-hdr::placeholder{color:var(--fg3)}
+.inp-hdr:focus{border-color:var(--acc2)}
+.inp-rnc{width:120px}
+.inp-nombre{width:200px}
+.inp-anio{width:80px}
+.save-badge{font-size:10px;color:var(--green);opacity:0;transition:opacity .4s;white-space:nowrap}
+.save-badge.show{opacity:1}
+.btn{padding:6px 13px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:opacity .15s;white-space:nowrap}
+.btn-primary{background:var(--acc);color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-outline{background:transparent;border:1px solid var(--bdr2);color:var(--acc2)}
+.btn-outline:hover{background:var(--surf)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{background:transparent;border:1px solid rgba(239,68,68,.4);color:var(--red);padding:3px 8px;border-radius:6px;cursor:pointer;font-size:11px}
+.btn-danger:hover{background:rgba(239,68,68,.1)}
+.btn-add{background:rgba(32,189,90,.1);border:1px solid rgba(32,189,90,.35);color:var(--green);padding:5px 12px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600}
+.btn-add:hover{background:rgba(32,189,90,.2)}
+
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 14px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:10px 14px;font-size:12px;font-weight:600;color:var(--fg3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s;flex-shrink:0}
+.tab.active{color:var(--acc2);border-bottom-color:var(--acc2)}
+.tab:hover:not(.active){color:var(--fg2)}
+
+.content{padding:14px;flex:1;overflow-y:auto}
+.section{display:none}
+.section.active{display:block}
+
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--bdr)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--surf2);color:var(--fg2);font-weight:600;padding:8px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--bdr)}
+thead th.num{text-align:right}
+tbody tr{border-bottom:1px solid var(--bdr)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody td{padding:5px 10px;vertical-align:middle}
+tbody td.mes{font-weight:600;color:var(--fg2);white-space:nowrap;width:100px}
+tbody td.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody td.calc{text-align:right;font-variant-numeric:tabular-nums;color:var(--acc3)}
+tbody td.total-row{background:var(--surf2);font-weight:700;color:var(--acc3)}
+tfoot td{background:var(--surf2);font-weight:700;color:var(--acc3);padding:7px 10px;border-top:2px solid var(--bdr2);font-variant-numeric:tabular-nums;text-align:right}
+tfoot td.lbl{text-align:left;color:var(--fg2)}
+
+input[type=number],input[type=text],select{
+  padding:4px 8px;border-radius:6px;border:1px solid var(--bdr);background:var(--surf);color:var(--fg);
+  font-size:12px;width:100%;outline:none;font-variant-numeric:tabular-nums
+}
+input[type=number]{text-align:right}
+input[type=number]:focus,input[type=text]:focus,select:focus{border-color:var(--acc2)}
+input[type=number]::placeholder,input[type=text]::placeholder{color:var(--fg3)}
+select option{background:var(--surf2)}
+
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:14px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:700;color:var(--fg2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;color:var(--fg3)}
+.field-val{padding:5px 9px;border-radius:7px;background:var(--surf2);font-variant-numeric:tabular-nums;font-weight:600;color:var(--acc3);text-align:right}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:12px 14px}
+.tile-lbl{font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.tile-val{font-size:18px;font-weight:700;color:var(--fg);font-variant-numeric:tabular-nums}
+.tile-val.pos{color:var(--green)}
+.tile-val.neg{color:var(--red)}
+.tile-val.warn{color:var(--warn)}
+
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.section-lbl{font-size:12px;font-weight:700;color:var(--acc3);text-transform:uppercase;letter-spacing:.05em}
+
+.res-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--bdr);margin-bottom:14px}
+.final-section{margin-top:14px}
+.res-line{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid var(--bdr)}
+.res-line:last-child{border-bottom:none}
+.res-line .lbl{color:var(--fg2);font-size:12px}
+.res-line .val{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;font-size:13px}
+.res-line .val.pos{color:var(--green)}
+.res-line .val.neg{color:var(--red)}
+.res-line .val.warn{color:var(--warn)}
+.res-line.sub{padding-left:28px}
+.res-line.total{background:var(--surf2);font-weight:700}
+.hint{font-size:11px;color:var(--fg3);margin-top:6px}
+
+.tbl-actions{display:flex;justify-content:flex-end;margin-bottom:8px}
+
+/* Resumen header groups */
+thead th.grp-v{background:rgba(32,189,90,.12);color:var(--green)}
+thead th.grp-c{background:rgba(61,139,255,.12);color:var(--acc3)}
+thead th.grp-t{background:rgba(124,58,237,.12);color:#a78bfa}
+thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
+
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--fg3);font-size:13px;gap:8px}
+
+@media(max-width:600px){
+  .hdr{flex-wrap:wrap;height:auto;padding:8px 12px;gap:6px}
+  .hdr-right{flex-wrap:wrap}
+  .inp-nombre{width:140px}
+  .row2,.row3{grid-template-columns:1fr}
+  .tiles{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="hdr">
+  <div class="hdr-left">
+    <a class="back-btn" href="/ir2/">← IR-2</a>
+    <div class="hdr-title">Datos DGII · Resumen Estimación</div>
+  </div>
+  <div class="hdr-right">
+    <input class="inp-hdr inp-rnc" id="h-rnc" type="text" placeholder="RNC" maxlength="11" oninput="onHdrChange()">
+    <input class="inp-hdr inp-nombre" id="h-nombre" type="text" placeholder="Nombre empresa" oninput="onHdrChange()">
+    <select class="inp-hdr inp-anio" id="h-anio" onchange="onAnioChange()"></select>
+    <button class="btn btn-primary btn-sm" onclick="save()">Guardar</button>
+    <span class="save-badge" id="save-badge">✓ Guardado</span>
+  </div>
+</div>
+
+<!-- ── Tabs ── -->
+<div class="tabs" id="tabs">
+  <div class="tab active" onclick="switchTab(0)">606-607</div>
+  <div class="tab" onclick="switchTab(1)">Datos Terceros</div>
+  <div class="tab" onclick="switchTab(2)">TSS e INFOTEP</div>
+  <div class="tab" onclick="switchTab(3)">Anticipos</div>
+  <div class="tab" onclick="switchTab(4)">Resumen</div>
+  <div class="tab" onclick="switchTab(5)">IR-13</div>
+</div>
+
+<!-- ── Content ── -->
+<div class="content">
+
+<!-- ════ TAB 0: 606-607 ════ -->
+<div class="section active" id="sec-0">
+  <div class="section-hdr"><span class="section-lbl">Ventas 607 & Compras 606 — Por Mes</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2">MES</th>
+          <th class="grp-v num" colspan="2">607 · VENTAS</th>
+          <th class="grp-c num" colspan="3">606 · COMPRAS</th>
+        </tr>
+        <tr>
+          <th class="grp-v num">Monto Facturado</th>
+          <th class="grp-v num">ITBIS Facturado</th>
+          <th class="grp-c num">Monto Facturado</th>
+          <th class="grp-c num">ITBIS por Adelantar</th>
+          <th class="grp-c num">ITBIS al Costo</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-606607"></tbody>
+      <tfoot id="tbl-606607-foot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ════ TAB 1: Datos Terceros ════ -->
+<div class="section" id="sec-1">
+  <div class="section-hdr">
+    <span class="section-lbl">Datos de Terceros</span>
+    <button class="btn-add" onclick="addTercero()">+ Agregar fila</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>NCF</th>
+          <th>RNC / Cédula</th>
+          <th>Nombre</th>
+          <th>Año Fiscal</th>
+          <th>Período</th>
+          <th>Tipo NCF</th>
+          <th>Tipo Costo/Gasto</th>
+          <th class="num">Monto Facturado</th>
+          <th class="num">ITBIS Retenido</th>
+          <th class="num">ITBIS Facturado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbl-terceros"></tbody>
+    </table>
+  </div>
+  <div class="hint" style="margin-top:8px">Datos obtenidos de DGII → Datos de Terceros</div>
+</div>
+
+<!-- ════ TAB 2: TSS e INFOTEP ════ -->
+<div class="section" id="sec-2">
+  <div class="section-hdr"><span class="section-lbl">TSS — Aportes por Mes</span></div>
+  <div class="tbl-wrap" style="margin-bottom:14px">
+    <table>
+      <thead>
+        <tr>
+          <th class="grp-t" colspan="12">TSS · Tesorería de la Seguridad Social</th>
+        </tr>
+        <tr>
+          <th>MES</th>
+          <th class="num">Salario Total</th>
+          <th class="num">R.S.F.S</th>
+          <th class="num">C.S.F.S</th>
+          <th class="num">R.P</th>
+          <th class="num">C.P</th>
+          <th class="num">S.R.L</th>
+          <th class="num">A.V</th>
+          <th class="num">P.C.A</th>
+          <th class="num">I.R</th>
+          <th class="num">C.R.</th>
+          <th class="num">Total Nómina</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-tss"></tbody>
+      <tfoot id="tbl-tss-foot"></tfoot>
+    </table>
+  </div>
+
+  <div class="card" style="max-width:320px">
+    <div class="card-title">INFOTEP — Aporte Anual</div>
+    <div class="field">
+      <label>Total INFOTEP del Año</label>
+      <input type="number" id="infotep-anual" min="0" step="0.01" placeholder="0.00" oninput="onInputChange()">
+    </div>
+  </div>
+</div>
+
+<!-- ════ TAB 3: Anticipos ════ -->
+<div class="section" id="sec-3">
+  <div class="section-hdr"><span class="section-lbl">Anticipos IR-3 / R-17 — Por Mes</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>MES</th>
+          <th>Período IR-3</th>
+          <th class="num">Impt. Pago IR-3</th>
+          <th>Período R-17</th>
+          <th class="num">Impt. Pago R-17</th>
+          <th class="num calc">Total Anticipo</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-anticipos"></tbody>
+      <tfoot id="tbl-anticipos-foot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ════ TAB 4: Resumen Estimación ════ -->
+<div class="section" id="sec-4">
+  <div class="section-hdr"><span class="section-lbl">Resumen Estimación Fiscal — <span id="res-anio-lbl">2025</span></span></div>
+
+  <div class="tiles" id="tiles-res"></div>
+
+  <div class="res-table-wrap">
+    <table id="tbl-resumen">
+      <thead>
+        <tr>
+          <th>MES</th>
+          <th class="grp-v num">Ventas (607)</th>
+          <th class="grp-c num">Gastos NCF (606)</th>
+          <th class="grp-t num">TSS Salud</th>
+          <th class="grp-t num">TSS Pensión E</th>
+          <th class="grp-t num">TSS Pensión P</th>
+          <th class="grp-t num">R. Laboral</th>
+          <th class="grp-t num">Sueldos</th>
+          <th class="grp-t num">INFOTEP/mes</th>
+          <th class="num">Otras Rem.</th>
+          <th class="grp-r num">Resultado</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-resumen-body"></tbody>
+      <tfoot id="tbl-resumen-foot"></tfoot>
+    </table>
+  </div>
+
+  <div class="row2">
+    <div>
+      <div class="card">
+        <div class="card-title">Datos Adicionales</div>
+        <div class="row2" style="gap:10px;margin-bottom:10px">
+          <div class="field"><label>Saldo en Bancos</label><input type="number" id="r-bancos" min="0" step="0.01" placeholder="0.00" oninput="onInputChange()"></div>
+          <div class="field"><label>Importaciones</label><input type="number" id="r-import" min="0" step="0.01" placeholder="0.00" oninput="onInputChange()"></div>
+        </div>
+        <div class="row2" style="gap:10px;margin-bottom:10px">
+          <div class="field"><label>Inventario Final</label><input type="number" id="r-inv" min="0" step="0.01" placeholder="0.00" oninput="onInputChange()"></div>
+          <div class="field"><label>Inventario Inicial</label><input type="number" id="r-invini" min="0" step="0.01" placeholder="0.00" oninput="onInputChange()"></div>
+        </div>
+        <div class="field"><label>Capital Social</label><input type="number" id="r-capital" min="0" step="0.01" placeholder="0.00" oninput="onInputChange()"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Estimación del ISR</div>
+        <div class="final-section" id="final-isr"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ TAB 5: IR-13 ════ -->
+<div class="section" id="sec-5">
+  <div class="section-hdr">
+    <span class="section-lbl">Declaración IR-13</span>
+    <button class="btn-add" onclick="addIr13()">+ Agregar fila</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Año Fiscal</th>
+          <th>Período</th>
+          <th>Fecha</th>
+          <th>Tipo Declaración</th>
+          <th class="num">Renta Neta</th>
+          <th class="num">ISR Determinado</th>
+          <th class="num">ISR Pagado</th>
+          <th class="num">Saldo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbl-ir13"></tbody>
+    </table>
+  </div>
+  <div class="hint" style="margin-top:8px">Datos obtenidos de DGII → Declaraciones → IR-13</div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+               'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+const TIPO_NCF = ['01','02','03','04','11','12','13','14','15','16','17','43','44','45','46','47'];
+const TIPO_COSTO = ['01','02','03','04','05','06','07','08','09','10','11','12','13','14'];
+
+let token = null;
+let currentTab = 0;
+let saveTimer = null;
+let data = {};   // main data object
+
+// ── Utility ──────────────────────────────────────────────
+function n(v){ return parseFloat(v) || 0; }
+function fmt(v){ return n(v).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDOP(v){ return 'RD$ ' + fmt(v); }
+
+function getToken(){
+  try { return sessionStorage.getItem('dtoken') || parent?.sessionStorage?.getItem('dtoken') || null; } catch { return null; }
+}
+
+// ── Header year selector ──────────────────────────────────
+function buildYearSelect(){
+  const sel = document.getElementById('h-anio');
+  const cur = new Date().getFullYear();
+  sel.innerHTML = '';
+  for(let y = cur+1; y >= cur-5; y--){
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if(y === cur) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+// ── Tab switching ─────────────────────────────────────────
+function switchTab(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.querySelectorAll('.section').forEach((s,j)=>s.classList.toggle('active',j===i));
+  currentTab = i;
+  if(i===4) renderResumen();
+}
+
+// ── Build 606-607 table ───────────────────────────────────
+function build606607(){
+  const tbody = document.getElementById('tbl-606607');
+  tbody.innerHTML = MESES.map((mes,i)=>{
+    const m = data.m?.[mes] || {};
+    return `<tr>
+      <td class="mes">${mes}</td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.v_monto||''}" data-mes="${mes}" data-f="v_monto" oninput="onM(this)"></td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.v_itbis||''}" data-mes="${mes}" data-f="v_itbis" oninput="onM(this)"></td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.c_total||''}" data-mes="${mes}" data-f="c_total" oninput="onM(this)"></td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.c_adelantar||''}" data-mes="${mes}" data-f="c_adelantar" oninput="onM(this)"></td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.c_costo||''}" data-mes="${mes}" data-f="c_costo" oninput="onM(this)"></td>
+    </tr>`;
+  }).join('');
+  render606607Foot();
+}
+
+function render606607Foot(){
+  const totals = {v_monto:0,v_itbis:0,c_total:0,c_adelantar:0,c_costo:0};
+  MESES.forEach(mes=>{ const m=data.m?.[mes]||{}; Object.keys(totals).forEach(k=>totals[k]+=n(m[k])); });
+  document.getElementById('tbl-606607-foot').innerHTML = `<tr>
+    <td class="lbl">TOTALES</td>
+    ${Object.values(totals).map(v=>`<td>${fmt(v)}</td>`).join('')}
+  </tr>`;
+}
+
+function onM(el){
+  const {mes,f} = el.dataset;
+  if(!data.m) data.m = {};
+  if(!data.m[mes]) data.m[mes] = {};
+  data.m[mes][f] = parseFloat(el.value)||0;
+  render606607Foot();
+  scheduleAutoSave();
+}
+
+// ── Build Terceros table ──────────────────────────────────
+function buildTerceros(){
+  renderTerceros();
+}
+
+function renderTerceros(){
+  const tbody = document.getElementById('tbl-terceros');
+  const rows = data.terceros || [];
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--fg3)">Sin registros. Haz clic en "+ Agregar fila".</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r,i)=>`<tr>
+    <td style="color:var(--fg3)">${i+1}</td>
+    <td><input type="text" value="${r.ncf||''}" placeholder="B0100000001" data-i="${i}" data-f="ncf" oninput="onT(this)" style="width:130px"></td>
+    <td><input type="text" value="${r.rnc||''}" placeholder="000-0000000-0" data-i="${i}" data-f="rnc" oninput="onT(this)" style="width:120px"></td>
+    <td><input type="text" value="${r.nombre||''}" placeholder="Razón social" data-i="${i}" data-f="nombre" oninput="onT(this)" style="width:160px"></td>
+    <td><input type="number" value="${r.anio||''}" placeholder="${new Date().getFullYear()}" data-i="${i}" data-f="anio" oninput="onT(this)" style="width:65px"></td>
+    <td><input type="text" value="${r.periodo||''}" placeholder="01" data-i="${i}" data-f="periodo" oninput="onT(this)" style="width:50px"></td>
+    <td><select data-i="${i}" data-f="tipo_ncf" onchange="onT(this)" style="width:60px"><option value="">-</option>${TIPO_NCF.map(t=>`<option${r.tipo_ncf===t?' selected':''}>${t}</option>`).join('')}</select></td>
+    <td><select data-i="${i}" data-f="tipo_costo" onchange="onT(this)" style="width:60px"><option value="">-</option>${TIPO_COSTO.map(t=>`<option${r.tipo_costo===t?' selected':''}>${t}</option>`).join('')}</select></td>
+    <td><input type="number" min="0" step="0.01" value="${r.monto||''}" placeholder="0.00" data-i="${i}" data-f="monto" oninput="onT(this)" style="width:110px;text-align:right"></td>
+    <td><input type="number" min="0" step="0.01" value="${r.itbis_ret||''}" placeholder="0.00" data-i="${i}" data-f="itbis_ret" oninput="onT(this)" style="width:110px;text-align:right"></td>
+    <td><input type="number" min="0" step="0.01" value="${r.itbis_fac||''}" placeholder="0.00" data-i="${i}" data-f="itbis_fac" oninput="onT(this)" style="width:110px;text-align:right"></td>
+    <td><button class="btn-danger" onclick="delTercero(${i})">✕</button></td>
+  </tr>`).join('');
+}
+
+function onT(el){
+  const {i,f} = el.dataset;
+  if(!data.terceros) data.terceros = [];
+  data.terceros[i][f] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
+  scheduleAutoSave();
+}
+
+function addTercero(){
+  if(!data.terceros) data.terceros = [];
+  data.terceros.push({ncf:'',rnc:'',nombre:'',anio:new Date().getFullYear(),periodo:'',tipo_ncf:'',tipo_costo:'',monto:0,itbis_ret:0,itbis_fac:0});
+  renderTerceros();
+}
+
+function delTercero(i){
+  data.terceros.splice(i,1);
+  renderTerceros();
+  scheduleAutoSave();
+}
+
+// ── Build TSS table ───────────────────────────────────────
+function buildTSS(){
+  const tbody = document.getElementById('tbl-tss');
+  tbody.innerHTML = MESES.map(mes=>{
+    const m = data.m?.[mes] || {};
+    const fields = ['tss_sal','tss_rsfs','tss_csfs','tss_rp','tss_cp','tss_srl','tss_av','tss_pca','tss_ir','tss_cr'];
+    const total = fields.reduce((s,f)=>s+n(m[f]),0);
+    return `<tr>
+      <td class="mes">${mes}</td>
+      ${fields.map(f=>`<td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m[f]||''}" data-mes="${mes}" data-f="${f}" oninput="onM(this);renderTSSFoot();renderResumen()"></td>`).join('')}
+      <td class="calc">${fmt(total)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('infotep-anual').value = data.infotep || '';
+  renderTSSFoot();
+}
+
+function renderTSSFoot(){
+  const fields = ['tss_sal','tss_rsfs','tss_csfs','tss_rp','tss_cp','tss_srl','tss_av','tss_pca','tss_ir','tss_cr'];
+  const totals = fields.map(f=>MESES.reduce((s,mes)=>s+n((data.m?.[mes]||{})[f]),0));
+  const total = totals.reduce((a,b)=>a+b,0);
+  document.getElementById('tbl-tss-foot').innerHTML = `<tr>
+    <td class="lbl">TOTALES</td>
+    ${totals.map(v=>`<td>${fmt(v)}</td>`).join('')}
+    <td>${fmt(total)}</td>
+  </tr>`;
+}
+
+// ── Build Anticipos table ─────────────────────────────────
+function buildAnticipos(){
+  const tbody = document.getElementById('tbl-anticipos');
+  tbody.innerHTML = MESES.map(mes=>{
+    const m = data.m?.[mes] || {};
+    const total = n(m.ant_impt_ir3)+n(m.ant_impt_r17);
+    return `<tr>
+      <td class="mes">${mes}</td>
+      <td><input type="text" placeholder="Ej. 202501" value="${m.ant_ir3||''}" data-mes="${mes}" data-f="ant_ir3" oninput="onM(this)" style="width:110px"></td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.ant_impt_ir3||''}" data-mes="${mes}" data-f="ant_impt_ir3" oninput="onM(this);renderAnticiposFoot()"></td>
+      <td><input type="text" placeholder="Ej. 202501" value="${m.ant_r17||''}" data-mes="${mes}" data-f="ant_r17" oninput="onM(this)" style="width:110px"></td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.ant_impt_r17||''}" data-mes="${mes}" data-f="ant_impt_r17" oninput="onM(this);renderAnticiposFoot()"></td>
+      <td class="calc">${fmt(total)}</td>
+    </tr>`;
+  }).join('');
+  renderAnticiposFoot();
+}
+
+function renderAnticiposFoot(){
+  const ir3 = MESES.reduce((s,mes)=>s+n((data.m?.[mes]||{}).ant_impt_ir3),0);
+  const r17 = MESES.reduce((s,mes)=>s+n((data.m?.[mes]||{}).ant_impt_r17),0);
+  document.getElementById('tbl-anticipos-foot').innerHTML = `<tr>
+    <td class="lbl" colspan="2">TOTALES</td>
+    <td>${fmt(ir3)}</td>
+    <td></td>
+    <td>${fmt(r17)}</td>
+    <td>${fmt(ir3+r17)}</td>
+  </tr>`;
+}
+
+// ── Build IR-13 table ─────────────────────────────────────
+function buildIr13(){
+  renderIr13();
+}
+
+function renderIr13(){
+  const tbody = document.getElementById('tbl-ir13');
+  const rows = data.ir13 || [];
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--fg3)">Sin declaraciones. Haz clic en "+ Agregar fila".</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r,i)=>`<tr>
+    <td style="color:var(--fg3)">${i+1}</td>
+    <td><input type="number" value="${r.anio||''}" placeholder="${new Date().getFullYear()}" data-i="${i}" data-f="anio" oninput="onIr13(this)" style="width:65px"></td>
+    <td><input type="text" value="${r.periodo||''}" placeholder="01" data-i="${i}" data-f="periodo" oninput="onIr13(this)" style="width:50px"></td>
+    <td><input type="text" value="${r.fecha||''}" placeholder="DD/MM/YYYY" data-i="${i}" data-f="fecha" oninput="onIr13(this)" style="width:100px"></td>
+    <td><input type="text" value="${r.tipo||''}" placeholder="Ordinaria" data-i="${i}" data-f="tipo" oninput="onIr13(this)" style="width:110px"></td>
+    <td><input type="number" min="0" step="0.01" value="${r.renta||''}" placeholder="0.00" data-i="${i}" data-f="renta" oninput="onIr13(this)" style="width:120px;text-align:right"></td>
+    <td><input type="number" min="0" step="0.01" value="${r.isr_det||''}" placeholder="0.00" data-i="${i}" data-f="isr_det" oninput="onIr13(this)" style="width:120px;text-align:right"></td>
+    <td><input type="number" min="0" step="0.01" value="${r.isr_pag||''}" placeholder="0.00" data-i="${i}" data-f="isr_pag" oninput="onIr13(this)" style="width:120px;text-align:right"></td>
+    <td class="calc">${fmt(n(r.isr_det)-n(r.isr_pag))}</td>
+    <td><button class="btn-danger" onclick="delIr13(${i})">✕</button></td>
+  </tr>`).join('');
+}
+
+function onIr13(el){
+  const {i,f} = el.dataset;
+  if(!data.ir13) data.ir13=[];
+  data.ir13[i][f] = el.type==='number' ? (parseFloat(el.value)||0) : el.value;
+  renderIr13();
+  scheduleAutoSave();
+}
+
+function addIr13(){
+  if(!data.ir13) data.ir13=[];
+  data.ir13.push({anio:new Date().getFullYear(),periodo:'',fecha:'',tipo:'',renta:0,isr_det:0,isr_pag:0});
+  renderIr13();
+}
+
+function delIr13(i){
+  data.ir13.splice(i,1);
+  renderIr13();
+  scheduleAutoSave();
+}
+
+// ── Resumen Estimación ─────────────────────────────────────
+function renderResumen(){
+  const anio = document.getElementById('h-anio').value;
+  document.getElementById('res-anio-lbl').textContent = anio;
+  const infotepMes = n(data.infotep)/12;
+
+  let totVentas=0,totGastos=0,totSalud=0,totPenE=0,totPenP=0,totRL=0,totSueldos=0,totOtras=0,totRes=0;
+
+  const bodyHtml = MESES.map(mes=>{
+    const m = data.m?.[mes]||{};
+    const ventas   = n(m.v_monto);
+    const gastos   = n(m.c_total);
+    const salud    = n(m.tss_rsfs)+n(m.tss_csfs);
+    const penE     = n(m.tss_rp);
+    const penP     = n(m.tss_cp);
+    const rl       = n(m.tss_srl);
+    const sueldos  = n(m.tss_sal);
+    const otras    = n(m.otras_rem)||0;
+    const res      = ventas - gastos - sueldos - salud - penE - penP - rl - infotepMes - otras;
+    totVentas+=ventas; totGastos+=gastos; totSalud+=salud; totPenE+=penE;
+    totPenP+=penP; totRL+=rl; totSueldos+=sueldos; totOtras+=otras; totRes+=res;
+    return `<tr>
+      <td class="mes">${mes}</td>
+      <td class="num">${fmt(ventas)}</td>
+      <td class="num">${fmt(gastos)}</td>
+      <td class="num">${fmt(salud)}</td>
+      <td class="num">${fmt(penE)}</td>
+      <td class="num">${fmt(penP)}</td>
+      <td class="num">${fmt(rl)}</td>
+      <td class="num">${fmt(sueldos)}</td>
+      <td class="num">${fmt(infotepMes)}</td>
+      <td><input type="number" min="0" step="0.01" placeholder="0.00" value="${m.otras_rem||''}" data-mes="${mes}" data-f="otras_rem" oninput="onM(this);renderResumen()" style="width:100px;text-align:right"></td>
+      <td class="calc ${res>=0?'pos':'neg'}">${fmt(res)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tbl-resumen-body').innerHTML = bodyHtml;
+  document.getElementById('tbl-resumen-foot').innerHTML = `<tr>
+    <td class="lbl">TOTALES</td>
+    <td>${fmt(totVentas)}</td>
+    <td>${fmt(totGastos)}</td>
+    <td>${fmt(totSalud)}</td>
+    <td>${fmt(totPenE)}</td>
+    <td>${fmt(totPenP)}</td>
+    <td>${fmt(totRL)}</td>
+    <td>${fmt(totSueldos)}</td>
+    <td>${fmt(n(data.infotep))}</td>
+    <td>${fmt(totOtras)}</td>
+    <td class="${totRes>=0?'pos':'neg'}">${fmt(totRes)}</td>
+  </tr>`;
+
+  // Tiles summary
+  const beneficio = totRes;
+  const isrEst = Math.max(0, beneficio * 0.27);
+  const anticipos = MESES.reduce((s,mes)=>s+n((data.m?.[mes]||{}).ant_impt_ir3)+n((data.m?.[mes]||{}).ant_impt_r17),0);
+  const porPagar = Math.max(0, isrEst - anticipos);
+  document.getElementById('tiles-res').innerHTML = [
+    {lbl:'Ingresos Totales', val:totVentas, cls:''},
+    {lbl:'Gastos NCF Total', val:totGastos, cls:''},
+    {lbl:'TSS + INFOTEP', val:totSalud+totPenE+totPenP+totRL+n(data.infotep), cls:''},
+    {lbl:'Beneficio Estimado', val:beneficio, cls:beneficio>=0?'pos':'neg'},
+    {lbl:'ISR Estimado (27%)', val:isrEst, cls:'warn'},
+    {lbl:'Anticipos Pagados', val:anticipos, cls:''},
+    {lbl:'ISR a Pagar', val:porPagar, cls:porPagar>0?'neg':'pos'},
+  ].map(t=>`<div class="tile"><div class="tile-lbl">${t.lbl}</div><div class="tile-val ${t.cls}">${fmtDOP(t.val)}</div></div>`).join('');
+
+  // Final ISR calculation
+  document.getElementById('final-isr').innerHTML = `
+    <div class="res-line"><span class="lbl">Ingresos Anuales</span><span class="val">${fmtDOP(totVentas)}</span></div>
+    <div class="res-line sub"><span class="lbl">(−) Gastos NCF</span><span class="val">${fmtDOP(totGastos)}</span></div>
+    <div class="res-line sub"><span class="lbl">(−) Sueldos</span><span class="val">${fmtDOP(totSueldos)}</span></div>
+    <div class="res-line sub"><span class="lbl">(−) TSS + INFOTEP</span><span class="val">${fmtDOP(totSalud+totPenE+totPenP+totRL+n(data.infotep))}</span></div>
+    <div class="res-line total"><span class="lbl">Beneficio Estimado</span><span class="val ${beneficio>=0?'pos':'neg'}">${fmtDOP(beneficio)}</span></div>
+    <div class="res-line sub"><span class="lbl">ISR Liquidado (27%)</span><span class="val warn">${fmtDOP(isrEst)}</span></div>
+    <div class="res-line sub"><span class="lbl">(−) Anticipos Pagados</span><span class="val">${fmtDOP(anticipos)}</span></div>
+    <div class="res-line total"><span class="lbl">Impuesto a Pagar</span><span class="val ${porPagar>0?'neg':'pos'}">${fmtDOP(porPagar)}</span></div>
+    <div class="res-line"><span class="lbl">Nuevos Anticipos</span><span class="val warn">${fmtDOP(Math.max(0,isrEst/4))}</span></div>`;
+}
+
+// ── Input change handlers ─────────────────────────────────
+function onHdrChange(){
+  scheduleAutoSave();
+}
+
+function onAnioChange(){
+  loadData();
+}
+
+function onInputChange(){
+  data.infotep = n(document.getElementById('infotep-anual').value);
+  data.saldo_bancos = n(document.getElementById('r-bancos').value);
+  data.importaciones = n(document.getElementById('r-import').value);
+  data.inventario = n(document.getElementById('r-inv').value);
+  data.inventario_ini = n(document.getElementById('r-invini').value);
+  data.capital = n(document.getElementById('r-capital').value);
+  renderResumen();
+  scheduleAutoSave();
+}
+
+// ── API ───────────────────────────────────────────────────
+async function loadData(){
+  const rnc = document.getElementById('h-rnc').value.trim();
+  const anio = document.getElementById('h-anio').value;
+  if(!rnc || !token) return;
+  try {
+    const res = await fetch(`/api/ir2/resumen?rnc=${encodeURIComponent(rnc)}&anio=${anio}`,
+      { headers:{ Authorization:`Bearer ${token}` } });
+    const json = await res.json();
+    if(json.ok && json.record){
+      data = json.record.data || {};
+      document.getElementById('h-nombre').value = json.record.nombre || '';
+    } else {
+      data = {};
+    }
+  } catch(e){
+    data = {};
+  }
+  buildAll();
+}
+
+async function save(){
+  const rnc = document.getElementById('h-rnc').value.trim();
+  const nombre = document.getElementById('h-nombre').value.trim();
+  const anio = parseInt(document.getElementById('h-anio').value);
+  if(!rnc) return;
+  // collect extra fields
+  data.infotep = n(document.getElementById('infotep-anual').value);
+  data.saldo_bancos = n(document.getElementById('r-bancos').value);
+  data.importaciones = n(document.getElementById('r-import').value);
+  data.inventario = n(document.getElementById('r-inv').value);
+  data.inventario_ini = n(document.getElementById('r-invini').value);
+  data.capital = n(document.getElementById('r-capital').value);
+
+  try {
+    const res = await fetch('/api/ir2/resumen',{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify({ rnc, anio, nombre, data })
+    });
+    const json = await res.json();
+    if(json.ok){
+      const badge = document.getElementById('save-badge');
+      badge.classList.add('show');
+      setTimeout(()=>badge.classList.remove('show'),2000);
+    }
+  } catch(e){ console.error(e); }
+}
+
+function scheduleAutoSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 1800);
+}
+
+// ── Build all tabs ─────────────────────────────────────────
+function buildAll(){
+  build606607();
+  buildTerceros();
+  buildTSS();
+  buildAnticipos();
+  buildIr13();
+  // fill extra fields
+  document.getElementById('infotep-anual').value = data.infotep||'';
+  document.getElementById('r-bancos').value = data.saldo_bancos||'';
+  document.getElementById('r-import').value = data.importaciones||'';
+  document.getElementById('r-inv').value = data.inventario||'';
+  document.getElementById('r-invini').value = data.inventario_ini||'';
+  document.getElementById('r-capital').value = data.capital||'';
+  if(currentTab===4) renderResumen();
+}
+
+// ── Init ──────────────────────────────────────────────────
+function init(){
+  buildYearSelect();
+  token = getToken();
+  if(!token){
+    document.querySelector('.content').innerHTML = `<div class="loading">⚠ Sesión no encontrada. Por favor regresa e inicia sesión.</div>`;
+    return;
+  }
+  // check URL params for pre-fill
+  const params = new URLSearchParams(location.search);
+  if(params.get('rnc')) document.getElementById('h-rnc').value = params.get('rnc');
+  if(params.get('nombre')) document.getElementById('h-nombre').value = params.get('nombre');
+  if(params.get('anio')){
+    document.getElementById('h-anio').value = params.get('anio');
+  }
+  buildAll();
+  const rnc = document.getElementById('h-rnc').value.trim();
+  if(rnc) loadData();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
