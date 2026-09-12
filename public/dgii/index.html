@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Módulos DGII · SAVE</title>
+<title>Estimación Fiscal · SAVE</title>
 <style>
 :root{
   --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
@@ -69,10 +69,10 @@ thead th.gW{background:rgba(245,158,11,.08);color:var(--warn)}
 thead th.gP{background:rgba(167,139,250,.08);color:var(--purple)}
 
 /* inputs */
-inp,sel{padding:3px 6px;border-radius:5px;border:1px solid var(--bdr);background:var(--surf);color:var(--fg);font-size:11px;outline:none;font-family:inherit;width:100%}
-inp[type=number]{text-align:right;font-variant-numeric:tabular-nums}
-inp:focus,sel:focus{border-color:var(--acc2)}
-sel option{background:var(--surf2)}
+input,select{padding:3px 6px;border-radius:5px;border:1px solid var(--bdr);background:var(--surf);color:var(--fg);font-size:11px;outline:none;font-family:inherit;width:100%}
+input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+input:focus,select:focus{border-color:var(--acc2)}
+select option{background:var(--surf2)}
 
 .btn-add{background:rgba(32,189,90,.09);border:1px solid rgba(32,189,90,.32);color:var(--green);padding:4px 11px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit}
 .btn-danger{background:transparent;border:none;color:var(--red);padding:0 5px;cursor:pointer;font-size:13px;font-family:inherit;line-height:1}
@@ -83,7 +83,7 @@ sel option{background:var(--surf2)}
 <div class="hdr">
   <div class="hdr-l">
     <div class="logo">SAVE</div>
-    <div class="hdr-title">Módulos DGII</div>
+    <div class="hdr-title">Estimación Fiscal</div>
   </div>
   <div class="hdr-r">
     <span class="save-badge" id="sbadge">✓ Guardado</span>
@@ -454,8 +454,8 @@ const MODS={
 /* ── helpers ── */
 function n(v){return parseFloat(v)||0}
 function f(v){return n(v).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function inp(r,fld,i,mod,w=100){return`<inp type="text" value="${(r[fld]||'').toString().replace(/"/g,'&quot;')}" data-i="${i}" data-f="${fld}" data-m="${mod}" oninput="onCell(this)" style="min-width:${w}px">`}
-function ninp(r,fld,i,mod,w=90){return`<inp type="number" min="0" step="0.01" value="${r[fld]||''}" data-i="${i}" data-f="${fld}" data-m="${mod}" oninput="onCell(this)" style="min-width:${w}px;text-align:right">`}
+function inp(r,fld,i,mod,w=100){return`<input type="text" value="${(r[fld]||'').toString().replace(/"/g,'&quot;')}" data-i="${i}" data-f="${fld}" data-m="${mod}" oninput="onCell(this)" style="min-width:${w}px">`}
+function ninp(r,fld,i,mod,w=90){return`<input type="number" min="0" step="0.01" value="${r[fld]||''}" data-i="${i}" data-f="${fld}" data-m="${mod}" oninput="onCell(this)" style="min-width:${w}px;text-align:right">`}
 
 /* ── Data ── */
 let DATA={};
@@ -493,20 +493,20 @@ function onCell(el){
   // auto-calc totals for gastos
   if(mod==='gastos'&&(fld==='mserv'||fld==='mbienes')){
     DATA[mod][i].mtotal=n(DATA[mod][i].mserv)+n(DATA[mod][i].mbienes);
-    const tr=el.closest('tr');const inputs=tr.querySelectorAll('inp');
+    const tr=el.closest('tr');const inputs=tr.querySelectorAll('input');
     // update mtotal input (index 9)
     inputs[9].value=DATA[mod][i].mtotal||'';
   }
   // auto-calc ret adquirencia
   if(mod==='retenciones'&&(fld==='monto_ventas'||fld==='pct_ret')){
     DATA[mod][i].monto_retenido=Math.round(n(DATA[mod][i].monto_ventas)*n(DATA[mod][i].pct_ret))/100;
-    el.closest('tr').querySelectorAll('inp')[6].value=DATA[mod][i].monto_retenido||'';
+    el.closest('tr').querySelectorAll('input')[6].value=DATA[mod][i].monto_retenido||'';
   }
   // auto-calc pagos-dga total
   if(mod==='pagos-dga'&&['arancel','itbis','isc','otros'].includes(fld)){
     const r=DATA[mod][i];
     r.total=n(r.arancel)+n(r.itbis)+n(r.isc)+n(r.otros);
-    el.closest('tr').querySelectorAll('inp')[14].value=r.total||'';
+    el.closest('tr').querySelectorAll('input')[14].value=r.total||'';
   }
   renderMod(mod);
 }

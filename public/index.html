@@ -662,7 +662,7 @@ const INST = {
   cami:    { name:'CAMI',        desc:'Acceso contable · Análisis 606/607 e IT-1',   grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Acceso contable · Chat IA Facturas 606/607',  grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
-  'dgii-modulos': { name:'Módulos DGII', desc:'Gastos NCF · Inmuebles · Adquirencia · Vehículos · 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
+  'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Adquirencia · Vehículos · 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
 };
 
 let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
@@ -1065,7 +1065,7 @@ function renderPortalGrid() {
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Accesos contables',        keys:['cami','nala','ir2'] },
-    { label:'Módulos DGII',             keys:['dgii-modulos'] },
+    { label:'Estimación Fiscal',         keys:['dgii-modulos'] },
   ];
 
   function makeCard(key,inst){
