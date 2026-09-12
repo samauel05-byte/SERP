@@ -584,9 +584,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <span class="cred-val" id="ch-tarjeta"></span>
     <button class="cred-copy" id="ch-copy-tarjeta" onclick="chCopy('tarjeta')">Copiar</button>
   </div>
-  <div id="ch-row-hint" hidden>
+  <div id="ch-row-ovi" hidden>
     <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
-    <div id="ch-hint-text" style="font-size:12px;color:var(--text3);line-height:1.55;padding:0 2px"></div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Pega en cada casilla del formulario</div>
+    <div class="cred-row" style="margin-bottom:6px">
+      <span class="cred-label" style="flex:1;font-size:12px">1ª RNC/Cédula</span>
+      <button class="cred-copy" id="ch-ovi-copy1" onclick="chCopyOvi(1)">Copiar</button>
+    </div>
+    <div class="cred-row" style="margin-bottom:6px">
+      <span class="cred-label" style="flex:1;font-size:12px">2ª Nombre de usuario</span>
+      <button class="cred-copy" id="ch-ovi-copy2" onclick="chCopyOvi(2)">Copiar</button>
+    </div>
+    <div class="cred-row" style="margin-bottom:0">
+      <span class="cred-label" style="flex:1;font-size:12px">3ª Contraseña</span>
+      <button class="cred-copy" id="ch-ovi-copy3" onclick="chCopyOvi(3)">Copiar</button>
+    </div>
   </div>
   <div id="ch-row-dgii-codes" hidden>
     <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
@@ -1338,15 +1350,8 @@ async function enterCompany(credId) {
   document.getElementById('ch-copy-pass').textContent='Copiar';
 
   // OVI (Min. Trabajo) is a React SPA — cannot autofill through proxy.
-  // Show 3-field guide so user knows to paste username into both first fields.
-  const hintRow = document.getElementById('ch-row-hint');
-  const hintText = document.getElementById('ch-hint-text');
-  if (instKey === 'trabajo') {
-    hintText.innerHTML = '📋 El formulario OVI tiene 3 casillas:<br><strong>1ª RNC/Cédula</strong> → pega el <em>Usuario</em><br><strong>2ª Nombre de usuario</strong> → pega el <em>Usuario</em> otra vez<br><strong>3ª Contraseña</strong> → pega la <em>Clave</em>';
-    hintRow.hidden = false;
-  } else {
-    hintRow.hidden = true;
-  }
+  // Show 3 labeled copy buttons matching the form fields exactly.
+  document.getElementById('ch-row-ovi').hidden = (instKey !== 'trabajo');
 
   // DGII card codes row
   const codesRow = document.getElementById('ch-row-dgii-codes');
@@ -1430,6 +1435,19 @@ async function chCopy(which) {
   const btn=document.getElementById(btnId);
   try { await navigator.clipboard.writeText(val); btn.textContent='✓'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='Copiar'; btn.classList.remove('copied'); },1800); }
   catch { toast('No se pudo copiar','warn'); }
+}
+
+async function chCopyOvi(field) {
+  // field 1 & 2 = username (RNC goes in both), field 3 = password
+  const val = field === 3 ? _chPass : _chUser;
+  const btnId = 'ch-ovi-copy' + field;
+  const btn = document.getElementById(btnId);
+  try {
+    await navigator.clipboard.writeText(val);
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1800);
+  } catch { toast('No se pudo copiar','warn'); }
 }
 
 function chLaunch() {
