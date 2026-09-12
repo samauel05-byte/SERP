@@ -262,9 +262,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </button>
     </div>
   </header>
-  <main class="main">
-    <p class="sect-label">Portales gubernamentales</p>
-    <div class="portal-grid" id="portal-grid"></div>
+  <main class="main" id="portals-main">
   </main>
 </div>
 
@@ -618,9 +616,9 @@ const INST = {
              uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
              uf:'usuario', pf:'contrasena' },
-  carnet:  { name:'Cardnet',     desc:'Red de pagos con tarjetas · POS y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
+  carnet:  { name:'Cardnet',     desc:'Portal bancario · Acceso a pagos y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
              uf:'usuario', pf:'contrasena' },
-  azul:    { name:'Azul',        desc:'Portal Azul',                                grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',
+  azul:    { name:'Azul',        desc:'Portal bancario · Banca en línea',           grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',
              uf:'usuario', pf:'contrasena' },
   idoppril:{ name:'IDOPPRIL',   desc:'Instituto Dom. de Prev. del Riesgo Lab.',     grad:'linear-gradient(135deg,#7c3aed 0%,#a855f7 100%)', abbr:'IDP',
              uf:'usuario', pf:'contrasena' },
@@ -632,9 +630,9 @@ const INST = {
              uf:'email', pf:'password' },
   citrus:  { name:'Citrus',     desc:'Portal Citrus · Pagos y servicios',           grad:'linear-gradient(135deg,#065f46 0%,#059669 100%)', abbr:'CT',
              uf:'usuario', pf:'contrasena' },
-  cami:    { name:'CAMI',        desc:'Análisis 606/607 e IT-1',                    grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
-  nala:    { name:'NALA',        desc:'Chat IA · Facturas 606/607',                 grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
-  ir2:     { name:'IR-2',        desc:'Balance de comprobación y declaración de renta', grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
+  cami:    { name:'CAMI',        desc:'Acceso contable · Análisis 606/607 e IT-1',   grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
+  nala:    { name:'NALA',        desc:'Acceso contable · Chat IA Facturas 606/607',  grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
+  ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
 };
 
 let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
@@ -1001,8 +999,8 @@ function getCompanies(instKey) {
 }
 
 function renderPortalGrid() {
-  const grid=document.getElementById('portal-grid');
-  grid.innerHTML='';
+  const main=document.getElementById('portals-main');
+  main.innerHTML='';
   const allowed = [];
   if (currentUser?.access_direct !== false) {
     const allPortals=['dgii','tss','trabajo','sirla','carnet','azul'];
@@ -1012,8 +1010,14 @@ function renderPortalGrid() {
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
   if (currentUser?.access_cami) allowed.push('ir2');
-  for (const [key,inst] of Object.entries(INST)) {
-    if (!allowed.includes(key)) continue;
+
+  const GROUPS=[
+    { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
+    { label:'Portales bancarios',       keys:['carnet','azul'] },
+    { label:'Accesos contables',        keys:['cami','nala','ir2'] },
+  ];
+
+  function makeCard(key,inst){
     const isTool=!!inst.tool;
     const cos=isTool?[]:getCompanies(key);
     const card=document.createElement('div');
@@ -1039,7 +1043,20 @@ function renderPortalGrid() {
         </div>
       </div>
       <div class="p-card-bottom">${bottomHtml}</div>`;
-    grid.appendChild(card);
+    return card;
+  }
+
+  for (const group of GROUPS){
+    const groupKeys=group.keys.filter(k=>allowed.includes(k)&&INST[k]);
+    if(!groupKeys.length) continue;
+    const label=document.createElement('p');
+    label.className='sect-label';
+    label.textContent=group.label;
+    main.appendChild(label);
+    const grid=document.createElement('div');
+    grid.className='portal-grid';
+    for(const key of groupKeys) grid.appendChild(makeCard(key,INST[key]));
+    main.appendChild(grid);
   }
 }
 
