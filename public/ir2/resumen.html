@@ -142,7 +142,6 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
     <div class="hdr-title">Datos DGII · Resumen Estimación</div>
   </div>
   <div class="hdr-right">
-    <button class="btn btn-outline btn-sm" onclick="confirmRefresh()">Actualizar</button>
     <button class="btn btn-primary btn-sm" onclick="openDgiiSection(0)">Gastos NCF · obligatorio</button>
     <button class="btn btn-outline btn-sm" onclick="openDgiiSection(1)">Inmuebles · opcional</button>
     <button class="btn btn-outline btn-sm" onclick="openDgiiSection(3)">Vehículos · opcional</button>
@@ -376,9 +375,12 @@ function goBack(){
   if(history.length > 1) history.back();
   else location.href='/ir2/';
 }
-function confirmRefresh(){
-  if(confirm('Esta página se actualizará. ¿Quieres actualizarla?')) location.reload();
-}
+// Browsers only allow their own native confirmation for refresh/close actions.
+// It covers Chrome, Edge and other modern browsers without risking data loss.
+window.addEventListener('beforeunload', event => {
+  event.preventDefault();
+  event.returnValue = '';
+});
 
 // ── Header year selector ──────────────────────────────────
 function buildYearSelect(){
