@@ -39,3 +39,16 @@ ALTER TABLE direct_config ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "deny_jwt" ON direct_profiles FOR ALL USING (false);
 CREATE POLICY "deny_jwt" ON direct_credentials FOR ALL USING (false);
 CREATE POLICY "deny_jwt" ON direct_config FOR ALL USING (false);
+
+-- 6. IR-2 Resumen DGII table
+CREATE TABLE IF NOT EXISTS ir2_resumen (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rnc         TEXT NOT NULL,
+  anio        INTEGER NOT NULL,
+  nombre      TEXT NOT NULL DEFAULT '',
+  data        JSONB NOT NULL DEFAULT '{}',
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(rnc, anio)
+);
+ALTER TABLE ir2_resumen ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "deny_jwt" ON ir2_resumen FOR ALL USING (false);
