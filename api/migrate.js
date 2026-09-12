@@ -2,7 +2,7 @@ const supabase = require('../lib/supabase');
 
 // Temporary migration endpoint — DELETE after use
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end();
 
   const results = [];
 
