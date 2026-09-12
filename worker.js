@@ -208,6 +208,7 @@ export default {
     el.value = val;
     el.dispatchEvent(new Event('input',{bubbles:true}));
     el.dispatchEvent(new Event('change',{bubbles:true}));
+    el.dispatchEvent(new Event('blur',{bubbles:true}));
   }
 
   function run(){
@@ -224,11 +225,19 @@ export default {
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
-    if(btn) setTimeout(function(){ btn.click(); }, 800);
+    setTimeout(function(){
+      if(btn) {
+        btn.click();
+      } else if(pEl) {
+        // Fallback: press Enter on the password field
+        pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));
+        pEl.dispatchEvent(new KeyboardEvent('keypress',{key:'Enter',keyCode:13,bubbles:true}));
+      }
+    }, 1500);
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run);
-  else setTimeout(run, 300);
+  else setTimeout(run, 600);
 })();
 <\/script>`;
 
