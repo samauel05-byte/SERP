@@ -354,6 +354,18 @@ export default {
     el.dispatchEvent(new Event('change',{bubbles:true}));
     el.dispatchEvent(new Event('blur',{bubbles:true}));
   }
+  function requestedCardPosition(){
+    // DGII renders text such as: "Favor introducir el código número: 3 de su tarjeta".
+    // Read the position from the page rather than assuming a fixed card slot.
+    var text = (document.body && document.body.innerText) || '';
+    var match = text.match(/c[oó]digo\\s*(?:n[uú]mero|n[ºo]\\.?)?\\s*:?\\s*(\\d{1,3})/i);
+    var position = match ? parseInt(match[1], 10) : 0;
+    return position > 0 ? position : 0;
+  }
+  function cardCodeForPosition(codes, position){
+    if(!Array.isArray(codes) || !position) return '';
+    return String(codes[position - 1] || '').trim();
+  }
 
   function run(){
     var cfg = PORTALS['${hostname}'];
@@ -373,8 +385,14 @@ export default {
       }
       fill(extraEl, p.cedula);
     }
-    if(cfg && cfg.tarjeta && p.tarjeta){
-      fill(q(cfg.tarjeta), p.tarjeta);
+    if(cfg && cfg.tarjeta){
+      // dgiiCodes is a positional card: item 1 is the code for position 1, etc.
+      // A single tarjeta value remains supported for portals that do not use a code card.
+      var cardCode = p.tarjeta || '';
+      if(p.dgiiCodes){
+        cardCode = cardCodeForPosition(p.dgiiCodes, requestedCardPosition());
+      }
+      if(cardCode) fill(q(cfg.tarjeta), cardCode);
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');

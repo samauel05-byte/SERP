@@ -47,6 +47,18 @@ function fillField(el, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function requestedCardPosition() {
+  const text = document.body?.innerText || '';
+  const match = text.match(/c[oó]digo\s*(?:n[uú]mero|n[ºo]\.?)?\s*:?\s*(\d{1,3})/i);
+  const position = match ? parseInt(match[1], 10) : 0;
+  return position > 0 ? position : 0;
+}
+
+function cardCodeForPosition(codes, position) {
+  const values = Array.isArray(codes) ? codes : String(codes || '').split(/[,;|\n]+/);
+  return position ? String(values[position - 1] || '').trim() : '';
+}
+
 function tryFill(creds) {
   const key = getPortalKey();
   if (!key) return false;
@@ -63,8 +75,11 @@ function tryFill(creds) {
   fillField(userEl, creds.username || creds.user || '');
   fillField(passEl, creds.password || creds.pass || '');
 
-  if (cfg.tarjeta && creds.tarjeta) {
-    fillField(findField(cfg.tarjeta), creds.tarjeta);
+  if (cfg.tarjeta) {
+    const code = creds.dgiiCodes
+      ? cardCodeForPosition(creds.dgiiCodes, requestedCardPosition())
+      : creds.tarjeta;
+    if (code) fillField(findField(cfg.tarjeta), code);
   }
 
   if (cfg.extra && creds.cedula) {

@@ -1401,7 +1401,7 @@ async function enterCompany(credId) {
 
   // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs)
   if (newTab && loginUrl && !inst?.directOpen) {
-    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, newTab);
+    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab);
     // Portal auto-launched — no need to show the credential panel
     return;
   }
@@ -1410,7 +1410,7 @@ async function enterCompany(credId) {
   document.getElementById('cred-helper').hidden=false;
 }
 
-function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existingTab=null) {
+function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCodes=[], existingTab=null) {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
   const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || null;
@@ -1421,6 +1421,7 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existin
   const payload = { url, user, pass };
   if (cedula) payload.cedula = cedula;
   if (tarjeta) payload.tarjeta = tarjeta;
+  if (Array.isArray(dgiiCodes) && dgiiCodes.length) payload.dgiiCodes = dgiiCodes;
   if (userField) payload.userField = userField;
   if (passField) payload.passField = passField;
   if (submitField) payload.submitField = submitField;
@@ -1451,6 +1452,7 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existin
   const proxyPayload = { user: payload.user, pass: payload.pass };
   if (payload.cedula) proxyPayload.cedula = payload.cedula;
   if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;
+  if (payload.dgiiCodes) proxyPayload.dgiiCodes = payload.dgiiCodes;
   const hash = btoa(encodeURIComponent(JSON.stringify(proxyPayload)));
   const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '#' + hash;
 
@@ -1492,7 +1494,7 @@ async function chCopyOvi(field) {
 function chLaunch() {
   if (!_chUrl) return;
   if (INST[activePortal]?.directOpen) { window.open(_chUrl, '_blank'); return; }
-  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'');
+  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'', _chDgiiCodes||[]);
 }
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
 
