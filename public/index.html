@@ -1253,6 +1253,21 @@ async function renderCompaniesView() {
   const cos=getCompanies(activePortal);
   list.innerHTML='';
 
+  // A new company account starts with no encrypted portal records. Give it a
+  // direct onboarding path instead of a blank list that looks like an error.
+  if (!cos.length) {
+    document.getElementById('company-search-wrap').hidden = true;
+    const existingBanner = document.getElementById('dupe-banner');
+    if (existingBanner) existingBanner.hidden = true;
+    const portalName = INST[activePortal]?.name || 'este portal';
+    list.innerHTML = `<section class="client-empty" style="margin:8px 0 16px">
+      <h2>No tienes ninguna empresa creada</h2>
+      <p>Sube el archivo de Excel para sincronizar los accesos de ${portalName} que necesites. La información quedará cifrada y asociada únicamente a tu empresa.</p>
+      <button class="client-upload" type="button" onclick="openImportModal()">Subir archivo y sincronizar accesos</button>
+    </section>`;
+    return;
+  }
+
   // Decrypt all entries first
   const decoded=[];
   for (const cred of cos) {
