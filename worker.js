@@ -350,6 +350,7 @@ export default {
         const autofillScript = `<script>
 (function(){
   var hash = location.hash.slice(1);
+  var launchedFromSerp = !!hash;
   // DGII posts the first form to a new relay URL. Keep the encrypted-in-URL
   // payload only for this browser tab, then remove it from the URL before
   // posting. This prevents the login script from starting over on every page.
