@@ -153,6 +153,12 @@ export default {
     // Credentials arrive only in the URL hash (never reaches this server)
     if (reqUrl.pathname === '/proxy') {
       const targetUrl = reqUrl.searchParams.get('url');
+      const rawFlow = reqUrl.searchParams.get('flow') || '';
+      // The flow is not a credential; it scopes portal cookies to one client
+      // tab so opening a second company cannot inherit the first company's
+      // DGII session.
+      const portalFlow = /^[A-Za-z0-9_-]{6,120}$/.test(rawFlow) ? rawFlow : '';
+      const flowCookiePrefix = portalFlow ? 'serp_' + portalFlow + '_' : '';
       if (!targetUrl) return new Response('Missing url parameter', { status: 400 });
 
       let target;
@@ -167,7 +173,7 @@ export default {
       const cacheStorage = caches.default;
       // A DGII login page establishes a session cookie. Serving a cached copy
       // would omit that cookie and make a valid login return to the same form.
-      const canCachePage = request.method === 'GET' && !target.hostname.endsWith('dgii.gov.do');
+      const canCachePage = request.method === 'GET' && !target.hostname.endsWith('dgii.gov.do') && !portalFlow;
       const cacheKey = new Request('https://cache.proxy/v2/' + encodeURIComponent(targetUrl));
       let html;
       let relaySetCookies = [];
@@ -182,7 +188,14 @@ export default {
             'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
           };
           const portalCookie = request.headers.get('Cookie');
-          if (portalCookie) forwardHeaders.Cookie = portalCookie;
+          if (portalCookie) {
+            if (flowCookiePrefix) {
+              const scopedCookies = portalCookie.split(';').map(v => v.trim()).filter(v => v.startsWith(flowCookiePrefix)).map(v => v.slice(flowCookiePrefix.length));
+              if (scopedCookies.length) forwardHeaders.Cookie = scopedCookies.join('; ');
+            } else {
+              forwardHeaders.Cookie = portalCookie;
+            }
+          }
           if (request.method === 'POST' && request.headers.get('Content-Type')) forwardHeaders['Content-Type'] = request.headers.get('Content-Type');
           // DGII redirects its WebForms POST. Buffer the body once so the
           // runtime can safely retransmit it after that redirect.
@@ -214,7 +227,7 @@ export default {
           cachedHtml = cachedHtml.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
             try {
               const actionUrl = new URL(action, targetUrl).href;
-              return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + post;
+              return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
             } catch { return m; }
           });
           if (canCachePage) await cacheStorage.put(cacheKey, new Response(cachedHtml, {
@@ -554,7 +567,9 @@ export default {
         // The browser is on workers.dev, so strip DGII's Domain attribute.
         // The relay forwards this cookie back to DGII on the next request.
         for (const cookie of relaySetCookies) {
-          responseHeaders.append('Set-Cookie', String(cookie).replace(/;\s*Domain=[^;]*/gi, ''));
+          let isolatedCookie = String(cookie).replace(/;\s*Domain=[^;]*/gi, '');
+          if (flowCookiePrefix) isolatedCookie = isolatedCookie.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
+          responseHeaders.append('Set-Cookie', isolatedCookie);
         }
         return new Response(html, { headers: responseHeaders });
       } catch(e) {

@@ -1608,7 +1608,7 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
   if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;
   if (payload.dgiiCodes) proxyPayload.dgiiCodes = payload.dgiiCodes;
   const hash = btoa(encodeURIComponent(JSON.stringify(proxyPayload)));
-  const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '#' + hash;
+  const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '&flow=' + encodeURIComponent(proxyPayload.flow) + '#' + hash;
 
   if (existingTab) {
     existingTab.location.href = proxyUrl;
