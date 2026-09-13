@@ -402,8 +402,12 @@ export default {
   }
   function cardInput(cfg){
     var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
-    if(el) return el;
-    var inputs = Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=password])'));
+    function isCardTextField(input){
+      if(!input || input.tagName !== 'INPUT') return false;
+      return !/^(hidden|password|submit|button|image|checkbox|radio|file)$/i.test(input.type || 'text');
+    }
+    if(isCardTextField(el)) return el;
+    var inputs = Array.from(document.querySelectorAll('input')).filter(isCardTextField);
     var matched = inputs.find(function(input){
       var label = input.labels && input.labels.length ? Array.from(input.labels).map(function(l){return l.textContent;}).join(' ') : '';
       var descriptor = [input.name,input.id,input.placeholder,label].filter(Boolean).join(' ');
