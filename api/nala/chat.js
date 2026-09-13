@@ -13,6 +13,9 @@ export default async function handler(req, res) {
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages requerido' });
   }
+  if (messages.length > 20 || messages.some(m => !m || !['user', 'assistant'].includes(m.role) || typeof m.content !== 'string') || messages.reduce((size, m) => size + m.content.length, 0) > 30000) {
+    return res.status(400).json({ error: 'Mensaje inválido o demasiado extenso.' });
+  }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });

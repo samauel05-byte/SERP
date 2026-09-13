@@ -11,6 +11,13 @@ export default async function handler(req, res) {
 
   const { base64, mimeType, pdfText, mode } = req.body || {};
   if (!base64 && !pdfText) return res.status(400).json({ error: 'archivo requerido' });
+  if ((base64 && typeof base64 !== 'string') || (pdfText && typeof pdfText !== 'string')) return res.status(400).json({ error: 'Formato de archivo inválido.' });
+  if ((typeof base64 === 'string' && base64.length > 12 * 1024 * 1024) || (typeof pdfText === 'string' && pdfText.length > 500000)) {
+    return res.status(413).json({ error: 'El archivo supera el tamaño permitido para análisis.' });
+  }
+  if (mimeType && (typeof mimeType !== 'string' || !/^(image\/(jpeg|png|webp)|application\/pdf|text\/plain)$/i.test(mimeType))) {
+    return res.status(400).json({ error: 'Tipo de archivo no permitido.' });
+  }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });

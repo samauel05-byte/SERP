@@ -1,11 +1,23 @@
+const { authenticate } = require('../../lib/auth');
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  const session = await authenticate(req);
+  if (!session || (session.role !== 'admin' && !session.access_direct)) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
 
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'url requerida' });
 
+  const allowed = [
+    'tss.gob.do', 'www.tss.gob.do', 'suir.gob.do', 'www.suir.gob.do',
+    'dgii.gov.do', 'www.dgii.gov.do', 'oficinavirtual.dgii.gov.do',
+    'ovi.mt.gob.do', 'mt.gob.do', 'www.mt.gob.do',
+    'sisaril.mt.gob.do', 'sisaril.gob.do', 'www.sisaril.gob.do',
+    'cardnet.com.do', 'www.cardnet.com.do',
+  ];
+  const isAllowed = candidate => candidate.protocol === 'https:' && allowed.some(h => candidate.hostname === h || candidate.hostname.endsWith('.' + h));
   let target;
   try {
     target = new URL(url);
@@ -13,32 +25,29 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'URL inválida' });
   }
 
-  // Only allow Dominican government/banking portals
-  const allowed = [
-    'tss.gob.do', 'www.tss.gob.do',
-    'suir.gob.do', 'www.suir.gob.do',
-    'dgii.gov.do', 'www.dgii.gov.do',
-    'oficinavirtual.dgii.gov.do',
-    // Ministerio de Trabajo
-    'ovi.mt.gob.do', 'mt.gob.do', 'www.mt.gob.do',
-    // SISARIL
-    'sisaril.mt.gob.do', 'sisaril.gob.do', 'www.sisaril.gob.do',
-    'cardnet.com.do', 'www.cardnet.com.do',
-  ];
-  if (!allowed.some(h => target.hostname === h || target.hostname.endsWith('.' + h))) {
+  if (!isAllowed(target)) {
     return res.status(403).json({ error: 'Portal no permitido' });
   }
 
   try {
-    const response = await fetch(url, {
+    let response;
+    for (let redirects = 0; redirects <= 3; redirects++) {
+      response = await fetch(target.toString(), {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
       },
-      redirect: 'follow',
-    });
+        redirect: 'manual',
+      });
+      if (response.status < 300 || response.status >= 400) break;
+      const location = response.headers.get('location');
+      if (!location) return res.status(502).json({ error: 'Redirección inválida del portal' });
+      target = new URL(location, target);
+      if (!isAllowed(target)) return res.status(403).json({ error: 'Redirección a portal no permitido' });
+      if (redirects === 3) return res.status(502).json({ error: 'Demasiadas redirecciones del portal' });
+    }
 
     if (!response.ok) {
       return res.status(response.status).json({ error: `Portal respondió ${response.status}` });
