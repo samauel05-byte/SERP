@@ -461,7 +461,11 @@ export default {
         // card prompt is rendered by the next WebForms page, so it must retain
         // this hash to read the requested card position and value.
         var form = btn.form || document.querySelector('form');
-        if(form && hash && form.action.indexOf('/proxy?url=') !== -1 && form.action.indexOf('#') === -1) form.action += '#' + hash;
+        // Only preserve credentials between DGII's two pages when this client
+        // actually has a code card. Otherwise the login response may keep the
+        // hash and this script would submit the password form repeatedly.
+        var needsCardStep = !!(p.dgiiCodes || p.tarjeta);
+        if(form && needsCardStep && hash && form.action.indexOf('/proxy?url=') !== -1 && form.action.indexOf('#') === -1) form.action += '#' + hash;
         btn.click();
       } else if(pEl) {
         // Fallback: press Enter on the password field
