@@ -164,19 +164,25 @@ export default {
       // Cache the raw login page HTML (without autofill script) for 2 minutes
       // so repeat opens of slow government portals are nearly instant.
       const cacheStorage = caches.default;
-      const cacheKey = new Request('https://cache.proxy/' + encodeURIComponent(targetUrl));
+      const cacheKey = new Request('https://cache.proxy/v2/' + encodeURIComponent(targetUrl));
       let html;
-      const cached = await cacheStorage.match(cacheKey);
+      const cached = request.method === 'GET' ? await cacheStorage.match(cacheKey) : null;
       if (cached) {
         html = await cached.text();
       } else {
         try {
+          const forwardHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
+          };
+          const portalCookie = request.headers.get('Cookie');
+          if (portalCookie) forwardHeaders.Cookie = portalCookie;
+          if (request.method === 'POST' && request.headers.get('Content-Type')) forwardHeaders['Content-Type'] = request.headers.get('Content-Type');
           const portalRes = await fetch(targetUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
-            },
+            method: request.method === 'POST' ? 'POST' : 'GET',
+            headers: forwardHeaders,
+            body: request.method === 'POST' ? request.body : undefined,
             redirect: 'follow',
           });
           html = await portalRes.text();
@@ -190,9 +196,12 @@ export default {
             cachedHtml = `<base href="${origin2}/">` + cachedHtml;
           }
           cachedHtml = cachedHtml.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
-            try { return pre + new URL(action, targetUrl).href + post; } catch { return m; }
+            try {
+              const actionUrl = new URL(action, targetUrl).href;
+              return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + post;
+            } catch { return m; }
           });
-          await cacheStorage.put(cacheKey, new Response(cachedHtml, {
+          if (request.method === 'GET') await cacheStorage.put(cacheKey, new Response(cachedHtml, {
             headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=120' }
           }));
           html = cachedHtml;
@@ -426,6 +435,11 @@ export default {
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
     setTimeout(function(){
       if(btn) {
+        // Keep the browser on the relay after the first DGII submit. The code
+        // card prompt is rendered by the next WebForms page, so it must retain
+        // this hash to read the requested card position and value.
+        var form = btn.form || document.querySelector('form');
+        if(form && hash && form.action.indexOf('/proxy?url=') !== -1 && form.action.indexOf('#') === -1) form.action += '#' + hash;
         btn.click();
       } else if(pEl) {
         // Fallback: press Enter on the password field
