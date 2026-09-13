@@ -6,6 +6,6 @@
     "@supabase/supabase-js": "^2.39.8"
   },
   "devDependencies": {
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
   }
 }

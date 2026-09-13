@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
   }
   try {
     if (req.method === 'GET') {
-      const credentials = await db.getCredentials(session.role === 'admin' ? null : session.portals_direct);
+      const credentials = await db.getCredentials(session.tenantId, session.role === 'admin' ? null : session.portals_direct);
       return res.json({ ok: true, credentials });
     }
     if (req.method === 'POST') {
@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: 'Cada credencial requiere id, institution, iv, ct' });
         }
       }
-      const count = await db.upsertCredentials(credentials);
+      const count = await db.upsertCredentials(session.tenantId, credentials);
       return res.json({ ok: true, count });
     }
     res.status(405).end();

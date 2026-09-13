@@ -1,4 +1,5 @@
 const supabase = require('../../lib/supabase');
+const { ensureDefaultTenant } = require('../../lib/tenant');
 
 module.exports = async (req, res) => {
   try {
@@ -18,6 +19,7 @@ module.exports = async (req, res) => {
       const { username, password, vaultKeyIv, vaultKeyCt, userSalt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
+      const tenantId = await ensureDefaultTenant();
 
       const { data: { user }, error } = await supabase.auth.admin.createUser({
         email,
@@ -28,6 +30,7 @@ module.exports = async (req, res) => {
 
       const { error: profileError } = await supabase.from('direct_profiles').insert({
         id: user.id,
+        tenant_id: tenantId,
         role: 'admin',
         access_direct: true,
         access_cami: true,

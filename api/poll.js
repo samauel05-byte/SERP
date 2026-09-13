@@ -11,7 +11,7 @@ module.exports = async (req, res) => {
     if (req.method !== 'GET') return res.status(405).end();
     const since = parseInt(req.query.since, 10) || 0;
     const serverTime = Date.now();
-    const updates = await db.getCredentialsSince(since, session.role === 'admin' ? null : session.portals_direct);
+    const updates = await db.getCredentialsSince(session.tenantId, since, session.role === 'admin' ? null : session.portals_direct);
     return res.json({ ok: true, updates, serverTime });
   } catch (e) {
     res.status(500).json({ error: e.message });

@@ -11,11 +11,11 @@ module.exports = async (req, res) => {
       const { institution, category, iv, ct } = req.body || {};
       if (!institution || !category || !iv || !ct) return res.status(400).json({ error: 'missing fields' });
       const ts = Date.now();
-      await db.upsertCredential(id, institution, category, iv, ct, ts);
+      await db.upsertCredential(session.tenantId, id, institution, category, iv, ct, ts);
       return res.json({ ok: true, updated_at: ts });
     }
     if (req.method === 'DELETE') {
-      await db.deleteCredential(id);
+      await db.deleteCredential(session.tenantId, id);
       return res.json({ ok: true });
     }
     res.status(405).end();

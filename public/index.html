@@ -153,6 +153,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-danger-ghost{background:rgba(239,68,68,.07);color:var(--danger);border:1px solid rgba(239,68,68,.2)}
 .btn-danger-ghost:hover{background:rgba(239,68,68,.15)}
 
+/* client workspace */
+.client-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:6px 0 22px}
+.client-hero h1{font-size:24px;letter-spacing:-.5px}.client-hero p{margin-top:6px;color:var(--text2);font-size:13px;line-height:1.5}
+.client-count{min-width:96px;text-align:center;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.client-count strong{display:block;font-size:24px;color:var(--accent3)}.client-count span{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.client-empty{border:1px dashed var(--border2);background:rgba(15,30,56,.62);border-radius:var(--rl);padding:42px 24px;text-align:center}
+.client-empty h2{font-size:18px}.client-empty p{color:var(--text2);font-size:13px;line-height:1.55;max-width:520px;margin:10px auto 20px}
+.client-upload{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 18px;border-radius:10px;background:linear-gradient(135deg,var(--p1),var(--accent));color:#fff;font-size:13px;font-weight:700;cursor:pointer}.client-upload input{display:none}
+.client-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.client-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:15px}.client-card h3{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.client-card p{margin-top:5px;color:var(--text2);font-size:12px}.client-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}@media(max-width:540px){.client-list{grid-template-columns:1fr}.client-hero{align-items:center}.client-hero h1{font-size:20px}}
+
 /* loading */
 .loading-sc{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;position:relative;z-index:1}
 .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
@@ -220,6 +230,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="spinner"></div>
   <p class="loading-txt">Iniciando bóveda…</p>
   <p class="loading-hint">Si tarda mucho, recarga la página (Ctrl+Shift+R)</p>
+</div>
+
+<!-- Clientes multiempresa -->
+<div id="view-clients" class="layer" hidden>
+  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" style="height:38px;mix-blend-mode:screen"></div><div class="hdr-right"><button class="back-btn" style="margin:0" onclick="showPortals()">Portales</button><button class="icon-btn" title="Cerrar sesión" onclick="lockVault()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+  <main class="main">
+    <div class="client-hero"><div><h1>Clientes</h1><p id="clients-subtitle">Gestiona los clientes de tu empresa.</p></div><div class="client-count"><strong id="clients-count">0</strong><span>clientes</span></div></div>
+    <div class="client-toolbar" id="clients-toolbar" hidden><label class="client-upload">Importar Excel<input id="clients-file" type="file" accept=".xlsx,.xls,.csv" onchange="importClientsFile(this.files[0])"></label></div>
+    <section id="clients-empty" class="client-empty" hidden><h2>Comienza cargando tus clientes</h2><p>Sube un Excel con la columna <strong>Nombre</strong>, <strong>Razón social</strong> o <strong>profile_name</strong>. Puedes incluir RNC, cédula, correo y teléfono.</p><label class="client-upload">Seleccionar Excel<input type="file" accept=".xlsx,.xls,.csv" onchange="importClientsFile(this.files[0])"></label></section>
+    <section id="clients-dashboard" hidden><div class="client-list" id="clients-list"></div></section>
+  </main>
 </div>
 
 <!-- Setup -->
@@ -672,9 +693,10 @@ const INST = {
   nala:    { name:'NALA',        desc:'Acceso contable · Chat IA Facturas 606/607',  grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
   'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
+  clients: { name:'Clientes', desc:'Gestión de clientes por empresa', grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'CLI', tool:true },
 };
 
-let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
+let masterKey = null, credentials = [], clients = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
 let _dupeGroups = [];
 let activePortal = null;
 let sessionToken = null, currentUser = null, vaultSecret = null;
@@ -852,7 +874,8 @@ async function loadHome() {
   const data=await A.get('/api/credentials');
   credentials=data.credentials||[];
   lastPollTs=Date.now();
-  showPortals(); startPolling();
+  try { await refreshClients(); openClients(); } catch { showPortals(); }
+  startPolling();
 }
 
 function lockVault() {
@@ -867,7 +890,7 @@ function lockVault() {
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 function showPortals() {
@@ -877,6 +900,51 @@ function showPortals() {
   // Show users button only for admin
   const btn=document.getElementById('btn-users');
   if (btn) btn.hidden = !(currentUser?.role==='admin');
+}
+
+async function refreshClients() {
+  const data=await A.get('/api/clients');
+  if(!data.ok) throw new Error(data.error||'No se pudieron cargar los clientes');
+  clients=Array.isArray(data.clients)?data.clients:[];
+}
+
+function openClients() {
+  const empty=clients.length===0;
+  document.getElementById('clients-count').textContent=String(clients.length);
+  document.getElementById('clients-subtitle').textContent=empty?'Tu empresa aún no tiene clientes.':'Clientes aislados para la empresa de tu perfil.';
+  document.getElementById('clients-empty').hidden=!empty;
+  document.getElementById('clients-dashboard').hidden=empty;
+  document.getElementById('clients-toolbar').hidden=empty;
+  const list=document.getElementById('clients-list'); list.textContent='';
+  for(const client of clients){
+    const card=document.createElement('article'); card.className='client-card';
+    const name=document.createElement('h3'); name.textContent=client.legal_name;
+    const id=document.createElement('p'); id.textContent=client.rnc?`RNC: ${client.rnc}`:client.cedula?`Cédula: ${client.cedula}`:'Sin identificador fiscal';
+    const details=document.createElement('p'); details.textContent=[client.email,client.phone].filter(Boolean).join(' · ')||'Importado desde '+(client.source==='excel'?'Excel':'registro manual');
+    card.append(name,id,details); list.appendChild(card);
+  }
+  show('view-clients');
+}
+
+function normalizedHeader(value){ return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/(^_|_$)/g,''); }
+function clientField(headers,row,names){ const i=headers.findIndex(h=>names.includes(h)); return i>=0?String(row[i]??'').trim():''; }
+async function importClientsFile(file){
+  if(!file) return;
+  if(file.size>8*1024*1024){ toast('El archivo no puede superar 8 MB','warn'); return; }
+  try{
+    if(typeof XLSX==='undefined') await new Promise((resolve,reject)=>{ const script=document.createElement('script'); script.src='/cami/vendor/xlsx.full.min.js'; script.onload=resolve; script.onerror=()=>reject(new Error('No se pudo cargar el lector de Excel')); document.head.appendChild(script); });
+    const buf=await file.arrayBuffer(); const wb=XLSX.read(buf,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    if(rows.length<2) throw new Error('El archivo no contiene filas para importar');
+    const headers=rows[0].map(normalizedHeader);
+    if(!headers.some(h=>['nombre','razon_social','profile_name'].includes(h))) throw new Error('Falta la columna Nombre, Razón social o profile_name');
+    const payload=rows.slice(1).filter(row=>row.some(cell=>String(cell).trim())).map(row=>({legal_name:clientField(headers,row,['nombre','razon_social','profile_name']),rnc:clientField(headers,row,['rnc']),cedula:clientField(headers,row,['cedula']),email:clientField(headers,row,['email','correo','correo_electronico']),phone:clientField(headers,row,['telefono','phone','celular'])}));
+    if(!payload.length) throw new Error('No se encontraron clientes válidos');
+    if(!confirm(`Se validarán e importarán ${payload.length} cliente(s) para esta empresa. ¿Continuar?`)) return;
+    const result=await A.post('/api/clients/import',{fileName:file.name,clients:payload});
+    if(!result.ok){ const detail=result.errors?.[0]; throw new Error(detail?`Fila ${detail.row}: ${detail.error}`:(result.error||'No se pudo importar')); }
+    await refreshClients(); openClients(); toast(`${result.imported_rows} cliente(s) importado(s). ${result.duplicate_rows||0} ya existían.`,'ok');
+  }catch(error){ toast(error.message||'No se pudo leer el Excel','err'); }
 }
 
 async function showUsers() {
@@ -1080,12 +1148,14 @@ function renderPortalGrid() {
   if (currentUser?.access_nala) allowed.push('nala');
   if (currentUser?.access_cami) allowed.push('ir2');
   if (currentUser?.access_cami) allowed.push('dgii-modulos');
+  allowed.push('clients');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Accesos contables',        keys:['cami','nala','ir2'] },
     { label:'Estimación Fiscal',         keys:['dgii-modulos'] },
+    { label:'Gestión',                   keys:['clients'] },
   ];
 
   function makeCard(key,inst){
@@ -1096,11 +1166,11 @@ function renderPortalGrid() {
     card.className='p-card'+toolClass;
     const logoKey=key==='sirla'?'sisaril':key;
     const logoHtml=LOGOS[logoKey]?`<div class="p-logo" style="background:#fff;padding:4px">${LOGOS[logoKey]}</div>`:`<div class="p-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px'}">${inst.abbr}</div>`;
-    const toolFn=key==='nala'?'openNala()':key==='ir2'?'openIr2()':key==='dgii-modulos'?'openDgiiModulos()':'openCami()';
+    const toolFn=key==='nala'?'openNala()':key==='ir2'?'openIr2()':key==='dgii-modulos'?'openDgiiModulos()':key==='clients'?'openClients()':'openCami()';
     const bottomHtml=isTool
       ?`<button class="p-enter-btn" onclick="${toolFn}">ABRIR →</button>`
       :`<button class="p-enter-btn" onclick="openPortal('${key}')">VER EMPRESAS →</button>`;
-    const countLabel=key==='nala'?'Agente IA':key==='ir2'?'Declaración IR-2':key==='dgii-modulos'?'6 módulos activos':'Herramienta local';
+    const countLabel=key==='nala'?'Agente IA':key==='ir2'?'Declaración IR-2':key==='dgii-modulos'?'6 módulos activos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'Herramienta local';
     const countHtml=isTool
       ?`<span class="p-count has">● ${countLabel}</span>`
       :`<span class="p-count ${cos.length>0?'has':'empty'}">${cos.length>0?`● ${cos.length} empresa${cos.length>1?'s':''}` :'○ Sin empresas'}</span>`;

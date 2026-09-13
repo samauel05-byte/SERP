@@ -1,16 +1,19 @@
 const supabase = require('../../lib/supabase');
 const { authenticate } = require('../../lib/auth');
+const { requireTenant } = require('../../lib/tenant');
 
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
+  if (!requireTenant(res, session.tenantId)) return;
 
   try {
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
         .select('id, role, access_direct, access_cami, access_nala, portals_direct, created_at')
+        .eq('tenant_id', session.tenantId)
         .order('created_at');
 
       const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
@@ -45,6 +48,7 @@ module.exports = async (req, res) => {
 
       const { error: profileError } = await supabase.from('direct_profiles').insert({
         id: user.id,
+        tenant_id: session.tenantId,
         role: role || 'user',
         access_direct: access_direct !== false,
         access_cami: access_cami || false,
