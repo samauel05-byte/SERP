@@ -380,11 +380,19 @@ export default {
     var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
     if(el) return el;
     var inputs = Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=password])'));
-    return inputs.find(function(input){
+    var matched = inputs.find(function(input){
       var label = input.labels && input.labels.length ? Array.from(input.labels).map(function(l){return l.textContent;}).join(' ') : '';
       var descriptor = [input.name,input.id,input.placeholder,label].filter(Boolean).join(' ');
       return /(tarjeta|c[oó]digo.*tarjeta|token)/i.test(descriptor);
-    }) || null;
+    });
+    if(matched) return matched;
+    // DGII's markup occasionally omits a usable id/name for Tarjeta. Once its
+    // prompt is present, the card input is always the final visible non-password
+    // field (Usuario, then Tarjeta); this avoids relying on its changing markup.
+    if('${hostname}'.indexOf('dgii.gov.do') !== -1 && requestedCardPosition() > 0) {
+      return inputs.length ? inputs[inputs.length - 1] : null;
+    }
+    return null;
   }
 
   function run(){
