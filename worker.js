@@ -381,7 +381,20 @@ export default {
       }).join(' ');
     var match = text.match(/c[oó]digo\\s*(?:(?:n[uú]mero|n[ºo]\\.?)(?:\\s*(?:de|#))?)?\\s*:?\\s*(\\d{1,3})/i);
     var position = match ? parseInt(match[1], 10) : 0;
-    return position > 0 ? position : 0;
+    if(position > 0){
+      // DGII replaces the request with only an error after a failed attempt.
+      // Retain the exact requested position so the retry still targets the
+      // same cell in the code card.
+      try { sessionStorage.setItem('serp-dgii-card-position', String(position)); } catch(e) {}
+      return position;
+    }
+    if(/c[oó]digo\s+introducido\s+es\s+incorrecto/i.test(text)){
+      try {
+        var previous = parseInt(sessionStorage.getItem('serp-dgii-card-position') || '0', 10);
+        return previous > 0 ? previous : 0;
+      } catch(e) {}
+    }
+    return 0;
   }
   function cardCodeForPosition(codes, position){
     if(!position) return '';
