@@ -279,8 +279,13 @@ export default {
     el.dispatchEvent(new Event('blur',{bubbles:true}));
   }
   function run(){
-    var uEl=document.querySelector('[name="usuario"],[name="user"],[name="username"]')||document.querySelector('input[type="text"],input[type="email"]');
+    var visible=Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="password"])'));
+    // OVI renders RNC/Cédula, then Usuario/Correo, then Contraseña.
+    // Its field names change between releases, so preserve the actual order
+    // as a safe fallback when the name selectors are absent.
+    var uEl=document.querySelector('[name="usuario"],[name="user"],[name="username"],[name="email"]')||visible[(p.cedula&&visible.length>1)?1:0];
     var pEl=document.querySelector('[name="contrasena"],[name="clave"],[name="password"]')||document.querySelector('input[type="password"]');
+    if(p.cedula && visible.length>1) fill(visible[0],p.cedula);
     fill(uEl,p.user||'');
     fill(pEl,p.pass||'');
     var btn=document.querySelector('button[type="submit"],input[type="submit"]');

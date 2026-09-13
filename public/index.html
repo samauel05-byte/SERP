@@ -669,9 +669,9 @@ const INST = {
              directSubmit:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
-             // OVI is a dynamic single-page application that cannot run through
-             // the HTML relay. Opening its official origin avoids its endless loader.
-             uf:'usuario', pf:'contrasena', directOpen:true },
+             // The relay preserves OVI's SPA requests and fills its three
+             // fields (RNC/Cédula, usuario/correo y contraseña).
+             uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
              url:'https://virtual.sisalril.gob.do/sisalrilvirtual/home/index/28',
              // SISALRIL uses an external identity provider; proxying its SPA
@@ -1466,7 +1466,7 @@ async function enterCompany(credId) {
   try { plain=await C.dec(masterKey,cred.iv,cred.ct); }
   catch { toast('Error al descifrar credenciales','err'); newTab?.close(); return; }
 
-  _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
+  _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||plain.rnc||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
   _chDgiiCodes = parseDgiiCodes(plain.dgiiCodes);
 
   // The SUIR WebForms form rejects a submission without its fresh ViewState.
