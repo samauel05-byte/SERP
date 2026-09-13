@@ -699,7 +699,7 @@ const INST = {
 let masterKey = null, credentials = [], clients = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
 let _dupeGroups = [];
 let activePortal = null;
-let sessionToken = null, currentUser = null, vaultSecret = null;
+let sessionToken = null, currentUser = null, vaultSecret = null, activeSessionId = null;
 
 /* ── Crypto ── */
 const C = {
@@ -742,13 +742,23 @@ function authH(body=false) {
   const h = {};
   if (body) h['Content-Type'] = 'application/json';
   if (sessionToken) h['Authorization'] = `Bearer ${sessionToken}`;
+  if (activeSessionId) h['X-Direct-Session'] = activeSessionId;
   return h;
 }
+async function apiRequest(path, options={}) {
+  const response=await fetch(path, options);
+  const data=await response.json().catch(()=>({}));
+  if(response.status===401 && sessionToken){
+    lockVault('Tu sesión fue cerrada porque este usuario inició sesión en otro equipo.');
+    throw new Error('Sesión reemplazada');
+  }
+  return data;
+}
 const A = {
-  get:  p     => fetch(p, {signal:AbortSignal.timeout(12000), headers:authH()}).then(r=>r.json()),
-  post: (p,b) => fetch(p, {method:'POST',  signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}).then(r=>r.json()),
-  put:  (p,b) => fetch(p, {method:'PUT',   signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}).then(r=>r.json()),
-  del:  p     => fetch(p, {method:'DELETE', signal:AbortSignal.timeout(12000), headers:authH()}).then(r=>r.json()),
+  get:  p     => apiRequest(p, {signal:AbortSignal.timeout(12000), headers:authH()}),
+  post: (p,b) => apiRequest(p, {method:'POST',  signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
+  put:  (p,b) => apiRequest(p, {method:'PUT',   signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
+  del:  p     => apiRequest(p, {method:'DELETE', signal:AbortSignal.timeout(12000), headers:authH()}),
 };
 
 /* ── Boot ── */
@@ -768,9 +778,11 @@ async function boot() {
     const storedToken = sessionStorage.getItem('dtoken');
     const storedSess  = sessionStorage.getItem('dsession');
     const storedVault = sessionStorage.getItem('dvault');
+    const storedSessionId = localStorage.getItem('direct_session_id');
     if (storedToken && storedSess && storedVault) {
       try {
         sessionToken = storedToken;
+        activeSessionId = storedSessionId;
         const s = JSON.parse(storedSess);
         currentUser = {role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, portals:s.portals};
         const v = JSON.parse(storedVault);
@@ -819,6 +831,8 @@ async function handleSetup() {
     }).then(r=>r.json());
     if (!signIn.ok){ err.textContent=signIn.error||'Error al iniciar sesión'; err.hidden=false; return; }
     sessionToken = signIn.access_token;
+    activeSessionId = signIn.session_id || null;
+    if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     sessionStorage.setItem('dtoken', sessionToken);
 
     currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, portals:['dgii','tss','trabajo','sirla'] };
@@ -849,6 +863,8 @@ async function handleLogin() {
     if (!res.ok){ err.textContent=res.error||'Credenciales incorrectas'; err.hidden=false; return; }
 
     sessionToken = res.access_token;
+    activeSessionId = res.session_id || null;
+    if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     currentUser = { role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, portals:res.portals };
 
     // 2. Derive vault key client-side (password still in memory)
@@ -874,18 +890,20 @@ async function loadHome() {
   const data=await A.get('/api/credentials');
   credentials=data.credentials||[];
   lastPollTs=Date.now();
-  try { await refreshClients(); openClients(); } catch { showPortals(); }
+  try { await refreshClients(); openClients(); } catch { if(sessionToken) showPortals(); }
   startPolling();
 }
 
-function lockVault() {
-  masterKey=null; vaultSecret=null; sessionToken=null; currentUser=null;
+function lockVault(message='') {
+  masterKey=null; vaultSecret=null; sessionToken=null; activeSessionId=null; currentUser=null;
   sessionStorage.removeItem('dtoken'); sessionStorage.removeItem('dsession'); sessionStorage.removeItem('dvault');
+  localStorage.removeItem('direct_session_id');
   stopPolling();
   show('view-login');
   document.getElementById('login-username').value='';
   document.getElementById('login-pw').value='';
   document.getElementById('login-username').focus();
+  if(message) toast(message,'warn');
 }
 
 /* ── Views ── */

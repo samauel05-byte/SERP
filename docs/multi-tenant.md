@@ -33,6 +33,14 @@ servidor son la única capa que usa el rol de servicio y aplican el filtro de
 tenant antes de cada operación. Esto evita que un cambio de identificador desde
 el navegador permita leer o modificar información de otra empresa.
 
+## Sesión única
+
+`direct_active_sessions` conserva un identificador aleatorio por usuario. Cada
+inicio de sesión lo reemplaza. Las rutas autenticadas comprueban ese identificador
+en cada solicitud; cuando otra computadora inicia sesión con el mismo usuario,
+la sesión anterior recibe un 401, borra su bóveda de memoria y vuelve a la pantalla
+de acceso.
+
 ## Flujo de Excel
 
 1. El usuario autenticado sin clientes aterriza en el estado vacío de Clientes.

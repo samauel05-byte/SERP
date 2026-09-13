@@ -356,8 +356,12 @@ export default {
   }
   function requestedCardPosition(){
     // DGII renders text such as: "Favor introducir el código número: 3 de su tarjeta".
-    // Read the position from the page rather than assuming a fixed card slot.
-    var text = (document.body && document.body.innerText) || '';
+    // Read labels and tooltip attributes too; DGII sometimes renders its hint
+    // outside the visible form text.
+    var text = ((document.body && (document.body.innerText || document.body.textContent)) || '') + ' ' +
+      Array.from(document.querySelectorAll('[title],[data-original-title],[aria-label]')).map(function(el){
+        return el.getAttribute('title') || el.getAttribute('data-original-title') || el.getAttribute('aria-label') || '';
+      }).join(' ');
     var match = text.match(/c[oó]digo\\s*(?:n[uú]mero|n[ºo]\\.?)?\\s*:?\\s*(\\d{1,3})/i);
     var position = match ? parseInt(match[1], 10) : 0;
     return position > 0 ? position : 0;
@@ -365,6 +369,16 @@ export default {
   function cardCodeForPosition(codes, position){
     if(!Array.isArray(codes) || !position) return '';
     return String(codes[position - 1] || '').trim();
+  }
+  function cardInput(cfg){
+    var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
+    if(el) return el;
+    var inputs = Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=password])'));
+    return inputs.find(function(input){
+      var label = input.labels && input.labels.length ? Array.from(input.labels).map(function(l){return l.textContent;}).join(' ') : '';
+      var descriptor = [input.name,input.id,input.placeholder,label].filter(Boolean).join(' ');
+      return /(tarjeta|c[oó]digo.*tarjeta|token)/i.test(descriptor);
+    }) || null;
   }
 
   function run(){
@@ -392,7 +406,7 @@ export default {
       if(p.dgiiCodes){
         cardCode = cardCodeForPosition(p.dgiiCodes, requestedCardPosition());
       }
-      if(cardCode) fill(q(cfg.tarjeta), cardCode);
+      if(cardCode) fill(cardInput(cfg), cardCode);
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
@@ -407,14 +421,23 @@ export default {
     }, 800);
   }
 
-  // Poll until the password field appears (handles SPAs that render the form after JS loads)
+  // DGII may render its card prompt after the password field. Do not submit
+  // until both its input and the requested card code are available.
   function waitAndRun(remaining) {
     var pEl = document.querySelector('input[type="password"]');
-    if (pEl) { run(); return; }
+    var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
+    if (pEl && !isDgii) { run(); return; }
+    if (pEl && isDgii) {
+      var cfg = PORTALS['${hostname}'];
+      var position = requestedCardPosition();
+      var code = p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '');
+      if(cardInput(cfg) && code) { run(); return; }
+    }
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 400);
+    else if (pEl) run();
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(20); });
-  else waitAndRun(20);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(30); });
+  else waitAndRun(30);
 })();
 <\/script>`;
 

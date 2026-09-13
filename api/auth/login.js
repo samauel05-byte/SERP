@@ -1,6 +1,7 @@
 const supabase = require('../../lib/supabase');
 const { authenticate } = require('../../lib/auth');
 const { allow } = require('../../lib/rate-limit');
+const { randomUUID } = require('crypto');
 
 module.exports = async (req, res) => {
   // POST: sign in server-side, return JWT + vault data in one call
@@ -37,6 +38,13 @@ module.exports = async (req, res) => {
 
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
 
+      let session_id = null;
+      const nextSessionId = randomUUID();
+      const { error: sessionError } = await supabase.from('direct_active_sessions').upsert({
+        user_id: user.id, session_id: nextSessionId, issued_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+      if (!sessionError) session_id = nextSessionId;
+
       return res.json({
         ok: true,
         access_token,
@@ -48,6 +56,7 @@ module.exports = async (req, res) => {
         userSalt: profile.user_key_salt,
         vaultKeyIv: profile.vault_key_iv,
         vaultKeyCt: profile.vault_key_ct,
+        session_id,
       });
     } catch (e) {
       return res.status(500).json({ error: e.message });
