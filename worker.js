@@ -179,10 +179,13 @@ export default {
           const portalCookie = request.headers.get('Cookie');
           if (portalCookie) forwardHeaders.Cookie = portalCookie;
           if (request.method === 'POST' && request.headers.get('Content-Type')) forwardHeaders['Content-Type'] = request.headers.get('Content-Type');
+          // DGII redirects its WebForms POST. Buffer the body once so the
+          // runtime can safely retransmit it after that redirect.
+          const postBody = request.method === 'POST' ? await request.arrayBuffer() : undefined;
           const portalRes = await fetch(targetUrl, {
             method: request.method === 'POST' ? 'POST' : 'GET',
             headers: forwardHeaders,
-            body: request.method === 'POST' ? request.body : undefined,
+            body: postBody,
             redirect: 'follow',
           });
           html = await portalRes.text();
