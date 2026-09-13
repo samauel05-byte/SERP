@@ -432,7 +432,12 @@ export default {
       var cfg = PORTALS['${hostname}'];
       var position = requestedCardPosition();
       var code = p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '');
-      if(cardInput(cfg) && code) { run(); return; }
+      var cardField = cardInput(cfg);
+      // DGII has two consecutive screens. The first only has Usuario/Clave;
+      // submit it immediately. On the second screen it requests a position
+      // from the code card, and only then wait for that exact card value.
+      if (!cardField && !position) { run(); return; }
+      if (cardField && code) { run(); return; }
     }
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
     // DGII must never be submitted without the requested position on the card.
