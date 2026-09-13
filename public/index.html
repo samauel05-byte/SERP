@@ -1562,9 +1562,12 @@ async function enterCompany(credId) {
 function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCodes=[], existingTab=null) {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
-  const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || null;
-  const passField = appConfig[institution+'_passField'] || aspF.pass || inst.pf || null;
-  const submitField = appConfig[institution+'_submitField'] || aspF.submit || null;
+  // TSS is WebForms and its exact fields are known. Ignore any stale custom
+  // portal configuration; a wrong override silently drops RNC and CLASS.
+  const fixedTssFields = institution === 'tss';
+  const userField = fixedTssFields ? aspF.user : (appConfig[institution+'_userField'] || aspF.user || inst.uf || null);
+  const passField = fixedTssFields ? aspF.pass : (appConfig[institution+'_passField'] || aspF.pass || inst.pf || null);
+  const submitField = fixedTssFields ? aspF.submit : (appConfig[institution+'_submitField'] || aspF.submit || null);
 
   // Build payload — credentials go in the URL hash (never sent to server)
   const payload = { url, user, pass };
