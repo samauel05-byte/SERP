@@ -1739,7 +1739,7 @@ async function parseExcel(file) {
 
     companies.push({
       name,
-      dgii:    {user:col('dgii_username'), pass:col('dgii_password'), tarjeta:col('dgii_tarjeta')},
+      dgii:    {user:col('dgii_username'), pass:col('dgii_password'), tarjeta:col('dgii_tarjeta'), dgiiCodes:col('dgii_cod_tarjetas')},
       tss:     {user:col('tesoreria_rnc_cedula'), cedula:col('tesoreria_cedula'), pass:col('tesoreria_class')},
       trabajo: {user:col('mintrabajo_username'), pass:col('mintrabajo_password'), rnc:col('mintrabajo_rnc')},
       idoppril:{user:col('idoppril_rnc_user'), pass:col('idoppril_password')},
@@ -1783,6 +1783,9 @@ async function startImport() {
       const plain={companyName:co.name, username:d.user||'', password:d.pass||''};
       if(d.cedula) plain.cedula=d.cedula;
       if(d.tarjeta) plain.tarjeta=d.tarjeta;
+      // The spreadsheet's dgii_cod_tarjetas value is the complete DGII code card.
+      // Keep it as entered (normally codes separated by commas) so its positions remain intact.
+      if(d.dgiiCodes) plain.dgiiCodes=d.dgiiCodes;
       if(d.rnc)    plain.rnc=d.rnc;
       if(d.company) plain.company=d.company;
 
