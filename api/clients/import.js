@@ -6,6 +6,7 @@ const { normalizeClient } = require('./index');
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
+  if (session.role !== 'admin' && !session.access_clientes) return res.status(403).json({ error: 'Sin acceso al módulo Clientes.' });
   if (req.method !== 'POST') return res.status(405).end();
   if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores pueden importar clientes.' });
 

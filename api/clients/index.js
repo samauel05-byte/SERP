@@ -25,6 +25,7 @@ function normalizeClient(input) {
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
+  if (session.role !== 'admin' && !session.access_clientes) return res.status(403).json({ error: 'Sin acceso al módulo Clientes.' });
   try {
     const tenantId = await getTenant(session);
     if (!requireTenant(res, tenantId)) return;

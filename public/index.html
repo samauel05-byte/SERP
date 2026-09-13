@@ -499,6 +499,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-cami"> CAMI — Análisis 606/607 e IT-1</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-nala"> NALA — Chat IA · Facturas 606/607</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-ir2"> IR-2 — Declaración de renta</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-estimacion"> Estimación Fiscal — Anexos DGII</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-clientes" checked> Clientes — Gestión multiempresa</label>
       <div class="ferr" id="user-err" hidden></div>
     </div>
     <div class="modal-ftr" id="modal-user-ftr">
@@ -784,7 +787,7 @@ async function boot() {
         sessionToken = storedToken;
         activeSessionId = storedSessionId;
         const s = JSON.parse(storedSess);
-        currentUser = {role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, portals:s.portals};
+        currentUser = {role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_clientes:s.access_clientes, portals:s.portals};
         const v = JSON.parse(storedVault);
         vaultSecret = C._u8(v.secret);
         const { config } = await A.get('/api/config');
@@ -835,7 +838,7 @@ async function handleSetup() {
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     sessionStorage.setItem('dtoken', sessionToken);
 
-    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, portals:['dgii','tss','trabajo','sirla'] };
+    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
     vaultSecret = vaultSecretBytes;
     appConfig = { vaultSalt, verifierIv:verIv, verifierCt:verCt };
 
@@ -843,7 +846,7 @@ async function handleSetup() {
     await A.post('/api/config',{key:'verifierIv',value:verIv});
     await A.post('/api/config',{key:'verifierCt',value:verCt});
 
-    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, portals:['dgii','tss','trabajo','sirla']}));
+    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla']}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecretBytes)}));
     await loadHome();
   } catch(e){ err.textContent='Error: '+e.message; err.hidden=false; }
@@ -865,7 +868,7 @@ async function handleLogin() {
     sessionToken = res.access_token;
     activeSessionId = res.session_id || null;
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
-    currentUser = { role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, portals:res.portals };
+    currentUser = { role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals };
 
     // 2. Derive vault key client-side (password still in memory)
     const userKey = await C.deriveKey(pw, res.userSalt);
@@ -880,7 +883,7 @@ async function handleLogin() {
       masterKey=null; sessionToken=null; vaultSecret=null; return;
     }
     sessionStorage.setItem('dtoken', sessionToken);
-    sessionStorage.setItem('dsession', JSON.stringify({role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, portals:res.portals}));
+    sessionStorage.setItem('dsession', JSON.stringify({role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
     await loadHome();
   } catch(e){ err.textContent='Error: '+e.message; err.hidden=false; }
@@ -980,9 +983,12 @@ async function renderUsersList() {
       if (user.access_direct) modules.push('Direct');
       if (user.access_cami) modules.push('CAMI');
       if (user.access_nala) modules.push('NALA');
+      if (user.access_ir2) modules.push('IR-2');
+      if (user.access_estimacion) modules.push('Estimación');
+      if (user.access_clientes !== false) modules.push('Clientes');
       const uname=(user.username||user.email||'?').replace('@direct.local','');
       const initials=uname.charAt(0).toUpperCase();
-      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion,access_clientes:user.access_clientes}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
@@ -1030,6 +1036,9 @@ function openUserModal(userData=null) {
   ['dgii','tss','trabajo','sirla','carnet','azul'].forEach(p => { document.getElementById('u-portal-'+p).checked = portals.includes(p); });
   document.getElementById('u-access-cami').checked = userData?.access_cami || false;
   document.getElementById('u-access-nala').checked = userData?.access_nala || false;
+  document.getElementById('u-access-ir2').checked = userData?.access_ir2 || false;
+  document.getElementById('u-access-estimacion').checked = userData?.access_estimacion || false;
+  document.getElementById('u-access-clientes').checked = userData?.access_clientes !== false;
   document.getElementById('user-err').hidden=true;
   document.getElementById('modal-user').hidden=false;
 }
@@ -1044,6 +1053,9 @@ async function saveUser() {
   const portals_direct=access_direct?['dgii','tss','trabajo','sirla','carnet','azul'].filter(p=>document.getElementById('u-portal-'+p).checked):[];
   const access_cami=document.getElementById('u-access-cami').checked;
   const access_nala=document.getElementById('u-access-nala').checked;
+  const access_ir2=document.getElementById('u-access-ir2').checked;
+  const access_estimacion=document.getElementById('u-access-estimacion').checked;
+  const access_clientes=document.getElementById('u-access-clientes').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
   if (!username){err.textContent='Escribe un nombre de usuario';err.hidden=false;return;}
   if (!userId && !password){err.textContent='La contraseña es requerida';err.hidden=false;return;}
@@ -1056,7 +1068,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={username, role, access_direct, portals_direct, access_cami, access_nala};
+    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes};
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
     else await A.post('/api/users',body);
@@ -1164,9 +1176,9 @@ function renderPortalGrid() {
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
-  if (currentUser?.access_cami) allowed.push('ir2');
-  if (currentUser?.access_cami) allowed.push('dgii-modulos');
-  allowed.push('clients');
+  if (currentUser?.access_ir2) allowed.push('ir2');
+  if (currentUser?.access_estimacion) allowed.push('dgii-modulos');
+  if (currentUser?.access_clientes !== false) allowed.push('clients');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },

@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
-        .select('id, role, access_direct, access_cami, access_nala, portals_direct, created_at')
+        .select('id, role, access_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes, portals_direct, created_at')
         .eq('tenant_id', session.tenantId)
         .order('created_at');
 
@@ -27,6 +27,9 @@ module.exports = async (req, res) => {
         access_direct: p.access_direct !== false,
         access_cami: p.access_cami,
         access_nala: p.access_nala,
+        access_ir2: p.access_ir2,
+        access_estimacion: p.access_estimacion,
+        access_clientes: p.access_clientes !== false,
         portals_direct: p.portals_direct,
         created_at: p.created_at,
       }));
@@ -35,7 +38,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -53,6 +56,9 @@ module.exports = async (req, res) => {
         access_direct: access_direct !== false,
         access_cami: access_cami || false,
         access_nala: access_nala || false,
+        access_ir2: access_ir2 || false,
+        access_estimacion: access_estimacion || false,
+        access_clientes: access_clientes !== false,
         portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         user_key_salt: userSalt || null,
         vault_key_iv: vaultKeyIv || null,

@@ -37,6 +37,9 @@ module.exports = async (req, res) => {
         .maybeSingle();
 
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
+      const { data: moduleProfile, error: moduleError } = await supabase.from('direct_profiles')
+        .select('access_ir2, access_estimacion, access_clientes').eq('id', user.id).maybeSingle();
+      const modules = moduleError ? { access_ir2: profile.access_cami === true, access_estimacion: profile.access_cami === true, access_clientes: true } : moduleProfile;
 
       let session_id = null;
       const nextSessionId = randomUUID();
@@ -52,6 +55,9 @@ module.exports = async (req, res) => {
         access_direct: profile.access_direct !== false,
         access_cami: profile.access_cami || false,
         access_nala: profile.access_nala || false,
+        access_ir2: modules.access_ir2 === true,
+        access_estimacion: modules.access_estimacion === true,
+        access_clientes: modules.access_clientes !== false,
         portals: profile.portals_direct || [],
         userSalt: profile.user_key_salt,
         vaultKeyIv: profile.vault_key_iv,
@@ -75,6 +81,9 @@ module.exports = async (req, res) => {
         .maybeSingle();
 
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
+      const { data: moduleProfile, error: moduleError } = await supabase.from('direct_profiles')
+        .select('access_ir2, access_estimacion, access_clientes').eq('id', session.userId).maybeSingle();
+      const modules = moduleError ? { access_ir2: profile.access_cami === true, access_estimacion: profile.access_cami === true, access_clientes: true } : moduleProfile;
 
       return res.json({
         ok: true,
@@ -82,6 +91,9 @@ module.exports = async (req, res) => {
         access_direct: profile.access_direct !== false,
         access_cami: profile.access_cami || false,
         access_nala: profile.access_nala || false,
+        access_ir2: modules.access_ir2 === true,
+        access_estimacion: modules.access_estimacion === true,
+        access_clientes: modules.access_clientes !== false,
         portals: profile.portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         userSalt: profile.user_key_salt,
         vaultKeyIv: profile.vault_key_iv,
