@@ -9,6 +9,11 @@ module.exports = async (req, res) => {
   }
   try {
     if (req.method === 'GET') {
+      if (req.query.poll === '1') {
+        const since = parseInt(req.query.since, 10) || 0;
+        const updates = await db.getCredentialsSince(session.tenantId, since, session.role === 'admin' ? null : session.portals_direct);
+        return res.json({ ok: true, updates, serverTime: Date.now() });
+      }
       const credentials = await db.getCredentials(session.tenantId, session.role === 'admin' ? null : session.portals_direct);
       return res.json({ ok: true, credentials });
     }

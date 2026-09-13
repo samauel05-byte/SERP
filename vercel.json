@@ -1,5 +1,8 @@
 {
   "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/api/poll", "destination": "/api/credentials?poll=1" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
