@@ -4,6 +4,7 @@ const PORTALS = {
   'dgii.gov.do': {
     user: ['ctl00$ContentPlaceHolder1$txtUsuario', 'txtUsuario', 'usuario', 'user', 'username'],
     pass: ['ctl00$ContentPlaceHolder1$txtPassword', 'txtPassword', 'password', 'clave', 'contrasena'],
+    tarjeta: ['ctl00$ContentPlaceHolder1$txtTarjeta', 'ctl00$ContentPlaceHolder1$txtCodigoTarjeta', 'txtTarjeta', 'txtCodigoTarjeta', 'tarjeta', 'codigoTarjeta', 'codigo'],
     submit: ['ctl00$ContentPlaceHolder1$btnEntrar', 'btnEntrar'],
   },
   'tss.gob.do': {
@@ -61,6 +62,10 @@ function tryFill(creds) {
 
   fillField(userEl, creds.username || creds.user || '');
   fillField(passEl, creds.password || creds.pass || '');
+
+  if (cfg.tarjeta && creds.tarjeta) {
+    fillField(findField(cfg.tarjeta), creds.tarjeta);
+  }
 
   if (cfg.extra && creds.cedula) {
     for (const [fieldName, credKey] of Object.entries(cfg.extra)) {

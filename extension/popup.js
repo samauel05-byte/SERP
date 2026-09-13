@@ -173,6 +173,7 @@ async function fillCurrent(index) {
     username: data.username || data.user || '',
     password: data.password || data.pass || '',
     cedula:   data.cedula || '',
+    tarjeta:  data.tarjeta || '',
     portal:   host,
   };
 
