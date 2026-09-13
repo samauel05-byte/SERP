@@ -385,8 +385,20 @@ export default {
   }
   function cardCodeForPosition(codes, position){
     if(!position) return '';
-    var list = Array.isArray(codes) ? codes : String(codes || '').split(/[;,|\\r\\n]+/);
-    return String(list[position - 1] || '').trim();
+    // Flatten again here even when the payload is an array: mobile browsers
+    // may preserve the whole Excel cell as a single array item.
+    var raw = Array.isArray(codes) ? codes : [codes];
+    var list = [];
+    raw.forEach(function(value){
+      String(value || '').split(/[;,|\\r\\n]+/).forEach(function(code){
+        code = code.trim();
+        if(code) list.push(code);
+      });
+    });
+    // Return one token only. A comma/newline in the result means it is not a
+    // valid single card position and must never be submitted as the full card.
+    var selected = String(list[position - 1] || '').trim();
+    return /^[^,;|\\r\\n]+$/.test(selected) ? selected : '';
   }
   function cardInput(cfg){
     var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
@@ -432,7 +444,10 @@ export default {
       if(p.dgiiCodes){
         cardCode = cardCodeForPosition(p.dgiiCodes, requestedCardPosition());
       }
-      if(cardCode) fill(cardInput(cfg), cardCode);
+      if(cardCode) {
+        var cardEl = cardInput(cfg);
+        if(cardEl) { cardEl.value=''; fill(cardEl, cardCode); }
+      }
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
