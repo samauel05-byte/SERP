@@ -311,6 +311,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       Volver a portales
     </button>
     <div id="portal-banner"></div>
+    <div id="portal-sync-action" style="display:flex;justify-content:flex-end;margin:0 0 12px">
+      <button class="add-company-btn" type="button" onclick="openImportModal()" style="background:var(--accent2,#059669);border-color:var(--accent2,#059669)">
+        Sincronizar Excel
+      </button>
+    </div>
     <div id="company-search-wrap" hidden style="margin-bottom:8px">
       <input id="company-search" type="search" placeholder="Buscar empresa…" autocomplete="off"
         style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;outline:none"
