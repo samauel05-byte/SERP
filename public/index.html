@@ -1854,6 +1854,10 @@ function slugId(name) {
     .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40);
 }
 
+function importedCredentialId(companyName, institution) {
+  return `${slugId(companyName)}_${institution}`;
+}
+
 function openImportModal() {
   document.getElementById('modal-import').hidden=false;
   document.getElementById('import-preview').hidden=true;
@@ -1894,7 +1898,10 @@ async function parseExcel(file) {
   if(raw.length<3) throw new Error('El archivo no tiene datos suficientes');
 
   // Row 0 = column keys
-  const keys=raw[0].map(k=>String(k).trim().toLowerCase().replace(/\s+/g,'_'));
+  const keys=raw[0].map(normalizedHeader);
+  const requiredHeaders=['profile_name','dgii_username','dgii_password','dgii_cod_tarjetas','tesoreria_rnc_cedula','tesoreria_cedula','tesoreria_class','mintrabajo_rnc','mintrabajo_username','mintrabajo_password','idoppril_rnc_user','idoppril_password','azul_username','azul_password','cardnet_username','cardnet_password','onapi_email','onapi_password','formalizate_username','formalizate_password','camara_email','camara_password','citrus_username','citrus_password','citrus_company','sisalril_email','sisalril_password'];
+  const missingHeaders=requiredHeaders.filter(header=>!keys.includes(header));
+  if(missingHeaders.length) throw new Error('El archivo no corresponde a PARA SUBIR.xlsx. Faltan columnas: '+missingHeaders.slice(0,4).join(', '));
   const companies=[];
 
   for(let i=2;i<raw.length;i++){
@@ -1938,8 +1945,7 @@ async function startImport() {
   let processed=0;
 
   for(const co of rows){
-    const slug=slugId(co.name);
-    for(const inst of PORTALS){
+      for(const inst of PORTALS){
       const d=co[inst]; if(!d) continue;
       const hasUser=d.user&&d.user.length>0;
       const hasPass=d.pass&&d.pass.length>0;
@@ -1960,7 +1966,7 @@ async function startImport() {
 
       try {
         const {iv,ct}=await C.enc(masterKey,plain);
-        batch.push({id:`${slug}_${inst}`, institution:inst, category:'acceso', iv, ct});
+        batch.push({id:importedCredentialId(co.name,inst), institution:inst, category:'acceso', iv, ct});
       } catch {}
     }
     processed++;
@@ -1981,9 +1987,25 @@ async function startImport() {
     // Reload credentials from server
     const data=await A.get('/api/credentials');
     credentials=data.credentials||[];
+    // The Excel is the source of truth. Remove only older copies that decrypt
+    // to the exact same company and portal as a row that was just imported.
+    const importedIds=new Set(batch.map(item=>item.id));
+    const duplicateIds=[];
+    for(const credential of credentials){
+      if(importedIds.has(credential.id)) continue;
+      try {
+        const plain=await C.dec(masterKey,credential.iv,credential.ct);
+        const canonicalId=importedCredentialId(plain.companyName||'',credential.institution);
+        if(importedIds.has(canonicalId)) duplicateIds.push(credential.id);
+      } catch {}
+    }
+    let removedDuplicates=0;
+    for(const id of duplicateIds){
+      try { const deleted=await A.del(`/api/credentials/${id}`); if(deleted?.ok){ removedDuplicates++; credentials=credentials.filter(item=>item.id!==id); } } catch {}
+    }
     renderPortalGrid();
     if(activePortal) await renderCompaniesView();
-    toast(`Importadas ${res.count} credenciales de ${rows.length} empresas`,'ok');
+    toast(`Importadas ${res.count} credenciales de ${rows.length} empresas${removedDuplicates?`. ${removedDuplicates} duplicado(s) eliminado(s)`:''}`,'ok');
     setTimeout(closeImportModal,1500);
   } catch(e) {
     progTxt.textContent='Error: '+e.message;
