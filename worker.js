@@ -16,6 +16,7 @@ const ALLOWED_HOSTS = [
   'sisaril.gob.do',
   'www.sisaril.gob.do',
   'portal.sisaril.gob.do',
+  'virtual.sisalril.gob.do',
   'cardnet.com.do',
   'www.cardnet.com.do',
   // Azul
@@ -51,7 +52,7 @@ const ALLOWED_HOSTS = [
 ];
 const CORS_ORIGIN = 'https://direct-save.vercel.app';
 const WORKER_ORIGIN = 'https://portal-rd-relay.samauel05.workers.dev';
-const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do']);
+const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do', 'virtual.sisalril.gob.do']);
 
 const SUBMIT_HTML = `<!doctype html>
 <html lang="es">

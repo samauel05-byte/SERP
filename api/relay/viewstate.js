@@ -15,6 +15,7 @@ export default async function handler(req, res) {
     'dgii.gov.do', 'www.dgii.gov.do', 'oficinavirtual.dgii.gov.do',
     'ovi.mt.gob.do', 'mt.gob.do', 'www.mt.gob.do',
     'sisaril.mt.gob.do', 'sisaril.gob.do', 'www.sisaril.gob.do',
+    'virtual.sisalril.gob.do',
     'cardnet.com.do', 'www.cardnet.com.do',
   ];
   const isAllowed = candidate => candidate.protocol === 'https:' && allowed.some(h => candidate.hostname === h || candidate.hostname.endsWith('.' + h));

@@ -638,16 +638,18 @@ const INST = {
              uf:'ctl00$ContentPlaceHolder1$txtUsuario', pf:'ctl00$ContentPlaceHolder1$txtPassword',
              aspFields:{ user:'ctl00$ContentPlaceHolder1$txtUsuario', pass:'ctl00$ContentPlaceHolder1$txtPassword' } },
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',
-             url:'https://www.tss.gob.do/Tss/Account/LogIn',
+             // The former www.tss.gob.do/Tss/Account/LogIn route is retired.
+             url:'https://suir.gob.do/Login.aspx?log=r',
              uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
              aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' },
-             directOpen:true },
+             // WebForms needs its hidden ViewState fields submitted with the credentials.
+             directSubmit:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
              uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
-             url:'https://sisaril.mt.gob.do',
-             uf:'usuario', pf:'contrasena', directOpen:true },
+             url:'https://virtual.sisalril.gob.do/sisalrilvirtual/home/index/28',
+             uf:'email', pf:'password' },
   carnet:  { name:'Cardnet',     desc:'Portal bancario · Acceso a pagos y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
              uf:'usuario', pf:'contrasena' },
   azul:    { name:'Azul',        desc:'Portal bancario · Banca en línea',           grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',
@@ -1422,6 +1424,15 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existin
   if (userField) payload.userField = userField;
   if (passField) payload.passField = passField;
   if (submitField) payload.submitField = submitField;
+
+  // TSS/SUIR is an ASP.NET WebForms site. Submit its ViewState and credentials
+  // through the dedicated form relay instead of trying to render it in a proxy.
+  if (inst.directSubmit) {
+    const directUrl = '/autologin.html#' + btoa(encodeURIComponent(JSON.stringify(payload)));
+    if (existingTab) existingTab.location.href = directUrl;
+    else window.open(directUrl, '_blank');
+    return;
+  }
 
   // Attach pre-fetched ViewState if available (avoids the relay fetch delay in autologin.html)
   const cached = _vsCache[url];
