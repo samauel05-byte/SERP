@@ -6,9 +6,27 @@ module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
-  if (!requireTenant(res, session.tenantId)) return;
 
   try {
+    // Preserve the legacy user list while a pre-existing installation has not
+    // yet run the tenant migration. It is read-only; mutations remain blocked.
+    if (req.method === 'GET' && !session.tenantId) {
+      const { data: profiles, error } = await supabase
+        .from('direct_profiles')
+        .select('id, role, access_direct, access_cami, access_nala, portals_direct, created_at')
+        .order('created_at');
+      if (error) throw error;
+      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const emailMap = Object.fromEntries((authUsers || []).map(user => [user.id, (user.email || '').replace('@direct.local', '')]));
+      return res.json({ ok: true, users: (profiles || []).map(profile => ({
+        ...profile,
+        username: emailMap[profile.id] || '',
+        access_ir2: profile.access_cami === true,
+        access_estimacion: profile.access_cami === true,
+        access_clientes: true,
+      })) });
+    }
+    if (!requireTenant(res, session.tenantId)) return;
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
