@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -76,7 +76,8 @@ module.exports = async (req, res) => {
         access_nala: access_nala || false,
         access_ir2: access_ir2 || false,
         access_estimacion: access_estimacion || false,
-        access_clientes: access_clientes !== false,
+        // Client records are isolated by the tenant, not by a module checkbox.
+        access_clientes: true,
         portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         user_key_salt: userSalt || null,
         vault_key_iv: vaultKeyIv || null,

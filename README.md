@@ -1,6 +1,15 @@
 # SERP — Plataforma contable multiempresa
 
-Sistema para equipos contables que centraliza clientes, credenciales cifradas y herramientas de trabajo para los portales dominicanos. Cada usuario trabaja únicamente con la empresa asignada a su perfil.
+Sistema para equipos contables que centraliza clientes, credenciales cifradas y herramientas de trabajo para los portales dominicanos.
+
+## Modelo multiempresa
+
+Hay dos niveles claramente separados:
+
+1. **Empresa operadora (tenant):** por ejemplo, `Save` o `Contadores del Este`. Cada usuario inicia sesión dentro de una sola empresa operadora.
+2. **Clientes:** son las empresas que atiende esa operadora. Sus credenciales, RNC, archivos y resultados pertenecen exclusivamente a su empresa operadora.
+
+Los módulos Direct, CAMI, NALA, IR-1 e Estimación Fiscal son funciones comunes del producto: se habilitan para cada empresa operadora contratante, pero sus consultas siempre usan el tenant del usuario autenticado. Por eso Contadores del Este nunca puede ver datos de Save, aun cuando ambos utilicen exactamente los mismos módulos.
 
 ## URL de producción
 
@@ -57,7 +66,7 @@ Contraseña del usuario (solo en memoria del navegador)
 | **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login |
 | **Cami** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 |
 | **NALA** | Chat IA para contabilidad dominicana |
-| **Clientes** | Onboarding y gestión de clientes por empresa mediante Excel |
+| **Clientes** | Gestión de los clientes de la empresa operadora mediante Excel |
 
 ---
 
@@ -70,7 +79,7 @@ Contraseña del usuario (solo en memoria del navegador)
 
 El admin puede:
 - Crear y desactivar usuarios
-- Asignar acceso a módulos (Direct / Cami / NALA)
+- Asignar acceso a módulos (Direct / CAMI / NALA / IR-1 / Estimación Fiscal)
 - Asignar portales individuales a cada usuario
 - Restablecer la contraseña de cualquier usuario
 
@@ -80,8 +89,8 @@ El admin puede:
 
 - **Auto-login**: un clic envía automáticamente las credenciales al portal en una nueva pestaña
 - **Cifrado AES-256-GCM** en el navegador — las credenciales viajan y se almacenan siempre cifradas
-- **Multiempresa** con datos aislados por tenant
-- **Carga de clientes por Excel** con validación de estructura, formatos y duplicados
+- **Multiempresa** con datos aislados por tenant, sin convertirla en un permiso visible para usuarios
+- **Carga de clientes por Excel** con validación de estructura, formatos y duplicados; la importación crea o actualiza solo clientes de la empresa operadora actual
 - **Sesión exclusiva**: al abrir el mismo usuario en otro equipo se bloquea la sesión anterior
 - **Sincronización en tiempo real** — cualquier cambio se refleja al instante
 - **Enter funciona** en todos los formularios y modales
@@ -140,7 +149,13 @@ Antes de usar Clientes o Sesión única, aplica las migraciones de `supabase/mig
 
 ---
 
-## Cómo subir empresas desde Excel
+## Alta de una empresa nueva y carga por Excel
+
+Cuando se vende el sistema a una firma nueva, por ejemplo `Contadores del Este`, se crea primero su **tenant** y su administrador. Ese administrador no hereda usuarios, clientes ni credenciales de Save.
+
+Luego se sube el Excel de esa firma. El proceso valida encabezados, formatos y duplicados; crea los perfiles de sus clientes nuevos y reporta los ya existentes, dejándolos disponibles en el panel de esa firma. Una carga debe ejecutarse siempre dentro del tenant correcto: nunca desde Save para evitar mezclar carteras.
+
+## Cómo subir información desde Excel
 
 El script `upload-companies.mjs` lee el Excel de credenciales y las sube directamente a la bóveda cifrada:
 

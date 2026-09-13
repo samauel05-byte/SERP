@@ -501,7 +501,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-nala"> NALA — Chat IA · Facturas 606/607</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-ir2"> IR-2 — Declaración de renta</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-estimacion"> Estimación Fiscal — Anexos DGII</label>
-      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-clientes" checked> Clientes — Gestión multiempresa</label>
       <div class="ferr" id="user-err" hidden></div>
     </div>
     <div class="modal-ftr" id="modal-user-ftr">
@@ -985,10 +984,9 @@ async function renderUsersList() {
       if (user.access_nala) modules.push('NALA');
       if (user.access_ir2) modules.push('IR-2');
       if (user.access_estimacion) modules.push('Estimación');
-      if (user.access_clientes !== false) modules.push('Clientes');
       const uname=(user.username||user.email||'?').replace('@direct.local','');
       const initials=uname.charAt(0).toUpperCase();
-      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion,access_clientes:user.access_clientes}).replace(/"/g,'&quot;');
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
@@ -1038,7 +1036,6 @@ function openUserModal(userData=null) {
   document.getElementById('u-access-nala').checked = userData?.access_nala || false;
   document.getElementById('u-access-ir2').checked = userData?.access_ir2 || false;
   document.getElementById('u-access-estimacion').checked = userData?.access_estimacion || false;
-  document.getElementById('u-access-clientes').checked = userData?.access_clientes !== false;
   document.getElementById('user-err').hidden=true;
   document.getElementById('modal-user').hidden=false;
 }
@@ -1055,7 +1052,6 @@ async function saveUser() {
   const access_nala=document.getElementById('u-access-nala').checked;
   const access_ir2=document.getElementById('u-access-ir2').checked;
   const access_estimacion=document.getElementById('u-access-estimacion').checked;
-  const access_clientes=document.getElementById('u-access-clientes').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
   if (!username){err.textContent='Escribe un nombre de usuario';err.hidden=false;return;}
   if (!userId && !password){err.textContent='La contraseña es requerida';err.hidden=false;return;}
@@ -1068,7 +1064,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes};
+    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion};
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
     else await A.post('/api/users',body);
@@ -1178,7 +1174,7 @@ function renderPortalGrid() {
   if (currentUser?.access_nala) allowed.push('nala');
   if (currentUser?.access_ir2) allowed.push('ir2');
   if (currentUser?.access_estimacion) allowed.push('dgii-modulos');
-  if (currentUser?.access_clientes !== false) allowed.push('clients');
+  allowed.push('clients');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
