@@ -82,6 +82,7 @@ const SUBMIT_HTML = `<!doctype html>
 <script>
 (function(){
   var hash = location.hash.slice(1);
+  var launchedFromSerp = !!hash;
   if(!hash){
     document.getElementById('sp').style.display='none';
     document.getElementById('msg').textContent='Error';
@@ -347,6 +348,12 @@ export default {
   if(!hash) return;
   var p; try { p = JSON.parse(decodeURIComponent(atob(hash))); } catch(e){ return; }
   var dgiiFlowKey = 'serp-dgii-first-submit-' + (p.flow || hash);
+  // A URL received directly from SERP starts a new login, even in an older
+  // browser tab whose previous session state still exists. The card page is
+  // loaded without a hash, so it keeps the one-time submission marker.
+  if(launchedFromSerp){
+    try { sessionStorage.removeItem(dgiiFlowKey); } catch(e) {}
+  }
   function hasSubmittedDgiiFirstPage(){
     try { return sessionStorage.getItem(dgiiFlowKey) === '1'; } catch(e) { return false; }
   }
