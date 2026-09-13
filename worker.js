@@ -337,6 +337,13 @@ export default {
         const autofillScript = `<script>
 (function(){
   var hash = location.hash.slice(1);
+  // DGII posts the first form to a new relay URL. Keep the encrypted-in-URL
+  // payload only for this browser tab, then remove it from the URL before
+  // posting. This prevents the login script from starting over on every page.
+  try {
+    if(hash) sessionStorage.setItem('serp-relay-autofill-payload', hash);
+    else hash = sessionStorage.getItem('serp-relay-autofill-payload') || '';
+  } catch(e) {}
   if(!hash) return;
   var p; try { p = JSON.parse(decodeURIComponent(atob(hash))); } catch(e){ return; }
   var dgiiFlowKey = 'serp-dgii-first-submit-' + (p.flow || hash);
@@ -477,16 +484,9 @@ export default {
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
     setTimeout(function(){
       if(btn) {
-        // Keep the browser on the relay after the first DGII submit. The code
-        // card prompt is rendered by the next WebForms page, so it must retain
-        // this hash to read the requested card position and value.
-        var form = btn.form || document.querySelector('form');
-        // Only preserve credentials between DGII's two pages when this client
-        // actually has a code card. Otherwise the login response may keep the
-        // hash and this script would submit the password form repeatedly.
-        var needsCardStep = !!(p.dgiiCodes || p.tarjeta);
+        // The following DGII page stays on the relay. Its temporary tab-local
+        // payload is used only if it asks for a code-card position.
         if('${hostname}'.indexOf('dgii.gov.do') !== -1 && !requestedCardPosition()) markDgiiFirstPageSubmitted();
-        if(form && needsCardStep && hash && form.action.indexOf('/proxy?url=') !== -1 && form.action.indexOf('#') === -1) form.action += '#' + hash;
         btn.click();
       } else if(pEl) {
         // Fallback: press Enter on the password field
