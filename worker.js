@@ -165,9 +165,13 @@ export default {
       // Cache the raw login page HTML (without autofill script) for 2 minutes
       // so repeat opens of slow government portals are nearly instant.
       const cacheStorage = caches.default;
+      // A DGII login page establishes a session cookie. Serving a cached copy
+      // would omit that cookie and make a valid login return to the same form.
+      const canCachePage = request.method === 'GET' && !target.hostname.endsWith('dgii.gov.do');
       const cacheKey = new Request('https://cache.proxy/v2/' + encodeURIComponent(targetUrl));
       let html;
-      const cached = request.method === 'GET' ? await cacheStorage.match(cacheKey) : null;
+      let relaySetCookies = [];
+      const cached = canCachePage ? await cacheStorage.match(cacheKey) : null;
       if (cached) {
         html = await cached.text();
       } else {
@@ -189,6 +193,14 @@ export default {
             body: postBody,
             redirect: 'follow',
           });
+          try {
+            relaySetCookies = typeof portalRes.headers.getSetCookie === 'function'
+              ? portalRes.headers.getSetCookie()
+              : (portalRes.headers.getAll ? portalRes.headers.getAll('set-cookie') : []);
+          } catch(e) {
+            const cookie = portalRes.headers.get('set-cookie');
+            if(cookie) relaySetCookies = [cookie];
+          }
           html = await portalRes.text();
 
           // Cache raw HTML (before autofill injection) for 2 minutes
@@ -205,7 +217,7 @@ export default {
               return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + post;
             } catch { return m; }
           });
-          if (request.method === 'GET') await cacheStorage.put(cacheKey, new Response(cachedHtml, {
+          if (canCachePage) await cacheStorage.put(cacheKey, new Response(cachedHtml, {
             headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=120' }
           }));
           html = cachedHtml;
@@ -534,12 +546,16 @@ export default {
 
         html = html.includes('</body>') ? html.replace('</body>', autofillScript + '</body>') : html + autofillScript;
 
-        return new Response(html, {
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'no-store',
-          },
+        const responseHeaders = new Headers({
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
         });
+        // The browser is on workers.dev, so strip DGII's Domain attribute.
+        // The relay forwards this cookie back to DGII on the next request.
+        for (const cookie of relaySetCookies) {
+          responseHeaders.append('Set-Cookie', String(cookie).replace(/;\s*Domain=[^;]*/gi, ''));
+        }
+        return new Response(html, { headers: responseHeaders });
       } catch(e) {
         return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
       }
