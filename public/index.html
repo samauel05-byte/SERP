@@ -1466,8 +1466,16 @@ async function enterCompany(credId) {
   try { plain=await C.dec(masterKey,cred.iv,cred.ct); }
   catch { toast('Error al descifrar credenciales','err'); newTab?.close(); return; }
 
-  _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||plain.rnc||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
+  _chUser=(instKey==='tss' ? (plain.tssRnc||plain.username) : plain.username)||'';
+  _chPass=(instKey==='tss' ? (plain.tssClass||plain.password) : plain.password)||'';
+  _chCedula=plain.cedula||plain.rnc||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
   _chDgiiCodes = parseDgiiCodes(plain.dgiiCodes);
+
+  if (instKey==='tss' && (!_chUser || !_chPass || !_chCedula)) {
+    newTab?.close();
+    toast('La ficha de TSS está incompleta. Reimporta el Excel para sincronizar RNC, cédula y CLASS.','warn');
+    return;
+  }
 
   // The SUIR WebForms form rejects a submission without its fresh ViewState.
   // The tab was opened above, so this short wait cannot be blocked by popup rules.
@@ -1889,7 +1897,7 @@ async function parseExcel(file) {
     companies.push({
       name,
       dgii:    {user:col('dgii_username'), pass:col('dgii_password'), tarjeta:col('dgii_tarjeta'), dgiiCodes:col('dgii_cod_tarjetas')},
-      tss:     {user:col('tesoreria_rnc_cedula'), cedula:col('tesoreria_cedula'), pass:col('tesoreria_class')},
+      tss:     {user:col('tesoreria_rnc_cedula'), rnc:col('tesoreria_rnc_cedula'), cedula:col('tesoreria_cedula'), pass:col('tesoreria_class'), classValue:col('tesoreria_class')},
       trabajo: {user:col('mintrabajo_username'), pass:col('mintrabajo_password'), rnc:col('mintrabajo_rnc')},
       idoppril:{user:col('idoppril_rnc_user'), pass:col('idoppril_password')},
       azul:    {user:col('azul_username'), pass:col('azul_password')},
@@ -1931,6 +1939,10 @@ async function startImport() {
 
       const plain={companyName:co.name, username:d.user||'', password:d.pass||''};
       if(d.cedula) plain.cedula=d.cedula;
+      if(inst==='tss') {
+        plain.tssRnc=d.rnc||d.user||'';
+        plain.tssClass=d.classValue||d.pass||'';
+      }
       if(d.tarjeta) plain.tarjeta=d.tarjeta;
       // The spreadsheet's dgii_cod_tarjetas value is the complete DGII code card.
       // Keep it as entered (normally codes separated by commas) so its positions remain intact.
