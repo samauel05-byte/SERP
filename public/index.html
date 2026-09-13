@@ -1601,7 +1601,9 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
   // Use CF Worker proxy: fetches portal HTML server-side, injects autofill script.
   // Credentials are ONLY in the hash — never sent to the worker.
   const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
-  const proxyPayload = { user: payload.user, pass: payload.pass };
+  // A unique flow id keeps the relay's one-time DGII submission state scoped
+  // to this exact launch, never to an older browser tab or prior login.
+  const proxyPayload = { user: payload.user, pass: payload.pass, flow: String(Date.now()) + '-' + Math.random().toString(36).slice(2) };
   if (payload.cedula) proxyPayload.cedula = payload.cedula;
   if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;
   if (payload.dgiiCodes) proxyPayload.dgiiCodes = payload.dgiiCodes;

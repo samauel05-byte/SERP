@@ -339,6 +339,13 @@ export default {
   var hash = location.hash.slice(1);
   if(!hash) return;
   var p; try { p = JSON.parse(decodeURIComponent(atob(hash))); } catch(e){ return; }
+  var dgiiFlowKey = 'serp-dgii-first-submit-' + (p.flow || hash);
+  function hasSubmittedDgiiFirstPage(){
+    try { return sessionStorage.getItem(dgiiFlowKey) === '1'; } catch(e) { return false; }
+  }
+  function markDgiiFirstPageSubmitted(){
+    try { sessionStorage.setItem(dgiiFlowKey, '1'); } catch(e) {}
+  }
 
   // Per-portal field name maps
   var PORTALS = {
@@ -478,6 +485,7 @@ export default {
         // actually has a code card. Otherwise the login response may keep the
         // hash and this script would submit the password form repeatedly.
         var needsCardStep = !!(p.dgiiCodes || p.tarjeta);
+        if('${hostname}'.indexOf('dgii.gov.do') !== -1 && !requestedCardPosition()) markDgiiFirstPageSubmitted();
         if(form && needsCardStep && hash && form.action.indexOf('/proxy?url=') !== -1 && form.action.indexOf('#') === -1) form.action += '#' + hash;
         btn.click();
       } else if(pEl) {
@@ -502,7 +510,10 @@ export default {
       // DGII has two consecutive screens. The first only has Usuario/Clave;
       // submit it immediately. On the second screen it requests a position
       // from the code card, and only then wait for that exact card value.
-      if (!cardField && !position) { run(); return; }
+      // A client without a card must submit the first form once only. If DGII
+      // returns another password page without requesting a numbered card code,
+      // it is a normal server response, not an instruction to submit again.
+      if (!position && !hasSubmittedDgiiFirstPage()) { run(); return; }
       if (cardField && code) { run(); return; }
     }
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
