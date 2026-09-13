@@ -362,13 +362,14 @@ export default {
       Array.from(document.querySelectorAll('[title],[data-original-title],[aria-label]')).map(function(el){
         return el.getAttribute('title') || el.getAttribute('data-original-title') || el.getAttribute('aria-label') || '';
       }).join(' ');
-    var match = text.match(/c[oó]digo\\s*(?:n[uú]mero|n[ºo]\\.?)?\\s*:?\\s*(\\d{1,3})/i);
+    var match = text.match(/c[oó]digo\\s*(?:(?:n[uú]mero|n[ºo]\\.?)(?:\\s*(?:de|#))?)?\\s*:?\\s*(\\d{1,3})/i);
     var position = match ? parseInt(match[1], 10) : 0;
     return position > 0 ? position : 0;
   }
   function cardCodeForPosition(codes, position){
-    if(!Array.isArray(codes) || !position) return '';
-    return String(codes[position - 1] || '').trim();
+    if(!position) return '';
+    var list = Array.isArray(codes) ? codes : String(codes || '').split(/[;,|\\r\\n]+/);
+    return String(list[position - 1] || '').trim();
   }
   function cardInput(cfg){
     var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
@@ -418,7 +419,7 @@ export default {
         pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));
         pEl.dispatchEvent(new KeyboardEvent('keypress',{key:'Enter',keyCode:13,bubbles:true}));
       }
-    }, 800);
+    }, 180);
   }
 
   // DGII may render its card prompt after the password field. Do not submit
@@ -433,11 +434,12 @@ export default {
       var code = p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '');
       if(cardInput(cfg) && code) { run(); return; }
     }
-    if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 400);
-    else if (pEl) run();
+    if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
+    // DGII must never be submitted without the requested position on the card.
+    else if (pEl && !isDgii) run();
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(30); });
-  else waitAndRun(30);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); });
+  else waitAndRun(100);
 })();
 <\/script>`;
 

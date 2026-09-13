@@ -1400,6 +1400,11 @@ async function cleanAllDupes() {
 /* ── Auto-login ── */
 let _chUser='', _chPass='', _chCedula='', _chTarjeta='', _chUrl='', _chDgiiCodes=[];
 
+function parseDgiiCodes(value) {
+  if (Array.isArray(value)) return value.map(v => String(v ?? '').trim()).filter(Boolean);
+  return String(value || '').split(/[;,|\r\n]+/).map(v => v.trim()).filter(Boolean);
+}
+
 // ViewState cache: keyed by portal URL, short TTL so stale values don't accumulate
 const _vsCache = {};
 const _VS_TTL = 90000; // 90 seconds
@@ -1447,7 +1452,7 @@ async function enterCompany(credId) {
   catch { toast('Error al descifrar credenciales','err'); newTab?.close(); return; }
 
   _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
-  _chDgiiCodes = plain.dgiiCodes ? plain.dgiiCodes.split(',').map(s=>s.trim()) : [];
+  _chDgiiCodes = parseDgiiCodes(plain.dgiiCodes);
 
   // The SUIR WebForms form rejects a submission without its fresh ViewState.
   // The tab was opened above, so this short wait cannot be blocked by popup rules.
