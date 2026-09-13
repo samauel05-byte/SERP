@@ -480,6 +480,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="modal-body">
       <input type="hidden" id="modal-user-id">
       <p class="slabel">Datos de acceso</p>
+      <div class="field"><label>Empresa contable</label><select id="u-tenant" disabled style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;width:100%;font-size:13px"><option>Cargando empresa…</option></select><small style="color:var(--text3);font-size:11px;margin-top:5px;display:block">El usuario solo verá los clientes y empresas asignados a esta empresa contable.</small></div>
       <div class="field"><label>Usuario</label><input id="u-username" type="text" placeholder="Ej: juan" autocomplete="off"></div>
       <div class="field"><label id="u-pw-label">Contraseña</label><input id="u-pw" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
       <p class="slabel">Rol</p>
@@ -972,6 +973,14 @@ async function importClientsFile(file){
   }catch(error){ toast(error.message||'No se pudo leer el Excel','err'); }
 }
 
+let currentTenant = null;
+async function loadCurrentTenant() {
+  if (currentTenant) return currentTenant;
+  const data = await A.get('/api/tenant');
+  currentTenant = data.tenant || null;
+  return currentTenant;
+}
+
 async function showUsers() {
   show('view-users');
   await renderUsersList();
@@ -1024,7 +1033,7 @@ function toggleDirectPortals(on) {
   document.getElementById('portals-section').style.display = on ? '' : 'none';
 }
 
-function openUserModal(userData=null) {
+async function openUserModal(userData=null) {
   const isEdit = userData && userData.id;
   document.getElementById('modal-user-id').value = isEdit ? userData.id : '';
   document.getElementById('modal-user-title').textContent = isEdit ? 'Editar usuario' : 'Nuevo usuario';
@@ -1032,6 +1041,18 @@ function openUserModal(userData=null) {
   document.getElementById('u-pw').value = '';
   document.getElementById('u-pw-label').textContent = isEdit ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña';
   document.getElementById('u-role').value = userData?.role || 'user';
+  const tenantSelect=document.getElementById('u-tenant');
+  tenantSelect.innerHTML='<option>Cargando empresa…</option>';
+  try {
+    const tenant=await loadCurrentTenant();
+    tenantSelect.textContent='';
+    const option=document.createElement('option');
+    option.value=tenant?.id||'';
+    option.textContent=tenant?.name||'Empresa contable asignada';
+    tenantSelect.appendChild(option);
+  } catch(e) {
+    tenantSelect.innerHTML='<option>Empresa contable no disponible</option>';
+  }
   const directOn = userData ? (userData.access_direct !== false) : true;
   document.getElementById('u-access-direct').checked = directOn;
   toggleDirectPortals(directOn);
