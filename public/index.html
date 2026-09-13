@@ -646,10 +646,14 @@ const INST = {
              directSubmit:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
-             uf:'usuario', pf:'contrasena' },
+             // OVI is a dynamic single-page application that cannot run through
+             // the HTML relay. Opening its official origin avoids its endless loader.
+             uf:'usuario', pf:'contrasena', directOpen:true },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
              url:'https://virtual.sisalril.gob.do/sisalrilvirtual/home/index/28',
-             uf:'email', pf:'password' },
+             // SISALRIL uses an external identity provider; proxying its SPA
+             // leaves it on a loading screen, so keep authentication on its origin.
+             uf:'email', pf:'password', directOpen:true },
   carnet:  { name:'Cardnet',     desc:'Portal bancario · Acceso a pagos y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
              uf:'usuario', pf:'contrasena' },
   azul:    { name:'Azul',        desc:'Portal bancario · Banca en línea',           grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',

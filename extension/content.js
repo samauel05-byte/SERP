@@ -13,6 +13,22 @@ const PORTALS = {
     extra: { 'ctl00$MainContent$txtrepresentante': 'cedula' },
     submit: ['ctl00$MainContent$btLoginRep'],
   },
+  'suir.gob.do': {
+    user: ['ctl00$MainContent$txtrncCedula', 'txtrncCedula'],
+    pass: ['ctl00$MainContent$txtClassRep', 'txtClassRep'],
+    extra: { 'ctl00$MainContent$txtrepresentante': 'cedula' },
+    submit: ['ctl00$MainContent$btLoginRep'],
+  },
+  'ovi.mt.gob.do': {
+    user: ['userNameOrEmailAddress', 'usuario', 'username', 'email'],
+    pass: ['password', 'contrasena', 'clave'],
+    submit: ['LoginButton', 'btnLogin', 'login'],
+  },
+  'virtual.sisalril.gob.do': {
+    user: ['email', 'correo', 'username', 'usuario'],
+    pass: ['password', 'contrasena', 'clave'],
+    submit: ['login', 'btnLogin', 'submit'],
+  },
   'mt.gob.do': {
     user: ['usuario', 'user', 'username'],
     pass: ['password', 'clave', 'contrasena'],
