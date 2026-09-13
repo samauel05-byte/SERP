@@ -1321,8 +1321,16 @@ async function prefetchViewState(credId) {
     try {
       const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
       const r = await fetch(CF_RELAY + '?url=' + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
-      if (r.ok) { const d = await r.json(); _vsCache[url].data = d; }
-    } catch {}
+      if (!r.ok) throw new Error('Relay no disponible');
+      _vsCache[url].data = await r.json();
+    } catch {
+      // The production relay may not know a newly moved government portal yet.
+      // Use the authenticated app relay so the current ViewState still accompanies TSS/SUIR.
+      try {
+        const d = await A.get('/api/relay/viewstate?url=' + encodeURIComponent(url));
+        if (!d.error) _vsCache[url].data = d;
+      } catch {}
+    }
   })();
 }
 
@@ -1344,6 +1352,14 @@ async function enterCompany(credId) {
 
   _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
   _chDgiiCodes = plain.dgiiCodes ? plain.dgiiCodes.split(',').map(s=>s.trim()) : [];
+
+  // The SUIR WebForms form rejects a submission without its fresh ViewState.
+  // The tab was opened above, so this short wait cannot be blocked by popup rules.
+  if (inst?.directSubmit && loginUrl) {
+    prefetchViewState(credId);
+    const preload = _vsCache[loginUrl]?.promise;
+    if (preload) await Promise.race([preload, new Promise(resolve => setTimeout(resolve, 3500))]);
+  }
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
@@ -1430,15 +1446,6 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
   if (passField) payload.passField = passField;
   if (submitField) payload.submitField = submitField;
 
-  // TSS/SUIR is an ASP.NET WebForms site. Submit its ViewState and credentials
-  // through the dedicated form relay instead of trying to render it in a proxy.
-  if (inst.directSubmit) {
-    const directUrl = '/autologin.html#' + btoa(encodeURIComponent(JSON.stringify(payload)));
-    if (existingTab) existingTab.location.href = directUrl;
-    else window.open(directUrl, '_blank');
-    return;
-  }
-
   // Attach pre-fetched ViewState if available (avoids the relay fetch delay in autologin.html)
   const cached = _vsCache[url];
   if (cached?.data) {
@@ -1448,6 +1455,15 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
     if (!userField && d.userField) payload.userField = d.userField;
     if (!passField && d.passField) payload.passField = d.passField;
     if (!submitField && d.submitField) payload.submitField = d.submitField;
+  }
+
+  // TSS/SUIR is an ASP.NET WebForms site. Submit its ViewState and credentials
+  // through the dedicated form relay instead of trying to render it in a proxy.
+  if (inst.directSubmit) {
+    const directUrl = '/autologin.html#' + btoa(encodeURIComponent(JSON.stringify(payload)));
+    if (existingTab) existingTab.location.href = directUrl;
+    else window.open(directUrl, '_blank');
+    return;
   }
 
   // Use CF Worker proxy: fetches portal HTML server-side, injects autofill script.
