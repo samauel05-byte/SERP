@@ -171,7 +171,14 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
       <div class="field"><label>Cargo</label><input id="h-cargo" type="text" placeholder="Gerente General" oninput="onHdrChange()"></div>
     </div>
   </div>
-  <div class="tax-note">💡 Tasa ISR vigente: 27% sobre Renta Neta Imponible. ISR Mínimo Alternativo: 1.5% sobre ingresos brutos. Se aplica el mayor de los dos.</div>
+  <div class="identity-card">
+    <div class="identity-title">TASAS DE LA ESTIMACIÓN · CONFIGURACIÓN MANUAL</div>
+    <div class="identity-grid small">
+      <div class="field"><label>Tasa ISR sobre renta neta (%)</label><input id="h-tasa-isr" type="number" min="0" step="0.01" value="27" oninput="onTaxRatesChange()"></div>
+      <div class="field"><label>ISR mínimo alternativo sobre ingresos (%)</label><input id="h-tasa-ima" type="number" min="0" step="0.01" value="1.5" oninput="onTaxRatesChange()"></div>
+    </div>
+  </div>
+  <div class="tax-note">💡 Estas tasas son manuales. La estimación compara el ISR calculado con el mínimo alternativo y aplica el mayor de los dos.</div>
 </div>
 
 <!-- ── Tabs ── -->
@@ -685,18 +692,22 @@ function renderResumen(){
 
   // Tiles summary
   const beneficio = totRes;
-  const isrEst = Math.max(0, beneficio * 0.27);
+  const tasaIsr = n(data.tasas?.isr) || 27;
+  const tasaIma = n(data.tasas?.ima) || 1.5;
+  const isrRentaNeta = Math.max(0, beneficio * tasaIsr / 100);
+  const isrMinimoAlternativo = Math.max(0, totVentas * tasaIma / 100);
+  const isrEst = Math.max(isrRentaNeta, isrMinimoAlternativo);
   const anticipos = MESES.reduce((s,mes)=>s+n((data.m?.[mes]||{}).ant_impt_ir3)+n((data.m?.[mes]||{}).ant_impt_r17),0);
   const porPagar = Math.max(0, isrEst - anticipos);
   // The source IR-2 workbook uses the higher of one twelfth of the ISR and
-  // 1.5% of annual sales divided by twelve to estimate the next advance.
-  const nuevosAnticipos = Math.max(isrEst / 12, (totVentas * 0.015) / 12);
+  // the configured minimum-alternative rate over annual sales divided by twelve.
+  const nuevosAnticipos = Math.max(isrEst / 12, isrMinimoAlternativo / 12);
   document.getElementById('tiles-res').innerHTML = [
     {lbl:'Ingresos Totales', val:totVentas, cls:''},
     {lbl:'Gastos NCF Total', val:totGastos, cls:''},
     {lbl:'TSS + INFOTEP', val:totSalud+totPenE+totPenP+totRL+n(data.infotep), cls:''},
     {lbl:'Beneficio Estimado', val:beneficio, cls:beneficio>=0?'pos':'neg'},
-    {lbl:'ISR Estimado (27%)', val:isrEst, cls:'warn'},
+    {lbl:`ISR Estimado (${fmt(tasaIsr)}% / ${fmt(tasaIma)}%)`, val:isrEst, cls:'warn'},
     {lbl:'Anticipos Pagados', val:anticipos, cls:''},
     {lbl:'ISR a Pagar', val:porPagar, cls:porPagar>0?'neg':'pos'},
   ].map(t=>`<div class="tile"><div class="tile-lbl">${t.lbl}</div><div class="tile-val ${t.cls}">${fmtDOP(t.val)}</div></div>`).join('');
@@ -708,7 +719,9 @@ function renderResumen(){
     <div class="res-line sub"><span class="lbl">(−) Sueldos</span><span class="val">${fmtDOP(totSueldos)}</span></div>
     <div class="res-line sub"><span class="lbl">(−) TSS + INFOTEP</span><span class="val">${fmtDOP(totSalud+totPenE+totPenP+totRL+n(data.infotep))}</span></div>
     <div class="res-line total"><span class="lbl">Beneficio Estimado</span><span class="val ${beneficio>=0?'pos':'neg'}">${fmtDOP(beneficio)}</span></div>
-    <div class="res-line sub"><span class="lbl">ISR Liquidado (27%)</span><span class="val warn">${fmtDOP(isrEst)}</span></div>
+    <div class="res-line sub"><span class="lbl">ISR sobre renta neta (${fmt(tasaIsr)}%)</span><span class="val warn">${fmtDOP(isrRentaNeta)}</span></div>
+    <div class="res-line sub"><span class="lbl">ISR mínimo alternativo (${fmt(tasaIma)}%)</span><span class="val warn">${fmtDOP(isrMinimoAlternativo)}</span></div>
+    <div class="res-line total"><span class="lbl">ISR aplicado (mayor de los dos)</span><span class="val warn">${fmtDOP(isrEst)}</span></div>
     <div class="res-line sub"><span class="lbl">(−) Anticipos Pagados</span><span class="val">${fmtDOP(anticipos)}</span></div>
     <div class="res-line total"><span class="lbl">Impuesto a Pagar</span><span class="val ${porPagar>0?'neg':'pos'}">${fmtDOP(porPagar)}</span></div>
     <div class="res-line"><span class="lbl">Nuevos Anticipos mensuales</span><span class="val warn">${fmtDOP(nuevosAnticipos)}</span></div>`;
@@ -733,6 +746,15 @@ function onAnioChange(){
   loadData();
 }
 
+function onTaxRatesChange(){
+  data.tasas = {
+    isr:n(document.getElementById('h-tasa-isr').value),
+    ima:n(document.getElementById('h-tasa-ima').value)
+  };
+  renderResumen();
+  scheduleAutoSave();
+}
+
 function onInputChange(){
   data.infotep = n(document.getElementById('infotep-anual').value);
   updateFicha();
@@ -741,6 +763,7 @@ function onInputChange(){
   data.inventario = n(document.getElementById('r-inv').value);
   data.inventario_ini = n(document.getElementById('r-invini').value);
   data.capital = n(document.getElementById('r-capital').value);
+  data.tasas = {isr:n(document.getElementById('h-tasa-isr').value),ima:n(document.getElementById('h-tasa-ima').value)};
   renderResumen();
   scheduleAutoSave();
 }
@@ -785,6 +808,7 @@ async function save(){
   data.inventario = n(document.getElementById('r-inv').value);
   data.inventario_ini = n(document.getElementById('r-invini').value);
   data.capital = n(document.getElementById('r-capital').value);
+  data.tasas = {isr:n(document.getElementById('h-tasa-isr').value),ima:n(document.getElementById('h-tasa-ima').value)};
 
   try {
     const res = await fetch('/api/ir2/resumen',{
@@ -821,6 +845,8 @@ function buildAll(){
   document.getElementById('r-inv').value = data.inventario||'';
   document.getElementById('r-invini').value = data.inventario_ini||'';
   document.getElementById('r-capital').value = data.capital||'';
+  document.getElementById('h-tasa-isr').value = data.tasas?.isr ?? 27;
+  document.getElementById('h-tasa-ima').value = data.tasas?.ima ?? 1.5;
   if(currentTab===5) renderResumen();
 }
 
@@ -846,6 +872,7 @@ function init(){
 }
 
 document.addEventListener('DOMContentLoaded', init);
+Object.assign(window,{goBack,switchTab,openAnexos,openDgiiSection,importDgiiFile,add607,add606,addTercero,delDgii,delTercero,delIr13,onDgii,onM,onT,onIr13,onHdrChange,onAnioChange,onTaxRatesChange,onInputChange,save});
 </script>
 </body>
 </html>
