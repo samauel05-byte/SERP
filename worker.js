@@ -360,7 +360,7 @@ export default {
     fill(pEl,p.pass||'');
     if(p.tarjeta){
       var tEl=document.querySelector('[name="tarjeta"],[name="token"],[name="codigo"],[name="codigoTarjeta"]');
-      if(!tEl){ var allInputs=Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=password]):not([type=submit])')); tEl=allInputs.find(function(i){return /(tarjeta|token|c[oó]digo)/i.test(i.name+' '+i.id+' '+(i.placeholder||''));}) || null; }
+      if(!tEl){ var allInputs=Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=submit])')); tEl=allInputs.find(function(i){return /(tarjeta|token|c[oó]digo)/i.test(i.name+' '+i.id+' '+(i.placeholder||''));}) || null; }
       if(tEl) fill(tEl, p.tarjeta);
     }
     var btn=document.querySelector('button[type="submit"],input[type="submit"]');
@@ -571,7 +571,7 @@ export default {
       }
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
-    if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
+    if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]') || document.querySelector('button:not([type="button"])');
     setTimeout(function(){
       if(btn) {
         // The following DGII page stays on the relay. Its temporary tab-local
@@ -629,23 +629,25 @@ export default {
   var W='${WORKER_ORIGIN}';
   var F=${JSON.stringify(portalFlow)};
   var HOSTS=${JSON.stringify(ALLOWED_HOSTS)};
+  // The page is served at workers.dev/proxy?url=<portal-url>.
+  // Relative hrefs must be resolved against the REAL portal base, not location.href.
+  var sp=new URLSearchParams(location.search);
+  var BASE=sp.get('url')||location.href;
   function isAllowed(host){return HOSTS.some(function(h){return host===h||host.endsWith('.'+h);});}
   function proxyHref(href){
     try{
-      var u=new URL(href);
+      var u=new URL(href,BASE);
       if(!isAllowed(u.hostname)) return null;
-      return W+'/proxy?url='+encodeURIComponent(href)+(F?'&flow='+encodeURIComponent(F):'');
+      return W+'/proxy?url='+encodeURIComponent(u.href)+(F?'&flow='+encodeURIComponent(F):'');
     }catch(e){return null;}
   }
   document.addEventListener('click',function(e){
     var el=e.target;
     while(el&&el.tagName!=='A') el=el.parentElement;
-    if(!el) return;
+    if(!el||!el.getAttribute) return;
     var href=el.getAttribute('href');
     if(!href||/^(javascript:|#|mailto:|tel:)/i.test(href)) return;
-    var abs;
-    try{abs=new URL(href,location.href).href;}catch(er){return;}
-    var p=proxyHref(abs);
+    var p=proxyHref(href);
     if(!p) return;
     e.preventDefault();
     e.stopPropagation();
