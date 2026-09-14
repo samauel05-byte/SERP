@@ -244,15 +244,16 @@ export default {
         const hostname = target.hostname;
         const isSPA = SPA_PROXY_HOSTS.has(hostname);
 
-        // DGII includes third-party chat and monitoring widgets which are
-        // registered only for dgii.gov.do.  When the page is served from the
-        // relay they fail (and an unguarded DigiWebchatWidget call can stop
-        // its whole inline script).  They are not part of authentication, so
-        // remove them from the proxied document before adding our login code.
+        // DGII includes a third-party chat widget registered only for
+        // dgii.gov.do. When served through the relay its global may be absent.
+        // Define a harmless fallback before DGII's scripts run; do not strip
+        // arbitrary inline scripts because the login form is also generated
+        // by DGII inline markup.
         if (hostname === 'dgii.gov.do' || hostname.endsWith('.dgii.gov.do')) {
-          html = html
-            .replace(/<script\b[^>]*\bsrc=["'][^"']*mfesecure-public[^"']*["'][^>]*>\s*<\/script>/gi, '')
-            .replace(/<script\b[^>]*>[\s\S]*?DigiWebchatWidget[\s\S]*?<\/script>/gi, '');
+          const chatGuard = '<script>window.DigiWebchatWidget=window.DigiWebchatWidget||function(){};</' + 'script>';
+          html = /<head(\s[^>]*)?>/i.test(html)
+            ? html.replace(/<head(\s[^>]*)?>/i, m => m + chatGuard)
+            : chatGuard + html;
         }
 
         // SPA portals (React): bypass cache, inject fetch/XHR interceptor, forward cookies
@@ -396,6 +397,7 @@ export default {
   if(!hash) return;
   var p; try { p = JSON.parse(decodeURIComponent(atob(hash))); } catch(e){ return; }
   var dgiiFlowKey = 'serp-dgii-first-submit-' + (p.flow || hash);
+  var dgiiCardSubmitKey = 'serp-dgii-card-submit-' + (p.flow || hash);
   // A URL received directly from SERP starts a new login, even in an older
   // browser tab whose previous session state still exists. The card page is
   // loaded without a hash, so it keeps the one-time submission marker.
@@ -407,6 +409,12 @@ export default {
   }
   function markDgiiFirstPageSubmitted(){
     try { sessionStorage.setItem(dgiiFlowKey, '1'); } catch(e) {}
+  }
+  function hasSubmittedDgiiCard(position){
+    try { return sessionStorage.getItem(dgiiCardSubmitKey) === String(position); } catch(e) { return false; }
+  }
+  function markDgiiCardSubmitted(position){
+    try { sessionStorage.setItem(dgiiCardSubmitKey, String(position)); } catch(e) {}
   }
 
   // Per-portal field name maps
@@ -490,30 +498,39 @@ export default {
     }
     if(isCardTextField(el)) return el;
     var inputs = Array.from(document.querySelectorAll('input')).filter(isCardTextField);
+    // DGII's labels are table cells rather than HTML <label> elements. Prefer
+    // the input in the row whose visible text explicitly says “Tarjeta”.
+    var rowMatched = inputs.find(function(input){
+      var row = input.closest && input.closest('tr');
+      return row && /tarjeta/i.test(row.textContent || '');
+    });
+    if(rowMatched) return rowMatched;
     var matched = inputs.find(function(input){
       var label = input.labels && input.labels.length ? Array.from(input.labels).map(function(l){return l.textContent;}).join(' ') : '';
       var descriptor = [input.name,input.id,input.placeholder,label].filter(Boolean).join(' ');
       return /(tarjeta|c[oó]digo.*tarjeta|token)/i.test(descriptor);
     });
     if(matched) return matched;
-    // DGII's markup occasionally omits a usable id/name for Tarjeta. Once its
-    // prompt is present, the card input is always the final visible non-password
-    // field (Usuario, then Tarjeta); this avoids relying on its changing markup.
-    if('${hostname}'.indexOf('dgii.gov.do') !== -1 && requestedCardPosition() > 0) {
-      return inputs.length ? inputs[inputs.length - 1] : null;
-    }
+    // Never guess a DGII field from its position. A wrong guess can put a
+    // card code in Usuario or overwrite another value.
     return null;
   }
 
   function run(){
     var cfg = PORTALS['${hostname}'];
+    var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
+    var cardPosition = isDgii ? requestedCardPosition() : 0;
     var uEl = cfg ? q(cfg.user) : null;
     var pEl = cfg ? q(cfg.pass) : null;
     // Generic fallback if portal-specific selectors don't match
     if(!uEl) uEl = document.querySelector('input[type="text"],input[type="email"]');
     if(!pEl) pEl = document.querySelector('input[type="password"]');
-    fill(uEl, p.user||'');
-    fill(pEl, p.pass||'');
+    // The code-card screen is a different step. Its Usuario/Clave values are
+    // already retained by DGII; on that screen write only into Tarjeta.
+    if(!isDgii || !cardPosition){
+      fill(uEl, p.user||'');
+      fill(pEl, p.pass||'');
+    }
     if(cfg && cfg.extra && p.cedula){
       var extraEl = Array.isArray(cfg.extra) ? q(cfg.extra) : document.querySelector('[name="'+cfg.extra+'"]');
       // Fallback: nth visible non-password input (for modern forms)
@@ -528,7 +545,7 @@ export default {
       // A single tarjeta value remains supported for portals that do not use a code card.
       var cardCode = p.tarjeta || '';
       if(p.dgiiCodes){
-        cardCode = cardCodeForPosition(p.dgiiCodes, requestedCardPosition());
+        cardCode = cardCodeForPosition(p.dgiiCodes, cardPosition);
       }
       if(cardCode) {
         var cardEl = cardInput(cfg);
@@ -541,7 +558,8 @@ export default {
       if(btn) {
         // The following DGII page stays on the relay. Its temporary tab-local
         // payload is used only if it asks for a code-card position.
-        if('${hostname}'.indexOf('dgii.gov.do') !== -1 && !requestedCardPosition()) markDgiiFirstPageSubmitted();
+        if(isDgii && !cardPosition) markDgiiFirstPageSubmitted();
+        if(isDgii && cardPosition) markDgiiCardSubmitted(cardPosition);
         btn.click();
       } else if(pEl) {
         // Fallback: press Enter on the password field
@@ -569,7 +587,9 @@ export default {
       // returns another password page without requesting a numbered card code,
       // it is a normal server response, not an instruction to submit again.
       if (!position && !hasSubmittedDgiiFirstPage()) { run(); return; }
-      if (cardField && code) { run(); return; }
+      // Send one card attempt only. If DGII rejects it, leave the page still
+      // instead of repeatedly submitting the same value.
+      if (cardField && code && !hasSubmittedDgiiCard(position)) { run(); return; }
     }
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
     // DGII must never be submitted without the requested position on the card.
