@@ -510,11 +510,13 @@ export default {
   }
   function cardInput(cfg){
     var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
+    // A configured selector names the exact field — accept any INPUT type, including password.
+    if(el && el.tagName === 'INPUT') return el;
     function isCardTextField(input){
       if(!input || input.tagName !== 'INPUT') return false;
-      return !/^(hidden|password|submit|button|image|checkbox|radio|file)$/i.test(input.type || 'text');
+      // Include password-type inputs: DGII's code card field is type=password
+      return !/^(hidden|submit|button|image|checkbox|radio|file)$/i.test(input.type || 'text');
     }
-    if(isCardTextField(el)) return el;
     var inputs = Array.from(document.querySelectorAll('input')).filter(isCardTextField);
     // DGII's labels are table cells rather than HTML <label> elements. Prefer
     // the input in the row whose visible text explicitly says “Tarjeta”.
