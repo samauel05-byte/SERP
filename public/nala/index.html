@@ -547,24 +547,24 @@ async function downloadXlsx(tipo, rows, periodo) {
     });
   });
 
-  // Totals row with SUM formulas (include cached result so Excel shows value without recalculation)
+  // Totals row with SUM formulas
   if (rows.length > 0) {
-    const totals = {};
+    const plainTotals = {};
+    cols.forEach(([key]) => {
+      plainTotals[key] = key === 'lineas' ? 'TOTAL' : '';
+    });
+    const tRow = ws.addRow(plainTotals);
+    tRow.font = { bold: true, size: 10 };
+    tRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+    // Set formulas explicitly on cells after row is added (more reliable than passing via addRow)
     cols.forEach(([key], ci) => {
-      if (key === 'lineas') { totals[key] = 'TOTAL'; return; }
       if (MONEY_KEYS.has(key)) {
         const letter = ws.getColumn(ci + 1).letter;
         const sum = rows.reduce((acc, row) => acc + n(row[key]), 0);
-        totals[key] = { formula: `SUM(${letter}2:${letter}${rows.length + 1})`, result: sum };
-      } else { totals[key] = ''; }
-    });
-    const tRow = ws.addRow(totals);
-    tRow.font = { bold: true, size: 10 };
-    tRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
-    cols.forEach(([key], ci) => {
-      if (MONEY_KEYS.has(key)) {
-        tRow.getCell(ci + 1).numFmt = '#,##0.00';
-        tRow.getCell(ci + 1).alignment = { horizontal: 'right' };
+        const cell = tRow.getCell(ci + 1);
+        cell.value = { formula: `SUM(${letter}2:${letter}${rows.length + 1})`, result: sum };
+        cell.numFmt = '#,##0.00';
+        cell.alignment = { horizontal: 'right' };
       }
     });
   }
