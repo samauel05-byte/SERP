@@ -36,8 +36,21 @@
     }
   };
 
-  // Credentials come from the URL hash — never sent to the server
-  const hash = location.hash.slice(1);
+  // Credentials come from the URL hash — never sent to the server.
+  // The parent window may navigate this tab to autologin.html#hash shortly after
+  // opening it (popup opened sync, credentials decrypted async), so poll briefly
+  // before giving up.
+  let hash = location.hash.slice(1);
+  if (!hash) {
+    await new Promise(resolve => {
+      let waited = 0;
+      const iv = setInterval(() => {
+        hash = location.hash.slice(1);
+        waited += 100;
+        if (hash || waited >= 5000) { clearInterval(iv); resolve(); }
+      }, 100);
+    });
+  }
   if (!hash) { set('Error', 'No se recibieron datos de acceso.', 'err'); return; }
 
   let params;
