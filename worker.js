@@ -244,6 +244,17 @@ export default {
         const hostname = target.hostname;
         const isSPA = SPA_PROXY_HOSTS.has(hostname);
 
+        // DGII includes third-party chat and monitoring widgets which are
+        // registered only for dgii.gov.do.  When the page is served from the
+        // relay they fail (and an unguarded DigiWebchatWidget call can stop
+        // its whole inline script).  They are not part of authentication, so
+        // remove them from the proxied document before adding our login code.
+        if (hostname === 'dgii.gov.do' || hostname.endsWith('.dgii.gov.do')) {
+          html = html
+            .replace(/<script\b[^>]*\bsrc=["'][^"']*mfesecure-public[^"']*["'][^>]*>\s*<\/script>/gi, '')
+            .replace(/<script\b[^>]*>[\s\S]*?DigiWebchatWidget[\s\S]*?<\/script>/gi, '');
+        }
+
         // SPA portals (React): bypass cache, inject fetch/XHR interceptor, forward cookies
         if (isSPA) {
           let spaRes;
