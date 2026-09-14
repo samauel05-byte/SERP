@@ -1155,19 +1155,27 @@ function openIr2() {
 
 function openDgiiModulos() {
   const frame = document.getElementById('dgii-modulos-frame');
-  if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('/ir2/resumen.html')) {
-    // The module can be opened from the dashboard without a selected company.
-    // Use an optional global context when one is available, but never block the
-    // iframe load because that context has not been initialized.
-    const co = window.currentCompany || null;
-    const params = co ? `?rnc=${encodeURIComponent(co.rnc||'')}&anio=${new Date().getFullYear()}&nombre=${encodeURIComponent(co.nombre||'')}` : '';
-    frame.src = '/ir2/resumen.html' + params;
+  if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('dgii')) {
+    frame.src = '/dgii/index.html';
   }
   show('view-dgii-modulos');
 }
 
 window.addEventListener('message', e => {
-  if (e.data && e.data.action === 'showPortals') showPortals();
+  if (!e.data) return;
+  if (e.data.action === 'showPortals') showPortals();
+  if (e.data.action === 'dgii-ready') {
+    const frame = document.getElementById('dgii-modulos-frame');
+    if (!frame || !frame.contentWindow) return;
+    const creds = getCompanies('dgii');
+    Promise.all(creds.map(async c => {
+      try { const p = await C.dec(masterKey, c.iv, c.ct); return {rnc: p.rnc||'', nombre: p.companyName||''}; }
+      catch { return null; }
+    })).then(cos => {
+      const companies = (cos||[]).filter(c => c && c.nombre);
+      frame.contentWindow.postMessage({action:'dgii-init', token: sessionToken, companies}, location.origin);
+    });
+  }
 });
 
 
