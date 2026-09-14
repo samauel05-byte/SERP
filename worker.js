@@ -328,6 +328,15 @@ export default {
           // Inject autofill script — waitAndRun polls until React renders the form
           const spaAutofill = `<script>
 (function(){
+  // Show error overlay if the portal hasn't rendered a password input within 30s
+  setTimeout(function(){
+    if(!document.querySelector('input[type="password"]')){
+      var d=document.createElement('div');
+      d.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.92);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:system-ui,sans-serif';
+      d.innerHTML='<div style="background:#1e293b;color:#e2e8f0;border-radius:12px;padding:32px 28px;max-width:360px;text-align:center"><div style="font-size:32px;margin-bottom:12px">⚠️</div><h3 style="margin:0 0 8px;font-size:17px">Portal no disponible</h3><p style="margin:0 0 18px;font-size:13px;color:#94a3b8">El portal del Ministerio de Trabajo tardó demasiado en cargar. Puede estar en mantenimiento o con problemas de conexión.</p><button onclick="window.close()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px">Cerrar</button></div>';
+      document.body.appendChild(d);
+    }
+  }, 30000);
   var hash=location.hash.slice(1);
   if(!hash) return;
   var p; try{p=JSON.parse(decodeURIComponent(atob(hash)));}catch(e){return;}
@@ -368,7 +377,11 @@ export default {
           // Forward Set-Cookie headers from OVI (strip Domain so they store on workers.dev)
           const spaRespHeaders = new Headers({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
           let spaCookies = [];
-          try { spaCookies = spaRes.headers.getAll('set-cookie'); } catch(e) {
+          try {
+            spaCookies = typeof spaRes.headers.getSetCookie === 'function'
+              ? spaRes.headers.getSetCookie()
+              : (spaRes.headers.getAll ? spaRes.headers.getAll('set-cookie') : []);
+          } catch(e) {
             const c = spaRes.headers.get('set-cookie');
             if (c) spaCookies = [c];
           }
