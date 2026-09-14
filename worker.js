@@ -275,6 +275,7 @@ export default {
   var R='${WORKER_ORIGIN}';
   var O='${spaOrigin}';
   window.__serpRelayErrors=[];
+  window.__serpRelayRequests=[];
   window.addEventListener('error',function(e){window.__serpRelayErrors.push({message:String(e.message||''),source:String(e.filename||''),line:e.lineno||0});});
   window.addEventListener('unhandledrejection',function(e){window.__serpRelayErrors.push({message:String((e.reason&&e.reason.message)||e.reason||'Unhandled rejection'),source:'promise',line:0});});
   function proxyUrl(u){
@@ -291,7 +292,7 @@ export default {
   window.fetch=function(input,init){
     var url=typeof input==='string'?input:(input&&input.url?input.url:String(input));
     var p=proxyUrl(url);
-    if(p) return _f(p,Object.assign({},init||{},{credentials:'include'}));
+    if(p) return _f(p,Object.assign({},init||{},{credentials:'include'})).then(function(r){window.__serpRelayRequests.push({url:url,status:r.status});return r;},function(e){window.__serpRelayRequests.push({url:url,error:String(e)});throw e;});
     return _f.apply(this,arguments);
   };
   var _X=window.XMLHttpRequest;
@@ -300,6 +301,7 @@ export default {
     var _o=x.open.bind(x);
     x.open=function(m,u){
       var p=proxyUrl(String(u));
+      x.addEventListener('loadend',function(){window.__serpRelayRequests.push({url:String(u),status:x.status});},{once:true});
       return _o(m,p||u,arguments[2],arguments[3],arguments[4]);
     };
     return x;
