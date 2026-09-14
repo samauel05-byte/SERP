@@ -589,6 +589,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <div class="notif-wrap" id="notif-wrap"></div>
 
+<!-- Modal: session timeout warning -->
+<div id="modal-session-timeout" class="modal-bg" hidden style="z-index:9999">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:32px;margin-bottom:12px">⏱️</div>
+    <div class="modal-ttl" style="margin-bottom:8px">Sesión por cerrarse</div>
+    <p id="session-timeout-msg" style="margin:0 0 20px;color:var(--muted);font-size:14px;line-height:1.5">
+      Tu sesión se cerrará en <strong id="session-countdown">60</strong> segundos por inactividad.<br>¿Quieres mantenerla abierta?
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-ghost" onclick="sessionTimeoutDeny()" style="min-width:90px">No</button>
+      <button class="btn btn-pri" onclick="sessionTimeoutExtend()" style="min-width:90px">Sí</button>
+    </div>
+  </div>
+</div>
+
 <!-- Credential helper panel -->
 <div id="cred-helper" class="cred-helper" hidden>
   <div class="cred-helper-hdr">
@@ -1837,9 +1852,66 @@ async function savePortalCfg() {
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
+/* ── Session timeout (20 min inactivity) ── */
+const SESSION_TIMEOUT_MS = 20 * 60 * 1000;  // 20 minutes
+const SESSION_WARN_MS    = 60 * 1000;        // warn 60 s before close
+let _sessionTimer = null, _sessionWarnTimer = null, _countdownTimer = null;
+
+function _resetSessionTimers() {
+  clearTimeout(_sessionTimer); clearTimeout(_sessionWarnTimer); clearInterval(_countdownTimer);
+  // Only arm if user is logged in
+  if (!sessionToken) return;
+  _sessionTimer     = setTimeout(_sessionWarnShow, SESSION_TIMEOUT_MS - SESSION_WARN_MS);
+  _sessionWarnTimer = null;
+}
+
+function _sessionWarnShow() {
+  if (!sessionToken) return;
+  const modal = document.getElementById('modal-session-timeout');
+  const cd    = document.getElementById('session-countdown');
+  modal.hidden = false;
+  let secs = 60;
+  cd.textContent = secs;
+  _countdownTimer = setInterval(() => {
+    secs--;
+    cd.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(_countdownTimer);
+      modal.hidden = true;
+      lockVault('Tu sesión se cerró por inactividad.');
+    }
+  }, 1000);
+}
+
+function sessionTimeoutExtend() {
+  document.getElementById('modal-session-timeout').hidden = true;
+  clearInterval(_countdownTimer);
+  _resetSessionTimers();
+}
+
+function sessionTimeoutDeny() {
+  document.getElementById('modal-session-timeout').hidden = true;
+  clearInterval(_countdownTimer);
+  lockVault('Sesión cerrada.');
+}
+
+function _startSessionWatch() {
+  _resetSessionTimers();
+  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(ev =>
+    document.addEventListener(ev, _resetSessionTimers, { passive: true })
+  );
+}
+
+function _stopSessionWatch() {
+  clearTimeout(_sessionTimer); clearTimeout(_sessionWarnTimer); clearInterval(_countdownTimer);
+  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(ev =>
+    document.removeEventListener(ev, _resetSessionTimers)
+  );
+}
+
 /* ── Polling ── */
-function startPolling() { if(pollTimer) return; pollTimer=setInterval(poll,8000); }
-function stopPolling()  { clearInterval(pollTimer); pollTimer=null; }
+function startPolling() { if(pollTimer) return; pollTimer=setInterval(poll,8000); _startSessionWatch(); }
+function stopPolling()  { clearInterval(pollTimer); pollTimer=null; _stopSessionWatch(); }
 async function poll() {
   const dot=document.getElementById('sync-dot'), txt=document.getElementById('sync-txt');
   try {
