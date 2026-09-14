@@ -973,14 +973,6 @@ async function importClientsFile(file){
   }catch(error){ toast(error.message||'No se pudo leer el Excel','err'); }
 }
 
-let currentTenant = null;
-async function loadCurrentTenant() {
-  if (currentTenant) return currentTenant;
-  const data = await A.get('/api/tenant');
-  currentTenant = data.tenant || null;
-  return currentTenant;
-}
-
 async function showUsers() {
   show('view-users');
   await renderUsersList();
@@ -1043,16 +1035,11 @@ async function openUserModal(userData=null) {
   document.getElementById('u-role').value = userData?.role || 'user';
   const tenantSelect=document.getElementById('u-tenant');
   tenantSelect.innerHTML='<option>Cargando empresa…</option>';
-  try {
-    const tenant=await loadCurrentTenant();
-    tenantSelect.textContent='';
-    const option=document.createElement('option');
-    option.value=tenant?.id||'';
-    option.textContent=tenant?.name||'Empresa contable asignada';
-    tenantSelect.appendChild(option);
-  } catch(e) {
-    tenantSelect.innerHTML='<option>Empresa contable no disponible</option>';
-  }
+  tenantSelect.textContent='';
+  const option=document.createElement('option');
+  option.value='current';
+  option.textContent='Empresa contable actual';
+  tenantSelect.appendChild(option);
   const directOn = userData ? (userData.access_direct !== false) : true;
   document.getElementById('u-access-direct').checked = directOn;
   toggleDirectPortals(directOn);
