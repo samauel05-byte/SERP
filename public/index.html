@@ -864,10 +864,18 @@ async function handleLogin() {
   if (!username||!pw){ err.textContent='Completa todos los campos'; err.hidden=false; return; }
   try {
     // 1. Sign in server-side — returns JWT + vault envelope in one call
-    const res = await fetch('/api/auth/login', {
+    const loginResponse = await fetch('/api/auth/login', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ username, password:pw })
-    }).then(r=>r.json());
+    });
+    const loginBody = await loginResponse.text();
+    let res;
+    try { res = JSON.parse(loginBody); }
+    catch {
+      throw new Error(loginResponse.status >= 500
+        ? 'El servidor tardó demasiado. Intenta nuevamente en unos segundos.'
+        : 'El servidor no respondió correctamente. Intenta nuevamente.');
+    }
     if (!res.ok){ err.textContent=res.error||'Credenciales incorrectas'; err.hidden=false; return; }
 
     sessionToken = res.access_token;
