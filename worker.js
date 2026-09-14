@@ -274,6 +274,9 @@ export default {
           const interceptor = `<script>(function(){
   var R='${WORKER_ORIGIN}';
   var O='${spaOrigin}';
+  window.__serpRelayErrors=[];
+  window.addEventListener('error',function(e){window.__serpRelayErrors.push({message:String(e.message||''),source:String(e.filename||''),line:e.lineno||0});});
+  window.addEventListener('unhandledrejection',function(e){window.__serpRelayErrors.push({message:String((e.reason&&e.reason.message)||e.reason||'Unhandled rejection'),source:'promise',line:0});});
   function proxyUrl(u){
     if(!u) return null;
     var s=String(u);
