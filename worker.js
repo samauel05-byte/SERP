@@ -671,18 +671,29 @@ export default {
       Object.defineProperty(_lp,'href',{configurable:true,get:_hd.get,set:function(href){var p=proxyHref(String(href));_origSet.call(this,p||href);}});
     }
   }catch(e){}
-  // Intercept form submits: rewrite absolute actions pointing at allowed hosts so they go through the proxy
-  document.addEventListener('submit',function(e){
-    var form=e.target;
-    if(!form||form.tagName!=='FORM') return;
+  // Rewrite a form's action to go through the proxy (used by both submit paths below)
+  function rewriteFormAction(form){
     var action=form.getAttribute('action')||'';
     if(!action||/^(javascript:|#)/i.test(action)) return;
     try{
       var u=new URL(action,BASE);
-      if(!isAllowed(u.hostname)) return;
-      form.action=W+'/proxy?url='+encodeURIComponent(u.href)+(F?'&flow='+encodeURIComponent(F):'');
+      if(isAllowed(u.hostname)) form.action=W+'/proxy?url='+encodeURIComponent(u.href)+(F?'&flow='+encodeURIComponent(F):'');
     }catch(ex){}
+  }
+  // Intercept user-initiated form submits (fires the submit event)
+  document.addEventListener('submit',function(e){
+    var form=e.target;
+    if(form&&form.tagName==='FORM') rewriteFormAction(form);
   },true);
+  // Patch HTMLFormElement.prototype.submit — ASP.NET __doPostBack calls form.submit() directly
+  // which DOES NOT fire the submit event, so the listener above would never catch it.
+  try{
+    var _origFormSubmit=HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit=function(){
+      rewriteFormAction(this);
+      _origFormSubmit.call(this);
+    };
+  }catch(e){}
 })();<\/script>`;
         html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + navInterceptor);
 
