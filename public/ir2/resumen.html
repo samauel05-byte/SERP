@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IR-2 · Datos DGII</title>
+<script src="/cami/vendor/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
@@ -106,6 +107,12 @@ select option{background:var(--surf2)}
 .res-line.sub{padding-left:28px}
 .res-line.total{background:var(--surf2);font-weight:700}
 .hint{font-size:11px;color:var(--fg3);margin-top:6px}
+.identity-wrap{padding:14px 14px 0;background:var(--bg)}
+.identity-card{background:#102342;border:1px solid #1d4d8d;border-radius:12px;padding:15px;margin-bottom:12px}
+.identity-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--acc3);padding-bottom:8px;margin-bottom:11px;border-bottom:1px solid rgba(61,139,255,.28)}
+.identity-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}.identity-grid.small{grid-template-columns:1fr 1fr 1fr}.identity-grid .field label{color:var(--acc3);font-weight:600}
+.tax-note{font-size:11px;color:var(--fg2);padding:0 4px 12px}
+.optional-note{font-size:11px;color:var(--fg2);padding:8px 0}
 
 .tbl-actions{display:flex;justify-content:flex-end;margin-bottom:8px}
 
@@ -131,26 +138,57 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 <!-- ── Header ── -->
 <div class="hdr">
   <div class="hdr-left">
-    <a class="back-btn" href="/ir2/">← IR-2</a>
+    <button class="back-btn" type="button" onclick="goBack()">← Volver</button>
     <div class="hdr-title">Datos DGII · Resumen Estimación</div>
   </div>
   <div class="hdr-right">
-    <input class="inp-hdr inp-rnc" id="h-rnc" type="text" placeholder="RNC" maxlength="11" oninput="onHdrChange()">
-    <input class="inp-hdr inp-nombre" id="h-nombre" type="text" placeholder="Nombre empresa" oninput="onHdrChange()">
-    <select class="inp-hdr inp-anio" id="h-anio" onchange="onAnioChange()"></select>
+    <button class="btn btn-primary btn-sm" onclick="openDgiiSection(0)">Gastos NCF · obligatorio</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(1)">Inmuebles · opcional</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(3)">Vehículos · opcional</button>
+    <button class="btn btn-outline btn-sm" onclick="openDgiiSection(5)">Importaciones · opcional</button>
+    <button class="btn btn-outline btn-sm" onclick="openAnexos()">Anexos DGII</button>
     <button class="btn btn-primary btn-sm" onclick="save()">Guardar</button>
     <span class="save-badge" id="save-badge">✓ Guardado</span>
   </div>
 </div>
 
+<div class="identity-wrap">
+  <div class="identity-card">
+    <div class="identity-title">IDENTIFICACIÓN DEL CONTRIBUYENTE</div>
+    <div class="identity-grid">
+      <div class="field"><label>Razón Social / Nombre Comercial</label><input id="h-nombre" type="text" placeholder="Empresa, S.R.L." oninput="onHdrChange()"></div>
+      <div class="field"><label>RNC (sin guiones)</label><input id="h-rnc" type="text" maxlength="11" placeholder="000000000" oninput="onHdrChange()"></div>
+      <div class="field"><label>Período Fiscal (Año)</label><select id="h-anio" onchange="onAnioChange()"></select></div>
+      <div class="field"><label>Tipo de Declaración</label><select id="h-tipo" onchange="onHdrChange()"><option>Original</option><option>Rectificativa</option></select></div>
+      <div class="field"><label>Actividad Económica</label><input id="h-actividad" type="text" placeholder="Comercio al por mayor" oninput="onHdrChange()"></div>
+    </div>
+  </div>
+  <div class="identity-card">
+    <div class="identity-title">REPRESENTANTE LEGAL</div>
+    <div class="identity-grid small">
+      <div class="field"><label>Nombre Completo</label><input id="h-representante" type="text" placeholder="Nombre del representante" oninput="onHdrChange()"></div>
+      <div class="field"><label>Cédula</label><input id="h-cedula" type="text" placeholder="000-0000000-0" oninput="onHdrChange()"></div>
+      <div class="field"><label>Cargo</label><input id="h-cargo" type="text" placeholder="Gerente General" oninput="onHdrChange()"></div>
+    </div>
+  </div>
+  <div class="identity-card">
+    <div class="identity-title">TASAS DE LA ESTIMACIÓN · CONFIGURACIÓN MANUAL</div>
+    <div class="identity-grid small">
+      <div class="field"><label>Tasa ISR sobre renta neta (%)</label><input id="h-tasa-isr" type="number" min="0" step="0.01" value="27" oninput="onTaxRatesChange()"></div>
+      <div class="field"><label>ISR mínimo alternativo sobre ingresos (%)</label><input id="h-tasa-ima" type="number" min="0" step="0.01" value="1.5" oninput="onTaxRatesChange()"></div>
+    </div>
+  </div>
+  <div class="tax-note">💡 Estas tasas son manuales. La estimación compara el ISR calculado con el mínimo alternativo y aplica el mayor de los dos.</div>
+</div>
+
 <!-- ── Tabs ── -->
 <div class="tabs" id="tabs">
-  <div class="tab active" onclick="switchTab(0)">606-607</div>
-  <div class="tab" onclick="switchTab(1)">Datos Terceros</div>
-  <div class="tab" onclick="switchTab(2)">TSS e INFOTEP</div>
-  <div class="tab" onclick="switchTab(3)">Anticipos</div>
-  <div class="tab" onclick="switchTab(4)">Resumen</div>
-  <div class="tab" onclick="switchTab(5)">IR-13</div>
+  <div class="tab active" onclick="switchTab(0)">607</div>
+  <div class="tab" onclick="switchTab(1)">606</div>
+  <div class="tab" onclick="switchTab(2)">Datos de Terceros</div>
+  <div class="tab" onclick="switchTab(3)">606 - 607</div>
+  <div class="tab" onclick="switchTab(4)">TSS e INFOTEP</div>
+  <div class="tab" onclick="switchTab(5)">Resumen Estimación</div>
 </div>
 
 <!-- ── Content ── -->
@@ -158,7 +196,54 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
 
 <!-- ════ TAB 0: 606-607 ════ -->
 <div class="section active" id="sec-0">
+  <div class="section-hdr"><span class="section-lbl">607 — Ventas DGII</span><div style="display:flex;gap:7px"><button class="btn btn-outline btn-sm" onclick="document.getElementById('file-607').click()">Subir 607</button><button class="btn-add" onclick="add607()">+ Agregar fila</button></div></div>
+  <input id="file-607" type="file" accept=".xlsx,.xls,.xlsm" hidden onchange="importDgiiFile(this,'607')">
+  <div class="tbl-wrap"><table><thead><tr><th>NCF</th><th>RNC / Cédula / Pasaporte</th><th>Tipo ingreso</th><th>Fecha comprobante</th><th class="num">Monto facturado</th><th class="num">ITBIS facturado</th><th class="num">Retención renta</th><th></th></tr></thead><tbody id="tbl-607"></tbody></table></div>
+</div>
+
+<!-- ════ TAB 1: 606 ════ -->
+<div class="section" id="sec-1">
+  <div class="section-hdr"><span class="section-lbl">606 — Compras y Gastos DGII</span><div style="display:flex;gap:7px"><button class="btn btn-outline btn-sm" onclick="document.getElementById('file-606').click()">Subir 606</button><button class="btn-add" onclick="add606()">+ Agregar fila</button></div></div>
+  <input id="file-606" type="file" accept=".xlsx,.xls,.xlsm" hidden onchange="importDgiiFile(this,'606')">
+  <div class="tbl-wrap"><table><thead><tr><th>NCF</th><th>RNC / Cédula</th><th>Tipo gasto</th><th>Fecha comprobante</th><th class="num">Servicios</th><th class="num">Bienes</th><th class="num">Total facturado</th><th class="num">ITBIS facturado</th><th class="num">ITBIS por adelantar</th><th class="num">ITBIS al costo</th><th></th></tr></thead><tbody id="tbl-606"></tbody></table></div>
+</div>
+
+<!-- ════ TAB 2: Datos de terceros ════ -->
+<div class="section" id="sec-2">
+  <div class="section-hdr">
+    <span class="section-lbl">Datos de Terceros</span>
+    <button class="btn-add" onclick="addTercero()">+ Agregar fila</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>NCF</th>
+          <th>RNC / Cédula</th>
+          <th>Nombre</th>
+          <th>Año Fiscal</th>
+          <th>Período</th>
+          <th>Fecha comprobante</th>
+          <th>Tipo NCF</th>
+          <th>Tipo Costo/Gasto</th>
+          <th class="num">Monto Facturado</th>
+          <th class="num">ITBIS Retenido</th>
+          <th class="num">ITBIS Facturado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbl-terceros"></tbody>
+    </table>
+  </div>
+  <div class="hint" style="margin-top:8px">Datos obtenidos de DGII → Datos de Terceros</div>
+</div>
+
+<!-- ════ TAB 3: 606-607 ════ -->
+<div class="section" id="sec-3">
   <div class="section-hdr"><span class="section-lbl">Ventas 607 & Compras 606 — Por Mes</span></div>
+  <div class="hint" style="margin-bottom:8px">Se consolida automáticamente con los archivos 606 y 607 cargados para el año seleccionado.</div>
+  <div class="optional-note">Gastos NCF es obligatorio para la estimación. Inmuebles, Vehículos y Pagos de Importación en DGA son datos opcionales.</div>
   <div class="tbl-wrap">
     <table>
       <thead>
@@ -181,38 +266,8 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
   </div>
 </div>
 
-<!-- ════ TAB 1: Datos Terceros ════ -->
-<div class="section" id="sec-1">
-  <div class="section-hdr">
-    <span class="section-lbl">Datos de Terceros</span>
-    <button class="btn-add" onclick="addTercero()">+ Agregar fila</button>
-  </div>
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>NCF</th>
-          <th>RNC / Cédula</th>
-          <th>Nombre</th>
-          <th>Año Fiscal</th>
-          <th>Período</th>
-          <th>Tipo NCF</th>
-          <th>Tipo Costo/Gasto</th>
-          <th class="num">Monto Facturado</th>
-          <th class="num">ITBIS Retenido</th>
-          <th class="num">ITBIS Facturado</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="tbl-terceros"></tbody>
-    </table>
-  </div>
-  <div class="hint" style="margin-top:8px">Datos obtenidos de DGII → Datos de Terceros</div>
-</div>
-
-<!-- ════ TAB 2: TSS e INFOTEP ════ -->
-<div class="section" id="sec-2">
+<!-- ════ TAB 4: TSS e INFOTEP ════ -->
+<div class="section" id="sec-4">
   <div class="section-hdr"><span class="section-lbl">TSS — Aportes por Mes</span></div>
   <div class="tbl-wrap" style="margin-bottom:14px">
     <table>
@@ -249,29 +304,8 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
   </div>
 </div>
 
-<!-- ════ TAB 3: Anticipos ════ -->
-<div class="section" id="sec-3">
-  <div class="section-hdr"><span class="section-lbl">Anticipos IR-3 / R-17 — Por Mes</span></div>
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>MES</th>
-          <th>Período IR-3</th>
-          <th class="num">Impt. Pago IR-3</th>
-          <th>Período R-17</th>
-          <th class="num">Impt. Pago R-17</th>
-          <th class="num calc">Total Anticipo</th>
-        </tr>
-      </thead>
-      <tbody id="tbl-anticipos"></tbody>
-      <tfoot id="tbl-anticipos-foot"></tfoot>
-    </table>
-  </div>
-</div>
-
-<!-- ════ TAB 4: Resumen Estimación ════ -->
-<div class="section" id="sec-4">
+<!-- ════ TAB 5: Resumen Estimación ════ -->
+<div class="section" id="sec-5">
   <div class="section-hdr"><span class="section-lbl">Resumen Estimación Fiscal — <span id="res-anio-lbl">2025</span></span></div>
 
   <div class="tiles" id="tiles-res"></div>
@@ -322,34 +356,6 @@ thead th.grp-r{background:rgba(245,158,11,.12);color:var(--warn)}
   </div>
 </div>
 
-<!-- ════ TAB 5: IR-13 ════ -->
-<div class="section" id="sec-5">
-  <div class="section-hdr">
-    <span class="section-lbl">Declaración IR-13</span>
-    <button class="btn-add" onclick="addIr13()">+ Agregar fila</button>
-  </div>
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Año Fiscal</th>
-          <th>Período</th>
-          <th>Fecha</th>
-          <th>Tipo Declaración</th>
-          <th class="num">Renta Neta</th>
-          <th class="num">ISR Determinado</th>
-          <th class="num">ISR Pagado</th>
-          <th class="num">Saldo</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="tbl-ir13"></tbody>
-    </table>
-  </div>
-  <div class="hint" style="margin-top:8px">Datos obtenidos de DGII → Declaraciones → IR-13</div>
-</div>
-
 </div><!-- /content -->
 
 <script>
@@ -368,10 +374,21 @@ let data = {};   // main data object
 function n(v){ return parseFloat(v) || 0; }
 function fmt(v){ return n(v).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtDOP(v){ return 'RD$ ' + fmt(v); }
+function escAttr(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function getToken(){
   try { return sessionStorage.getItem('dtoken') || parent?.sessionStorage?.getItem('dtoken') || null; } catch { return null; }
 }
+function goBack(){
+  if(history.length > 1) history.back();
+  else location.href='/ir2/';
+}
+// Browsers only allow their own native confirmation for refresh/close actions.
+// It covers Chrome, Edge and other modern browsers without risking data loss.
+window.addEventListener('beforeunload', event => {
+  event.preventDefault();
+  event.returnValue = '';
+});
 
 // ── Header year selector ──────────────────────────────────
 function buildYearSelect(){
@@ -391,10 +408,51 @@ function switchTab(i){
   document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
   document.querySelectorAll('.section').forEach((s,j)=>s.classList.toggle('active',j===i));
   currentTab = i;
-  if(i===4) renderResumen();
+  if(i===5) renderResumen();
 }
 
-// ── Build 606-607 table ───────────────────────────────────
+// ── DGII source tables ────────────────────────────────────
+function renderDgiiRows(key, target, columns){
+  const tbody=document.getElementById(target), rows=data[key]||[];
+  if(!rows.length){ tbody.innerHTML=`<tr><td colspan="${columns.length+2}" style="text-align:center;padding:20px;color:var(--fg3)">Sin registros DGII.</td></tr>`; return; }
+  tbody.innerHTML=rows.map((r,i)=>`<tr>${columns.map(c=>`<td><input type="${c.type||'text'}" value="${escAttr(r[c.key])}" placeholder="${c.placeholder||''}" data-key="${key}" data-i="${i}" data-f="${c.key}" ${c.type==='number'?'min="0" step="0.01"':''} oninput="onDgii(this)" style="width:${c.width||'120px'};${c.type==='number'?'text-align:right':''}"></td>`).join('')}<td><button class="btn-danger" onclick="delDgii('${key}',${i})">✕</button></td></tr>`).join('');
+}
+function onDgii(el){ const {key,i,f}=el.dataset; data[key][i][f]=el.type==='number'?(parseFloat(el.value)||0):el.value; scheduleAutoSave(); }
+function delDgii(key,i){ data[key].splice(i,1); key==='ventas607'?build607():build606(); scheduleAutoSave(); }
+function build607(){ renderDgiiRows('ventas607','tbl-607',[{key:'ncf',placeholder:'B0100000001'},{key:'rnc',placeholder:'RNC/Cédula'},{key:'tipo_ingreso',placeholder:'01',width:'80px'},{key:'fecha',type:'date',width:'135px'},{key:'monto',type:'number'},{key:'itbis',type:'number'},{key:'retencion_renta',type:'number'}]); }
+function add607(){ if(!data.ventas607)data.ventas607=[]; data.ventas607.push({ncf:'',rnc:'',tipo_ingreso:'',fecha:'',monto:0,itbis:0,retencion_renta:0}); build607(); }
+function build606(){ renderDgiiRows('compras606','tbl-606',[{key:'ncf',placeholder:'B0100000001'},{key:'rnc',placeholder:'RNC/Cédula'},{key:'tipo_gasto',placeholder:'01',width:'80px'},{key:'fecha',type:'date',width:'135px'},{key:'servicios',type:'number'},{key:'bienes',type:'number'},{key:'total',type:'number'},{key:'itbis',type:'number'},{key:'adelantar',type:'number'},{key:'costo',type:'number'}]); }
+function add606(){ if(!data.compras606)data.compras606=[]; data.compras606.push({ncf:'',rnc:'',tipo_gasto:'',fecha:'',servicios:0,bienes:0,total:0,itbis:0,adelantar:0,costo:0}); build606(); }
+function syncDgiiSummary(){
+  const year=String(document.getElementById('h-anio')?.value||''); if(!year) return;
+  if(!data.m) data.m={};
+  MESES.forEach(m=>data.m[m]={...(data.m[m]||{}),v_monto:0,v_itbis:0,c_total:0,c_adelantar:0,c_costo:0});
+  const month=d=>MESES[Number(String(d||'').slice(5,7))-1];
+  (data.ventas607||[]).filter(r=>String(r.fecha||'').startsWith(year)).forEach(r=>{const m=month(r.fecha);if(m){data.m[m].v_monto+=n(r.monto);data.m[m].v_itbis+=n(r.itbis)}});
+  (data.compras606||[]).filter(r=>String(r.fecha||'').startsWith(year)).forEach(r=>{const m=month(r.fecha);if(m){data.m[m].c_total+=n(r.total)||n(r.servicios)+n(r.bienes);data.m[m].c_adelantar+=n(r.adelantar);data.m[m].c_costo+=n(r.costo)}});
+}
+function openAnexos(){
+  const q=new URLSearchParams({rnc:document.getElementById('h-rnc').value,nombre:document.getElementById('h-nombre').value,anio:document.getElementById('h-anio').value});
+  location.href='/ir2/anexos.html?'+q;
+}
+function openDgiiSection(tab){
+  const q=new URLSearchParams({rnc:document.getElementById('h-rnc').value,nombre:document.getElementById('h-nombre').value,anio:document.getElementById('h-anio').value,tab});
+  location.href='/dgii/index.html?'+q;
+}
+function importDgiiFile(input,type){
+  const file=input.files?.[0]; if(!file||!window.XLSX)return;
+  const reader=new FileReader(); reader.onload=e=>{try{
+    const wb=XLSX.read(e.target.result,{type:'array',cellDates:true}), rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    const hi=rows.findIndex(r=>r.some(v=>String(v).toLowerCase().includes('ncf'))), h=rows[hi].map(v=>String(v).toLowerCase());
+    const val=(r,...names)=>r[h.findIndex(x=>names.some(n=>x.includes(n)))]||'';
+    const date=v=>v instanceof Date?v.toISOString().slice(0,10):String(v||'');
+    const key=type==='607'?'ventas607':'compras606'; if(!data[key])data[key]=[];
+    rows.slice(hi+1).filter(r=>r.some(Boolean)).forEach(r=>{const x=type==='607'?{ncf:val(r,'número comprobante','ncf'),rnc:val(r,'rnc/cédula'),fecha:date(val(r,'fecha comprobante')),monto:n(val(r,'monto facturado')),itbis:n(val(r,'itbis facturado'))}:{ncf:val(r,'ncf'),rnc:val(r,'rnc o cédula'),fecha:date(val(r,'fecha comprobante')),servicios:n(val(r,'servicios')),bienes:n(val(r,'bienes')),total:n(val(r,'total monto')),itbis:n(val(r,'itbis facturado')),adelantar:n(val(r,'por adelantar')),costo:n(val(r,'llevado al costo'))};if(x.ncf||x.rnc)data[key].push(x)});
+    syncDgiiSummary();buildAll();scheduleAutoSave();alert('Archivo '+type+' importado');
+  }catch(err){alert('No se pudo importar: '+err.message)} input.value=''};reader.readAsArrayBuffer(file);
+}
+
+// ── Consolidado 606-607 ───────────────────────────────────
 function build606607(){
   const tbody = document.getElementById('tbl-606607');
   tbody.innerHTML = MESES.map((mes,i)=>{
@@ -438,16 +496,17 @@ function renderTerceros(){
   const tbody = document.getElementById('tbl-terceros');
   const rows = data.terceros || [];
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--fg3)">Sin registros. Haz clic en "+ Agregar fila".</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--fg3)">Sin registros. Haz clic en "+ Agregar fila".</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map((r,i)=>`<tr>
     <td style="color:var(--fg3)">${i+1}</td>
-    <td><input type="text" value="${r.ncf||''}" placeholder="B0100000001" data-i="${i}" data-f="ncf" oninput="onT(this)" style="width:130px"></td>
-    <td><input type="text" value="${r.rnc||''}" placeholder="000-0000000-0" data-i="${i}" data-f="rnc" oninput="onT(this)" style="width:120px"></td>
-    <td><input type="text" value="${r.nombre||''}" placeholder="Razón social" data-i="${i}" data-f="nombre" oninput="onT(this)" style="width:160px"></td>
+    <td><input type="text" value="${escAttr(r.ncf)}" placeholder="B0100000001" data-i="${i}" data-f="ncf" oninput="onT(this)" style="width:130px"></td>
+    <td><input type="text" value="${escAttr(r.rnc)}" placeholder="000-0000000-0" data-i="${i}" data-f="rnc" oninput="onT(this)" style="width:120px"></td>
+    <td><input type="text" value="${escAttr(r.nombre)}" placeholder="Razón social" data-i="${i}" data-f="nombre" oninput="onT(this)" style="width:160px"></td>
     <td><input type="number" value="${r.anio||''}" placeholder="${new Date().getFullYear()}" data-i="${i}" data-f="anio" oninput="onT(this)" style="width:65px"></td>
-    <td><input type="text" value="${r.periodo||''}" placeholder="01" data-i="${i}" data-f="periodo" oninput="onT(this)" style="width:50px"></td>
+    <td><input type="text" value="${escAttr(r.periodo)}" placeholder="01" data-i="${i}" data-f="periodo" oninput="onT(this)" style="width:50px"></td>
+    <td><input type="date" value="${escAttr(r.fecha_comprobante)}" data-i="${i}" data-f="fecha_comprobante" onchange="onT(this)" style="width:135px"></td>
     <td><select data-i="${i}" data-f="tipo_ncf" onchange="onT(this)" style="width:60px"><option value="">-</option>${TIPO_NCF.map(t=>`<option${r.tipo_ncf===t?' selected':''}>${t}</option>`).join('')}</select></td>
     <td><select data-i="${i}" data-f="tipo_costo" onchange="onT(this)" style="width:60px"><option value="">-</option>${TIPO_COSTO.map(t=>`<option${r.tipo_costo===t?' selected':''}>${t}</option>`).join('')}</select></td>
     <td><input type="number" min="0" step="0.01" value="${r.monto||''}" placeholder="0.00" data-i="${i}" data-f="monto" oninput="onT(this)" style="width:110px;text-align:right"></td>
@@ -466,7 +525,7 @@ function onT(el){
 
 function addTercero(){
   if(!data.terceros) data.terceros = [];
-  data.terceros.push({ncf:'',rnc:'',nombre:'',anio:new Date().getFullYear(),periodo:'',tipo_ncf:'',tipo_costo:'',monto:0,itbis_ret:0,itbis_fac:0});
+  data.terceros.push({ncf:'',rnc:'',nombre:'',anio:new Date().getFullYear(),periodo:'',fecha_comprobante:'',tipo_ncf:'',tipo_costo:'',monto:0,itbis_ret:0,itbis_fac:0});
   renderTerceros();
 }
 
@@ -550,9 +609,9 @@ function renderIr13(){
   tbody.innerHTML = rows.map((r,i)=>`<tr>
     <td style="color:var(--fg3)">${i+1}</td>
     <td><input type="number" value="${r.anio||''}" placeholder="${new Date().getFullYear()}" data-i="${i}" data-f="anio" oninput="onIr13(this)" style="width:65px"></td>
-    <td><input type="text" value="${r.periodo||''}" placeholder="01" data-i="${i}" data-f="periodo" oninput="onIr13(this)" style="width:50px"></td>
-    <td><input type="text" value="${r.fecha||''}" placeholder="DD/MM/YYYY" data-i="${i}" data-f="fecha" oninput="onIr13(this)" style="width:100px"></td>
-    <td><input type="text" value="${r.tipo||''}" placeholder="Ordinaria" data-i="${i}" data-f="tipo" oninput="onIr13(this)" style="width:110px"></td>
+    <td><input type="text" value="${escAttr(r.periodo)}" placeholder="01" data-i="${i}" data-f="periodo" oninput="onIr13(this)" style="width:50px"></td>
+    <td><input type="text" value="${escAttr(r.fecha)}" placeholder="DD/MM/YYYY" data-i="${i}" data-f="fecha" oninput="onIr13(this)" style="width:100px"></td>
+    <td><input type="text" value="${escAttr(r.tipo)}" placeholder="Ordinaria" data-i="${i}" data-f="tipo" oninput="onIr13(this)" style="width:110px"></td>
     <td><input type="number" min="0" step="0.01" value="${r.renta||''}" placeholder="0.00" data-i="${i}" data-f="renta" oninput="onIr13(this)" style="width:120px;text-align:right"></td>
     <td><input type="number" min="0" step="0.01" value="${r.isr_det||''}" placeholder="0.00" data-i="${i}" data-f="isr_det" oninput="onIr13(this)" style="width:120px;text-align:right"></td>
     <td><input type="number" min="0" step="0.01" value="${r.isr_pag||''}" placeholder="0.00" data-i="${i}" data-f="isr_pag" oninput="onIr13(this)" style="width:120px;text-align:right"></td>
@@ -634,15 +693,22 @@ function renderResumen(){
 
   // Tiles summary
   const beneficio = totRes;
-  const isrEst = Math.max(0, beneficio * 0.27);
+  const tasaIsr = n(data.tasas?.isr) || 27;
+  const tasaIma = n(data.tasas?.ima) || 1.5;
+  const isrRentaNeta = Math.max(0, beneficio * tasaIsr / 100);
+  const isrMinimoAlternativo = Math.max(0, totVentas * tasaIma / 100);
+  const isrEst = Math.max(isrRentaNeta, isrMinimoAlternativo);
   const anticipos = MESES.reduce((s,mes)=>s+n((data.m?.[mes]||{}).ant_impt_ir3)+n((data.m?.[mes]||{}).ant_impt_r17),0);
   const porPagar = Math.max(0, isrEst - anticipos);
+  // The source IR-2 workbook uses the higher of one twelfth of the ISR and
+  // the configured minimum-alternative rate over annual sales divided by twelve.
+  const nuevosAnticipos = Math.max(isrEst / 12, isrMinimoAlternativo / 12);
   document.getElementById('tiles-res').innerHTML = [
     {lbl:'Ingresos Totales', val:totVentas, cls:''},
     {lbl:'Gastos NCF Total', val:totGastos, cls:''},
     {lbl:'TSS + INFOTEP', val:totSalud+totPenE+totPenP+totRL+n(data.infotep), cls:''},
     {lbl:'Beneficio Estimado', val:beneficio, cls:beneficio>=0?'pos':'neg'},
-    {lbl:'ISR Estimado (27%)', val:isrEst, cls:'warn'},
+    {lbl:`ISR Estimado (${fmt(tasaIsr)}% / ${fmt(tasaIma)}%)`, val:isrEst, cls:'warn'},
     {lbl:'Anticipos Pagados', val:anticipos, cls:''},
     {lbl:'ISR a Pagar', val:porPagar, cls:porPagar>0?'neg':'pos'},
   ].map(t=>`<div class="tile"><div class="tile-lbl">${t.lbl}</div><div class="tile-val ${t.cls}">${fmtDOP(t.val)}</div></div>`).join('');
@@ -654,14 +720,26 @@ function renderResumen(){
     <div class="res-line sub"><span class="lbl">(−) Sueldos</span><span class="val">${fmtDOP(totSueldos)}</span></div>
     <div class="res-line sub"><span class="lbl">(−) TSS + INFOTEP</span><span class="val">${fmtDOP(totSalud+totPenE+totPenP+totRL+n(data.infotep))}</span></div>
     <div class="res-line total"><span class="lbl">Beneficio Estimado</span><span class="val ${beneficio>=0?'pos':'neg'}">${fmtDOP(beneficio)}</span></div>
-    <div class="res-line sub"><span class="lbl">ISR Liquidado (27%)</span><span class="val warn">${fmtDOP(isrEst)}</span></div>
+    <div class="res-line sub"><span class="lbl">ISR sobre renta neta (${fmt(tasaIsr)}%)</span><span class="val warn">${fmtDOP(isrRentaNeta)}</span></div>
+    <div class="res-line sub"><span class="lbl">ISR mínimo alternativo (${fmt(tasaIma)}%)</span><span class="val warn">${fmtDOP(isrMinimoAlternativo)}</span></div>
+    <div class="res-line total"><span class="lbl">ISR aplicado (mayor de los dos)</span><span class="val warn">${fmtDOP(isrEst)}</span></div>
     <div class="res-line sub"><span class="lbl">(−) Anticipos Pagados</span><span class="val">${fmtDOP(anticipos)}</span></div>
     <div class="res-line total"><span class="lbl">Impuesto a Pagar</span><span class="val ${porPagar>0?'neg':'pos'}">${fmtDOP(porPagar)}</span></div>
-    <div class="res-line"><span class="lbl">Nuevos Anticipos</span><span class="val warn">${fmtDOP(Math.max(0,isrEst/4))}</span></div>`;
+    <div class="res-line"><span class="lbl">Nuevos Anticipos mensuales</span><span class="val warn">${fmtDOP(nuevosAnticipos)}</span></div>`;
 }
 
 // ── Input change handlers ─────────────────────────────────
+function updateFicha(){
+  data.ficha = {
+    tipo_declaracion:document.getElementById('h-tipo').value,
+    actividad_economica:document.getElementById('h-actividad').value.trim(),
+    representante_legal:document.getElementById('h-representante').value.trim(),
+    cedula_representante:document.getElementById('h-cedula').value.trim(),
+    cargo_representante:document.getElementById('h-cargo').value.trim(),
+  };
+}
 function onHdrChange(){
+  updateFicha();
   scheduleAutoSave();
 }
 
@@ -669,13 +747,24 @@ function onAnioChange(){
   loadData();
 }
 
+function onTaxRatesChange(){
+  data.tasas = {
+    isr:n(document.getElementById('h-tasa-isr').value),
+    ima:n(document.getElementById('h-tasa-ima').value)
+  };
+  renderResumen();
+  scheduleAutoSave();
+}
+
 function onInputChange(){
   data.infotep = n(document.getElementById('infotep-anual').value);
+  updateFicha();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
   data.inventario_ini = n(document.getElementById('r-invini').value);
   data.capital = n(document.getElementById('r-capital').value);
+  data.tasas = {isr:n(document.getElementById('h-tasa-isr').value),ima:n(document.getElementById('h-tasa-ima').value)};
   renderResumen();
   scheduleAutoSave();
 }
@@ -692,6 +781,12 @@ async function loadData(){
     if(json.ok && json.record){
       data = json.record.data || {};
       document.getElementById('h-nombre').value = json.record.nombre || '';
+      const ficha=data.ficha||{};
+      document.getElementById('h-tipo').value=ficha.tipo_declaracion||'Original';
+      document.getElementById('h-actividad').value=ficha.actividad_economica||'';
+      document.getElementById('h-representante').value=ficha.representante_legal||data.representante_legal||'';
+      document.getElementById('h-cedula').value=ficha.cedula_representante||'';
+      document.getElementById('h-cargo').value=ficha.cargo_representante||'';
     } else {
       data = {};
     }
@@ -708,11 +803,13 @@ async function save(){
   if(!rnc) return;
   // collect extra fields
   data.infotep = n(document.getElementById('infotep-anual').value);
+  updateFicha();
   data.saldo_bancos = n(document.getElementById('r-bancos').value);
   data.importaciones = n(document.getElementById('r-import').value);
   data.inventario = n(document.getElementById('r-inv').value);
   data.inventario_ini = n(document.getElementById('r-invini').value);
   data.capital = n(document.getElementById('r-capital').value);
+  data.tasas = {isr:n(document.getElementById('h-tasa-isr').value),ima:n(document.getElementById('h-tasa-ima').value)};
 
   try {
     const res = await fetch('/api/ir2/resumen',{
@@ -736,11 +833,12 @@ function scheduleAutoSave(){
 
 // ── Build all tabs ─────────────────────────────────────────
 function buildAll(){
+  syncDgiiSummary();
+  build607();
+  build606();
   build606607();
   buildTerceros();
   buildTSS();
-  buildAnticipos();
-  buildIr13();
   // fill extra fields
   document.getElementById('infotep-anual').value = data.infotep||'';
   document.getElementById('r-bancos').value = data.saldo_bancos||'';
@@ -748,7 +846,9 @@ function buildAll(){
   document.getElementById('r-inv').value = data.inventario||'';
   document.getElementById('r-invini').value = data.inventario_ini||'';
   document.getElementById('r-capital').value = data.capital||'';
-  if(currentTab===4) renderResumen();
+  document.getElementById('h-tasa-isr').value = data.tasas?.isr ?? 27;
+  document.getElementById('h-tasa-ima').value = data.tasas?.ima ?? 1.5;
+  if(currentTab===5) renderResumen();
 }
 
 // ── Init ──────────────────────────────────────────────────
@@ -763,6 +863,7 @@ function init(){
   const params = new URLSearchParams(location.search);
   if(params.get('rnc')) document.getElementById('h-rnc').value = params.get('rnc');
   if(params.get('nombre')) document.getElementById('h-nombre').value = params.get('nombre');
+  if(params.get('representante')) document.getElementById('h-representante').value = params.get('representante');
   if(params.get('anio')){
     document.getElementById('h-anio').value = params.get('anio');
   }
@@ -772,6 +873,7 @@ function init(){
 }
 
 document.addEventListener('DOMContentLoaded', init);
+Object.assign(window,{goBack,switchTab,openAnexos,openDgiiSection,importDgiiFile,add607,add606,addTercero,delDgii,delTercero,delIr13,onDgii,onM,onT,onIr13,onHdrChange,onAnioChange,onTaxRatesChange,onInputChange,save});
 </script>
 </body>
 </html>

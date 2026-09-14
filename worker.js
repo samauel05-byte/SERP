@@ -9,6 +9,7 @@ const ALLOWED_HOSTS = [
   'www.suir.gob.do',
   // Ministerio de Trabajo (OVI)
   'ovi.mt.gob.do',
+  'api.mt.gob.do',
   'mt.gob.do',
   'www.mt.gob.do',
   // SISARIL / SISALRIL
@@ -16,6 +17,7 @@ const ALLOWED_HOSTS = [
   'sisaril.gob.do',
   'www.sisaril.gob.do',
   'portal.sisaril.gob.do',
+  'virtual.sisalril.gob.do',
   'cardnet.com.do',
   'www.cardnet.com.do',
   // Azul
@@ -51,7 +53,7 @@ const ALLOWED_HOSTS = [
 ];
 const CORS_ORIGIN = 'https://direct-save.vercel.app';
 const WORKER_ORIGIN = 'https://portal-rd-relay.samauel05.workers.dev';
-const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do']);
+const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do', 'virtual.sisalril.gob.do']);
 
 const SUBMIT_HTML = `<!doctype html>
 <html lang="es">
@@ -81,6 +83,7 @@ const SUBMIT_HTML = `<!doctype html>
 <script>
 (function(){
   var hash = location.hash.slice(1);
+  var launchedFromSerp = !!hash;
   if(!hash){
     document.getElementById('sp').style.display='none';
     document.getElementById('msg').textContent='Error';
@@ -151,6 +154,12 @@ export default {
     // Credentials arrive only in the URL hash (never reaches this server)
     if (reqUrl.pathname === '/proxy') {
       const targetUrl = reqUrl.searchParams.get('url');
+      const rawFlow = reqUrl.searchParams.get('flow') || '';
+      // The flow is not a credential; it scopes portal cookies to one client
+      // tab so opening a second company cannot inherit the first company's
+      // DGII session.
+      const portalFlow = /^[A-Za-z0-9_-]{6,120}$/.test(rawFlow) ? rawFlow : '';
+      const flowCookiePrefix = portalFlow ? 'serp_' + portalFlow + '_' : '';
       if (!targetUrl) return new Response('Missing url parameter', { status: 400 });
 
       let target;
@@ -163,21 +172,49 @@ export default {
       // Cache the raw login page HTML (without autofill script) for 2 minutes
       // so repeat opens of slow government portals are nearly instant.
       const cacheStorage = caches.default;
-      const cacheKey = new Request('https://cache.proxy/' + encodeURIComponent(targetUrl));
+      // A DGII login page establishes a session cookie. Serving a cached copy
+      // would omit that cookie and make a valid login return to the same form.
+      const canCachePage = request.method === 'GET' && !target.hostname.endsWith('dgii.gov.do') && !portalFlow;
+      const cacheKey = new Request('https://cache.proxy/v2/' + encodeURIComponent(targetUrl));
       let html;
-      const cached = await cacheStorage.match(cacheKey);
+      let relaySetCookies = [];
+      const cached = canCachePage ? await cacheStorage.match(cacheKey) : null;
       if (cached) {
         html = await cached.text();
       } else {
         try {
+          const forwardHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
+          };
+          const portalCookie = request.headers.get('Cookie');
+          if (portalCookie) {
+            if (flowCookiePrefix) {
+              const scopedCookies = portalCookie.split(';').map(v => v.trim()).filter(v => v.startsWith(flowCookiePrefix)).map(v => v.slice(flowCookiePrefix.length));
+              if (scopedCookies.length) forwardHeaders.Cookie = scopedCookies.join('; ');
+            } else {
+              forwardHeaders.Cookie = portalCookie;
+            }
+          }
+          if (request.method === 'POST' && request.headers.get('Content-Type')) forwardHeaders['Content-Type'] = request.headers.get('Content-Type');
+          // DGII redirects its WebForms POST. Buffer the body once so the
+          // runtime can safely retransmit it after that redirect.
+          const postBody = request.method === 'POST' ? await request.arrayBuffer() : undefined;
           const portalRes = await fetch(targetUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'Accept-Language': 'es-DO,es;q=0.9,en;q=0.8',
-            },
+            method: request.method === 'POST' ? 'POST' : 'GET',
+            headers: forwardHeaders,
+            body: postBody,
             redirect: 'follow',
           });
+          try {
+            relaySetCookies = typeof portalRes.headers.getSetCookie === 'function'
+              ? portalRes.headers.getSetCookie()
+              : (portalRes.headers.getAll ? portalRes.headers.getAll('set-cookie') : []);
+          } catch(e) {
+            const cookie = portalRes.headers.get('set-cookie');
+            if(cookie) relaySetCookies = [cookie];
+          }
           html = await portalRes.text();
 
           // Cache raw HTML (before autofill injection) for 2 minutes
@@ -189,9 +226,12 @@ export default {
             cachedHtml = `<base href="${origin2}/">` + cachedHtml;
           }
           cachedHtml = cachedHtml.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
-            try { return pre + new URL(action, targetUrl).href + post; } catch { return m; }
+            try {
+              const actionUrl = new URL(action, targetUrl).href;
+              return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
+            } catch { return m; }
           });
-          await cacheStorage.put(cacheKey, new Response(cachedHtml, {
+          if (canCachePage) await cacheStorage.put(cacheKey, new Response(cachedHtml, {
             headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=120' }
           }));
           html = cachedHtml;
@@ -203,6 +243,18 @@ export default {
       try {
         const hostname = target.hostname;
         const isSPA = SPA_PROXY_HOSTS.has(hostname);
+
+        // DGII includes a third-party chat widget registered only for
+        // dgii.gov.do. When served through the relay its global may be absent.
+        // Define a harmless fallback before DGII's scripts run; do not strip
+        // arbitrary inline scripts because the login form is also generated
+        // by DGII inline markup.
+        if (hostname === 'dgii.gov.do' || hostname.endsWith('.dgii.gov.do')) {
+          const chatGuard = '<script>window.DigiWebchatWidget=window.DigiWebchatWidget||function(){};</' + 'script>';
+          html = /<head(\s[^>]*)?>/i.test(html)
+            ? html.replace(/<head(\s[^>]*)?>/i, m => m + chatGuard)
+            : chatGuard + html;
+        }
 
         // SPA portals (React): bypass cache, inject fetch/XHR interceptor, forward cookies
         if (isSPA) {
@@ -234,18 +286,27 @@ export default {
           const interceptor = `<script>(function(){
   var R='${WORKER_ORIGIN}';
   var O='${spaOrigin}';
+  window.__serpRelayErrors=[];
+  window.__serpRelayRequests=[];
+  var _serpConsoleError=console.error.bind(console);
+  console.error=function(){try{window.__serpRelayErrors.push({message:Array.prototype.map.call(arguments,function(a){return a&&a.message?a.message:String(a);}).join(' '),source:'console',line:0});}catch(e){}return _serpConsoleError.apply(console,arguments);};
+  window.addEventListener('error',function(e){window.__serpRelayErrors.push({message:String(e.message||''),source:String(e.filename||''),line:e.lineno||0});});
+  window.addEventListener('unhandledrejection',function(e){window.__serpRelayErrors.push({message:String((e.reason&&e.reason.message)||e.reason||'Unhandled rejection'),source:'promise',line:0});});
   function proxyUrl(u){
     if(!u) return null;
     var s=String(u);
     if(s.charAt(0)==='/') return R+'/api-proxy?url='+encodeURIComponent(O+s);
     if(s.indexOf(O)===0) return R+'/api-proxy?url='+encodeURIComponent(s);
+    // OVI serves its application at ovi.mt.gob.do but authenticates through
+    // the separate public API domain. Keep that request same-origin too.
+    if(s.indexOf('https://api.mt.gob.do')===0) return R+'/api-proxy?url='+encodeURIComponent(s);
     return null;
   }
   var _f=window.fetch;
   window.fetch=function(input,init){
     var url=typeof input==='string'?input:(input&&input.url?input.url:String(input));
     var p=proxyUrl(url);
-    if(p) return _f(p,Object.assign({},init||{},{credentials:'include'}));
+    if(p) return _f(p,Object.assign({},init||{},{credentials:'include'})).then(function(r){window.__serpRelayRequests.push({url:url,status:r.status});return r;},function(e){window.__serpRelayRequests.push({url:url,error:String(e)});throw e;});
     return _f.apply(this,arguments);
   };
   var _X=window.XMLHttpRequest;
@@ -254,6 +315,7 @@ export default {
     var _o=x.open.bind(x);
     x.open=function(m,u){
       var p=proxyUrl(String(u));
+      x.addEventListener('loadend',function(){window.__serpRelayRequests.push({url:String(u),status:x.status});},{once:true});
       return _o(m,p||u,arguments[2],arguments[3],arguments[4]);
     };
     return x;
@@ -278,8 +340,13 @@ export default {
     el.dispatchEvent(new Event('blur',{bubbles:true}));
   }
   function run(){
-    var uEl=document.querySelector('[name="usuario"],[name="user"],[name="username"]')||document.querySelector('input[type="text"],input[type="email"]');
+    var visible=Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="password"])'));
+    // OVI renders RNC/Cédula, then Usuario/Correo, then Contraseña.
+    // Its field names change between releases, so preserve the actual order
+    // as a safe fallback when the name selectors are absent.
+    var uEl=document.querySelector('[name="usuario"],[name="user"],[name="username"],[name="email"]')||visible[(p.cedula&&visible.length>1)?1:0];
     var pEl=document.querySelector('[name="contrasena"],[name="clave"],[name="password"]')||document.querySelector('input[type="password"]');
+    if(p.cedula && visible.length>1) fill(visible[0],p.cedula);
     fill(uEl,p.user||'');
     fill(pEl,p.pass||'');
     var btn=document.querySelector('button[type="submit"],input[type="submit"]');
@@ -319,14 +386,42 @@ export default {
         const autofillScript = `<script>
 (function(){
   var hash = location.hash.slice(1);
+  var launchedFromSerp = !!hash;
+  // DGII posts the first form to a new relay URL. Keep the encrypted-in-URL
+  // payload only for this browser tab, then remove it from the URL before
+  // posting. This prevents the login script from starting over on every page.
+  try {
+    if(hash) sessionStorage.setItem('serp-relay-autofill-payload', hash);
+    else hash = sessionStorage.getItem('serp-relay-autofill-payload') || '';
+  } catch(e) {}
   if(!hash) return;
   var p; try { p = JSON.parse(decodeURIComponent(atob(hash))); } catch(e){ return; }
+  var dgiiFlowKey = 'serp-dgii-first-submit-' + (p.flow || hash);
+  var dgiiCardSubmitKey = 'serp-dgii-card-submit-' + (p.flow || hash);
+  // A URL received directly from SERP starts a new login, even in an older
+  // browser tab whose previous session state still exists. The card page is
+  // loaded without a hash, so it keeps the one-time submission marker.
+  if(launchedFromSerp){
+    try { sessionStorage.removeItem(dgiiFlowKey); } catch(e) {}
+  }
+  function hasSubmittedDgiiFirstPage(){
+    try { return sessionStorage.getItem(dgiiFlowKey) === '1'; } catch(e) { return false; }
+  }
+  function markDgiiFirstPageSubmitted(){
+    try { sessionStorage.setItem(dgiiFlowKey, '1'); } catch(e) {}
+  }
+  function hasSubmittedDgiiCard(position){
+    try { return sessionStorage.getItem(dgiiCardSubmitKey) === String(position); } catch(e) { return false; }
+  }
+  function markDgiiCardSubmitted(position){
+    try { sessionStorage.setItem(dgiiCardSubmitKey, String(position)); } catch(e) {}
+  }
 
   // Per-portal field name maps
   var PORTALS = {
-    'oficinavirtual.dgii.gov.do':{ user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
-    'www.dgii.gov.do':           { user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
-    'dgii.gov.do':               { user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
+    'oficinavirtual.dgii.gov.do':{ user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], tarjeta:['ctl00$ContentPlaceHolder1$txtTarjeta','ctl00$ContentPlaceHolder1$txtCodigoTarjeta','txtTarjeta','txtCodigoTarjeta','tarjeta','codigoTarjeta','codigo'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
+    'www.dgii.gov.do':           { user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], tarjeta:['ctl00$ContentPlaceHolder1$txtTarjeta','ctl00$ContentPlaceHolder1$txtCodigoTarjeta','txtTarjeta','txtCodigoTarjeta','tarjeta','codigoTarjeta','codigo'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
+    'dgii.gov.do':               { user:['ctl00$ContentPlaceHolder1$txtUsuario','txtUsuario'], pass:['ctl00$ContentPlaceHolder1$txtPassword','txtPassword'], tarjeta:['ctl00$ContentPlaceHolder1$txtTarjeta','ctl00$ContentPlaceHolder1$txtCodigoTarjeta','txtTarjeta','txtCodigoTarjeta','tarjeta','codigoTarjeta','codigo'], submit:['ctl00$ContentPlaceHolder1$btnEntrar','btnEntrar'] },
     'www.tss.gob.do':            { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
     'tss.gob.do':                { user:['ctl00$MainContent$txtrncCedula','txtrncCedula'], pass:['ctl00$MainContent$txtClassRep','txtClassRep'], extra:'ctl00$MainContent$txtrepresentante', submit:['ctl00$MainContent$btLoginRep'] },
     'suir.gob.do':               { user:['rnc','rncCedula','cedula_empresa','codigoEmpresa'], extra:['username','email','usuario','correo','nombre_usuario'], pass:['password','contrasena','clave'], extraFallbackNth:1 },
@@ -353,16 +448,89 @@ export default {
     el.dispatchEvent(new Event('change',{bubbles:true}));
     el.dispatchEvent(new Event('blur',{bubbles:true}));
   }
+  function requestedCardPosition(){
+    // DGII renders text such as: "Favor introducir el código número: 3 de su tarjeta".
+    // Read labels and tooltip attributes too; DGII sometimes renders its hint
+    // outside the visible form text.
+    var text = ((document.body && (document.body.innerText || document.body.textContent)) || '') + ' ' +
+      Array.from(document.querySelectorAll('[title],[data-original-title],[aria-label]')).map(function(el){
+        return el.getAttribute('title') || el.getAttribute('data-original-title') || el.getAttribute('aria-label') || '';
+      }).join(' ');
+    var match = text.match(/c[oó]digo\\s*(?:(?:n[uú]mero|n[ºo]\\.?)(?:\\s*(?:de|#))?)?\\s*:?\\s*(\\d{1,3})/i);
+    var position = match ? parseInt(match[1], 10) : 0;
+    if(position > 0){
+      // DGII replaces the request with only an error after a failed attempt.
+      // Retain the exact requested position so the retry still targets the
+      // same cell in the code card.
+      try { sessionStorage.setItem('serp-dgii-card-position', String(position)); } catch(e) {}
+      return position;
+    }
+    if(/c[oó]digo\s+introducido\s+es\s+incorrecto/i.test(text)){
+      try {
+        var previous = parseInt(sessionStorage.getItem('serp-dgii-card-position') || '0', 10);
+        return previous > 0 ? previous : 0;
+      } catch(e) {}
+    }
+    return 0;
+  }
+  function cardCodeForPosition(codes, position){
+    if(!position) return '';
+    // Flatten again here even when the payload is an array: mobile browsers
+    // may preserve the whole Excel cell as a single array item.
+    var raw = Array.isArray(codes) ? codes : [codes];
+    var list = [];
+    raw.forEach(function(value){
+      String(value || '').split(/[;,|\\r\\n]+/).forEach(function(code){
+        code = code.trim();
+        if(code) list.push(code);
+      });
+    });
+    // Return one token only. A comma/newline in the result means it is not a
+    // valid single card position and must never be submitted as the full card.
+    var selected = String(list[position - 1] || '').trim();
+    return /^[^,;|\\r\\n]+$/.test(selected) ? selected : '';
+  }
+  function cardInput(cfg){
+    var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
+    function isCardTextField(input){
+      if(!input || input.tagName !== 'INPUT') return false;
+      return !/^(hidden|password|submit|button|image|checkbox|radio|file)$/i.test(input.type || 'text');
+    }
+    if(isCardTextField(el)) return el;
+    var inputs = Array.from(document.querySelectorAll('input')).filter(isCardTextField);
+    // DGII's labels are table cells rather than HTML <label> elements. Prefer
+    // the input in the row whose visible text explicitly says “Tarjeta”.
+    var rowMatched = inputs.find(function(input){
+      var row = input.closest && input.closest('tr');
+      return row && /tarjeta/i.test(row.textContent || '');
+    });
+    if(rowMatched) return rowMatched;
+    var matched = inputs.find(function(input){
+      var label = input.labels && input.labels.length ? Array.from(input.labels).map(function(l){return l.textContent;}).join(' ') : '';
+      var descriptor = [input.name,input.id,input.placeholder,label].filter(Boolean).join(' ');
+      return /(tarjeta|c[oó]digo.*tarjeta|token)/i.test(descriptor);
+    });
+    if(matched) return matched;
+    // Never guess a DGII field from its position. A wrong guess can put a
+    // card code in Usuario or overwrite another value.
+    return null;
+  }
 
   function run(){
     var cfg = PORTALS['${hostname}'];
+    var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
+    var cardPosition = isDgii ? requestedCardPosition() : 0;
     var uEl = cfg ? q(cfg.user) : null;
     var pEl = cfg ? q(cfg.pass) : null;
     // Generic fallback if portal-specific selectors don't match
     if(!uEl) uEl = document.querySelector('input[type="text"],input[type="email"]');
     if(!pEl) pEl = document.querySelector('input[type="password"]');
-    fill(uEl, p.user||'');
-    fill(pEl, p.pass||'');
+    // The code-card screen is a different step. Its Usuario/Clave values are
+    // already retained by DGII; on that screen write only into Tarjeta.
+    if(!isDgii || !cardPosition){
+      fill(uEl, p.user||'');
+      fill(pEl, p.pass||'');
+    }
     if(cfg && cfg.extra && p.cedula){
       var extraEl = Array.isArray(cfg.extra) ? q(cfg.extra) : document.querySelector('[name="'+cfg.extra+'"]');
       // Fallback: nth visible non-password input (for modern forms)
@@ -372,41 +540,80 @@ export default {
       }
       fill(extraEl, p.cedula);
     }
-    if(cfg && cfg.tarjeta && p.tarjeta){
-      fill(q(cfg.tarjeta), p.tarjeta);
+    if(cfg && cfg.tarjeta){
+      // dgiiCodes is a positional card: item 1 is the code for position 1, etc.
+      // A single tarjeta value remains supported for portals that do not use a code card.
+      var cardCode = p.tarjeta || '';
+      if(p.dgiiCodes){
+        cardCode = cardCodeForPosition(p.dgiiCodes, cardPosition);
+      }
+      if(cardCode) {
+        var cardEl = cardInput(cfg);
+        if(cardEl) { cardEl.value=''; fill(cardEl, cardCode); }
+      }
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
     setTimeout(function(){
       if(btn) {
+        // The following DGII page stays on the relay. Its temporary tab-local
+        // payload is used only if it asks for a code-card position.
+        if(isDgii && !cardPosition) markDgiiFirstPageSubmitted();
+        if(isDgii && cardPosition) markDgiiCardSubmitted(cardPosition);
         btn.click();
       } else if(pEl) {
         // Fallback: press Enter on the password field
         pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));
         pEl.dispatchEvent(new KeyboardEvent('keypress',{key:'Enter',keyCode:13,bubbles:true}));
       }
-    }, 800);
+    }, 180);
   }
 
-  // Poll until the password field appears (handles SPAs that render the form after JS loads)
+  // DGII may render its card prompt after the password field. Do not submit
+  // until both its input and the requested card code are available.
   function waitAndRun(remaining) {
     var pEl = document.querySelector('input[type="password"]');
-    if (pEl) { run(); return; }
-    if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 400);
+    var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
+    if (pEl && !isDgii) { run(); return; }
+    if (pEl && isDgii) {
+      var cfg = PORTALS['${hostname}'];
+      var position = requestedCardPosition();
+      var code = p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '');
+      var cardField = cardInput(cfg);
+      // DGII has two consecutive screens. The first only has Usuario/Clave;
+      // submit it immediately. On the second screen it requests a position
+      // from the code card, and only then wait for that exact card value.
+      // A client without a card must submit the first form once only. If DGII
+      // returns another password page without requesting a numbered card code,
+      // it is a normal server response, not an instruction to submit again.
+      if (!position && !hasSubmittedDgiiFirstPage()) { run(); return; }
+      // Send one card attempt only. If DGII rejects it, leave the page still
+      // instead of repeatedly submitting the same value.
+      if (cardField && code && !hasSubmittedDgiiCard(position)) { run(); return; }
+    }
+    if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
+    // DGII must never be submitted without the requested position on the card.
+    else if (pEl && !isDgii) run();
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(20); });
-  else waitAndRun(20);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); });
+  else waitAndRun(100);
 })();
 <\/script>`;
 
         html = html.includes('</body>') ? html.replace('</body>', autofillScript + '</body>') : html + autofillScript;
 
-        return new Response(html, {
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'no-store',
-          },
+        const responseHeaders = new Headers({
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
         });
+        // The browser is on workers.dev, so strip DGII's Domain attribute.
+        // The relay forwards this cookie back to DGII on the next request.
+        for (const cookie of relaySetCookies) {
+          let isolatedCookie = String(cookie).replace(/;\s*Domain=[^;]*/gi, '');
+          if (flowCookiePrefix) isolatedCookie = isolatedCookie.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
+          responseHeaders.append('Set-Cookie', isolatedCookie);
+        }
+        return new Response(html, { headers: responseHeaders });
       } catch(e) {
         return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
       }

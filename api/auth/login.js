@@ -1,11 +1,16 @@
 const supabase = require('../../lib/supabase');
 const { authenticate } = require('../../lib/auth');
+const { allow } = require('../../lib/rate-limit');
+const { randomUUID } = require('crypto');
 
 module.exports = async (req, res) => {
   // POST: sign in server-side, return JWT + vault data in one call
   if (req.method === 'POST') {
+    if (!allow(req, 'login')) return res.status(429).json({ error: 'Demasiados intentos. Intenta nuevamente en unos minutos.' });
     const { username, password } = req.body || {};
-    if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+    if (typeof username !== 'string' || typeof password !== 'string' || !/^[a-zA-Z0-9._-]{3,64}$/.test(username.trim())) {
+      return res.status(400).json({ error: 'Credenciales inválidas' });
+    }
 
     const email = username.toLowerCase().trim() + '@direct.local';
     try {
@@ -32,6 +37,16 @@ module.exports = async (req, res) => {
         .maybeSingle();
 
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
+      const { data: moduleProfile, error: moduleError } = await supabase.from('direct_profiles')
+        .select('access_ir2, access_estimacion, access_clientes').eq('id', user.id).maybeSingle();
+      const modules = moduleError ? { access_ir2: profile.access_cami === true, access_estimacion: profile.access_cami === true, access_clientes: true } : moduleProfile;
+
+      let session_id = null;
+      const nextSessionId = randomUUID();
+      const { error: sessionError } = await supabase.from('direct_active_sessions').upsert({
+        user_id: user.id, session_id: nextSessionId, issued_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+      if (!sessionError) session_id = nextSessionId;
 
       return res.json({
         ok: true,
@@ -40,10 +55,14 @@ module.exports = async (req, res) => {
         access_direct: profile.access_direct !== false,
         access_cami: profile.access_cami || false,
         access_nala: profile.access_nala || false,
+        access_ir2: modules.access_ir2 === true,
+        access_estimacion: modules.access_estimacion === true,
+        access_clientes: modules.access_clientes !== false,
         portals: profile.portals_direct || [],
         userSalt: profile.user_key_salt,
         vaultKeyIv: profile.vault_key_iv,
         vaultKeyCt: profile.vault_key_ct,
+        session_id,
       });
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -62,6 +81,9 @@ module.exports = async (req, res) => {
         .maybeSingle();
 
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
+      const { data: moduleProfile, error: moduleError } = await supabase.from('direct_profiles')
+        .select('access_ir2, access_estimacion, access_clientes').eq('id', session.userId).maybeSingle();
+      const modules = moduleError ? { access_ir2: profile.access_cami === true, access_estimacion: profile.access_cami === true, access_clientes: true } : moduleProfile;
 
       return res.json({
         ok: true,
@@ -69,6 +91,9 @@ module.exports = async (req, res) => {
         access_direct: profile.access_direct !== false,
         access_cami: profile.access_cami || false,
         access_nala: profile.access_nala || false,
+        access_ir2: modules.access_ir2 === true,
+        access_estimacion: modules.access_estimacion === true,
+        access_clientes: modules.access_clientes !== false,
         portals: profile.portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         userSalt: profile.user_key_salt,
         vaultKeyIv: profile.vault_key_iv,

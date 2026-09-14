@@ -4,6 +4,7 @@ const PORTALS = {
   'dgii.gov.do': {
     user: ['ctl00$ContentPlaceHolder1$txtUsuario', 'txtUsuario', 'usuario', 'user', 'username'],
     pass: ['ctl00$ContentPlaceHolder1$txtPassword', 'txtPassword', 'password', 'clave', 'contrasena'],
+    tarjeta: ['ctl00$ContentPlaceHolder1$txtTarjeta', 'ctl00$ContentPlaceHolder1$txtCodigoTarjeta', 'txtTarjeta', 'txtCodigoTarjeta', 'tarjeta', 'codigoTarjeta', 'codigo'],
     submit: ['ctl00$ContentPlaceHolder1$btnEntrar', 'btnEntrar'],
   },
   'tss.gob.do': {
@@ -11,6 +12,22 @@ const PORTALS = {
     pass: ['ctl00$MainContent$txtClassRep', 'password', 'clave'],
     extra: { 'ctl00$MainContent$txtrepresentante': 'cedula' },
     submit: ['ctl00$MainContent$btLoginRep'],
+  },
+  'suir.gob.do': {
+    user: ['ctl00$MainContent$txtrncCedula', 'txtrncCedula'],
+    pass: ['ctl00$MainContent$txtClassRep', 'txtClassRep'],
+    extra: { 'ctl00$MainContent$txtrepresentante': 'cedula' },
+    submit: ['ctl00$MainContent$btLoginRep'],
+  },
+  'ovi.mt.gob.do': {
+    user: ['userNameOrEmailAddress', 'usuario', 'username', 'email'],
+    pass: ['password', 'contrasena', 'clave'],
+    submit: ['LoginButton', 'btnLogin', 'login'],
+  },
+  'virtual.sisalril.gob.do': {
+    user: ['email', 'correo', 'username', 'usuario'],
+    pass: ['password', 'contrasena', 'clave'],
+    submit: ['login', 'btnLogin', 'submit'],
   },
   'mt.gob.do': {
     user: ['usuario', 'user', 'username'],
@@ -46,6 +63,18 @@ function fillField(el, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function requestedCardPosition() {
+  const text = document.body?.innerText || '';
+  const match = text.match(/c[oó]digo\s*(?:n[uú]mero|n[ºo]\.?)?\s*:?\s*(\d{1,3})/i);
+  const position = match ? parseInt(match[1], 10) : 0;
+  return position > 0 ? position : 0;
+}
+
+function cardCodeForPosition(codes, position) {
+  const values = Array.isArray(codes) ? codes : String(codes || '').split(/[,;|\n]+/);
+  return position ? String(values[position - 1] || '').trim() : '';
+}
+
 function tryFill(creds) {
   const key = getPortalKey();
   if (!key) return false;
@@ -61,6 +90,13 @@ function tryFill(creds) {
 
   fillField(userEl, creds.username || creds.user || '');
   fillField(passEl, creds.password || creds.pass || '');
+
+  if (cfg.tarjeta) {
+    const code = creds.dgiiCodes
+      ? cardCodeForPosition(creds.dgiiCodes, requestedCardPosition())
+      : creds.tarjeta;
+    if (code) fillField(findField(cfg.tarjeta), code);
+  }
 
   if (cfg.extra && creds.cedula) {
     for (const [fieldName, credKey] of Object.entries(cfg.extra)) {

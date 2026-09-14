@@ -153,6 +153,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-danger-ghost{background:rgba(239,68,68,.07);color:var(--danger);border:1px solid rgba(239,68,68,.2)}
 .btn-danger-ghost:hover{background:rgba(239,68,68,.15)}
 
+/* client workspace */
+.client-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:6px 0 22px}
+.client-hero h1{font-size:24px;letter-spacing:-.5px}.client-hero p{margin-top:6px;color:var(--text2);font-size:13px;line-height:1.5}
+.client-count{min-width:96px;text-align:center;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.client-count strong{display:block;font-size:24px;color:var(--accent3)}.client-count span{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.client-empty{border:1px dashed var(--border2);background:rgba(15,30,56,.62);border-radius:var(--rl);padding:42px 24px;text-align:center}
+.client-empty h2{font-size:18px}.client-empty p{color:var(--text2);font-size:13px;line-height:1.55;max-width:520px;margin:10px auto 20px}
+.client-upload{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 18px;border-radius:10px;background:linear-gradient(135deg,var(--p1),var(--accent));color:#fff;font-size:13px;font-weight:700;cursor:pointer}.client-upload input{display:none}
+.client-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.client-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:15px}.client-card h3{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.client-card p{margin-top:5px;color:var(--text2);font-size:12px}.client-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}@media(max-width:540px){.client-list{grid-template-columns:1fr}.client-hero{align-items:center}.client-hero h1{font-size:20px}}
+
 /* loading */
 .loading-sc{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;position:relative;z-index:1}
 .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
@@ -220,6 +230,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="spinner"></div>
   <p class="loading-txt">Iniciando bóveda…</p>
   <p class="loading-hint">Si tarda mucho, recarga la página (Ctrl+Shift+R)</p>
+</div>
+
+<!-- Clientes multiempresa -->
+<div id="view-clients" class="layer" hidden>
+  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" style="height:38px;mix-blend-mode:screen"></div><div class="hdr-right"><button class="back-btn" style="margin:0" onclick="showPortals()">Portales</button><button class="icon-btn" title="Cerrar sesión" onclick="lockVault()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+  <main class="main">
+    <div class="client-hero"><div><h1>Clientes</h1><p id="clients-subtitle">Gestiona los clientes de tu empresa.</p></div><div class="client-count"><strong id="clients-count">0</strong><span>clientes</span></div></div>
+    <div class="client-toolbar" id="clients-toolbar" hidden><label class="client-upload">Importar Excel<input id="clients-file" type="file" accept=".xlsx,.xls,.csv" onchange="importClientsFile(this.files[0])"></label></div>
+    <section id="clients-empty" class="client-empty" hidden><h2>Comienza cargando tus clientes</h2><p>Sube un Excel con la columna <strong>Nombre</strong>, <strong>Razón social</strong> o <strong>profile_name</strong>. Puedes incluir RNC, cédula, correo y teléfono.</p><label class="client-upload">Seleccionar Excel<input type="file" accept=".xlsx,.xls,.csv" onchange="importClientsFile(this.files[0])"></label></section>
+    <section id="clients-dashboard" hidden><div class="client-list" id="clients-list"></div></section>
+  </main>
 </div>
 
 <!-- Setup -->
@@ -290,6 +311,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       Volver a portales
     </button>
     <div id="portal-banner"></div>
+    <div id="portal-sync-action" style="display:flex;justify-content:flex-end;margin:0 0 12px">
+      <button class="add-company-btn" type="button" onclick="openImportModal()" style="background:var(--accent2,#059669);border-color:var(--accent2,#059669)">
+        Sincronizar Excel
+      </button>
+    </div>
     <div id="company-search-wrap" hidden style="margin-bottom:8px">
       <input id="company-search" type="search" placeholder="Buscar empresa…" autocomplete="off"
         style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;outline:none"
@@ -454,6 +480,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="modal-body">
       <input type="hidden" id="modal-user-id">
       <p class="slabel">Datos de acceso</p>
+      <div class="field"><label>Empresa contable</label><select id="u-tenant" disabled style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;width:100%;font-size:13px"><option>Cargando empresa…</option></select><small style="color:var(--text3);font-size:11px;margin-top:5px;display:block">El usuario solo verá los clientes y empresas asignados a esta empresa contable.</small></div>
       <div class="field"><label>Usuario</label><input id="u-username" type="text" placeholder="Ej: juan" autocomplete="off"></div>
       <div class="field"><label id="u-pw-label">Contraseña</label><input id="u-pw" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
       <p class="slabel">Rol</p>
@@ -478,6 +505,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-cami"> CAMI — Análisis 606/607 e IT-1</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-nala"> NALA — Chat IA · Facturas 606/607</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-ir2"> IR-2 — Declaración de renta</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-estimacion"> Estimación Fiscal — Anexos DGII</label>
       <div class="ferr" id="user-err" hidden></div>
     </div>
     <div class="modal-ftr" id="modal-user-ftr">
@@ -638,16 +667,22 @@ const INST = {
              uf:'ctl00$ContentPlaceHolder1$txtUsuario', pf:'ctl00$ContentPlaceHolder1$txtPassword',
              aspFields:{ user:'ctl00$ContentPlaceHolder1$txtUsuario', pass:'ctl00$ContentPlaceHolder1$txtPassword' } },
   tss:     { name:'TSS',         desc:'Tesorería de la Seguridad Social',           grad:'linear-gradient(135deg,#0e7490 0%,#0891b2 100%)', abbr:'TSS',
-             url:'https://www.tss.gob.do/Tss/Account/LogIn',
+             // The former www.tss.gob.do/Tss/Account/LogIn route is retired.
+             url:'https://suir.gob.do/Login.aspx?log=r',
              uf:'ctl00$MainContent$txtrncCedula', pf:'ctl00$MainContent$txtClassRep',
              aspFields:{ user:'ctl00$MainContent$txtrncCedula', cedula:'ctl00$MainContent$txtrepresentante', pass:'ctl00$MainContent$txtClassRep', submit:'ctl00$MainContent$btLoginRep' },
-             directOpen:true },
+             // WebForms needs its hidden ViewState fields submitted with the credentials.
+             directSubmit:true },
   trabajo: { name:'Min. Trabajo',desc:'Ministerio de Trabajo',                      grad:'linear-gradient(135deg,#1a3d8f 0%,#1547a8 100%)', abbr:'MT',
              url:'https://ovi.mt.gob.do/account/login',
+             // The relay preserves OVI's SPA requests and fills its three
+             // fields (RNC/Cédula, usuario/correo y contraseña).
              uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
-             url:'https://sisaril.mt.gob.do',
-             uf:'usuario', pf:'contrasena', directOpen:true },
+             url:'https://virtual.sisalril.gob.do/sisalrilvirtual/home/index/28',
+             // SISALRIL uses an external identity provider; proxying its SPA
+             // leaves it on a loading screen, so keep authentication on its origin.
+             uf:'email', pf:'password', directOpen:true },
   carnet:  { name:'Cardnet',     desc:'Portal bancario · Acceso a pagos y comercios',grad:'linear-gradient(135deg,#78350f 0%,#d97706 100%)', abbr:'ID',
              uf:'usuario', pf:'contrasena' },
   azul:    { name:'Azul',        desc:'Portal bancario · Banca en línea',           grad:'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', abbr:'AZ',
@@ -665,13 +700,14 @@ const INST = {
   cami:    { name:'CAMI',        desc:'Acceso contable · Análisis 606/607 e IT-1',   grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Acceso contable · Chat IA Facturas 606/607',  grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
-  'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Adquirencia · Vehículos · 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
+  'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
+  clients: { name:'Clientes', desc:'Gestión de clientes por empresa', grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'CLI', tool:true },
 };
 
-let masterKey = null, credentials = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
+let masterKey = null, credentials = [], clients = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
 let _dupeGroups = [];
 let activePortal = null;
-let sessionToken = null, currentUser = null, vaultSecret = null;
+let sessionToken = null, currentUser = null, vaultSecret = null, activeSessionId = null;
 
 /* ── Crypto ── */
 const C = {
@@ -714,13 +750,23 @@ function authH(body=false) {
   const h = {};
   if (body) h['Content-Type'] = 'application/json';
   if (sessionToken) h['Authorization'] = `Bearer ${sessionToken}`;
+  if (activeSessionId) h['X-Direct-Session'] = activeSessionId;
   return h;
 }
+async function apiRequest(path, options={}) {
+  const response=await fetch(path, options);
+  const data=await response.json().catch(()=>({}));
+  if(response.status===401 && sessionToken){
+    lockVault('Tu sesión fue cerrada porque este usuario inició sesión en otro equipo.');
+    throw new Error('Sesión reemplazada');
+  }
+  return data;
+}
 const A = {
-  get:  p     => fetch(p, {signal:AbortSignal.timeout(12000), headers:authH()}).then(r=>r.json()),
-  post: (p,b) => fetch(p, {method:'POST',  signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}).then(r=>r.json()),
-  put:  (p,b) => fetch(p, {method:'PUT',   signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}).then(r=>r.json()),
-  del:  p     => fetch(p, {method:'DELETE', signal:AbortSignal.timeout(12000), headers:authH()}).then(r=>r.json()),
+  get:  p     => apiRequest(p, {signal:AbortSignal.timeout(12000), headers:authH()}),
+  post: (p,b) => apiRequest(p, {method:'POST',  signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
+  put:  (p,b) => apiRequest(p, {method:'PUT',   signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
+  del:  p     => apiRequest(p, {method:'DELETE', signal:AbortSignal.timeout(12000), headers:authH()}),
 };
 
 /* ── Boot ── */
@@ -740,11 +786,13 @@ async function boot() {
     const storedToken = sessionStorage.getItem('dtoken');
     const storedSess  = sessionStorage.getItem('dsession');
     const storedVault = sessionStorage.getItem('dvault');
+    const storedSessionId = localStorage.getItem('direct_session_id');
     if (storedToken && storedSess && storedVault) {
       try {
         sessionToken = storedToken;
+        activeSessionId = storedSessionId;
         const s = JSON.parse(storedSess);
-        currentUser = {role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, portals:s.portals};
+        currentUser = {role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_clientes:s.access_clientes, portals:s.portals};
         const v = JSON.parse(storedVault);
         vaultSecret = C._u8(v.secret);
         const { config } = await A.get('/api/config');
@@ -791,9 +839,11 @@ async function handleSetup() {
     }).then(r=>r.json());
     if (!signIn.ok){ err.textContent=signIn.error||'Error al iniciar sesión'; err.hidden=false; return; }
     sessionToken = signIn.access_token;
+    activeSessionId = signIn.session_id || null;
+    if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     sessionStorage.setItem('dtoken', sessionToken);
 
-    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, portals:['dgii','tss','trabajo','sirla'] };
+    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
     vaultSecret = vaultSecretBytes;
     appConfig = { vaultSalt, verifierIv:verIv, verifierCt:verCt };
 
@@ -801,7 +851,7 @@ async function handleSetup() {
     await A.post('/api/config',{key:'verifierIv',value:verIv});
     await A.post('/api/config',{key:'verifierCt',value:verCt});
 
-    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, portals:['dgii','tss','trabajo','sirla']}));
+    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla']}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecretBytes)}));
     await loadHome();
   } catch(e){ err.textContent='Error: '+e.message; err.hidden=false; }
@@ -814,14 +864,24 @@ async function handleLogin() {
   if (!username||!pw){ err.textContent='Completa todos los campos'; err.hidden=false; return; }
   try {
     // 1. Sign in server-side — returns JWT + vault envelope in one call
-    const res = await fetch('/api/auth/login', {
+    const loginResponse = await fetch('/api/auth/login', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ username, password:pw })
-    }).then(r=>r.json());
+    });
+    const loginBody = await loginResponse.text();
+    let res;
+    try { res = JSON.parse(loginBody); }
+    catch {
+      throw new Error(loginResponse.status >= 500
+        ? 'El servidor tardó demasiado. Intenta nuevamente en unos segundos.'
+        : 'El servidor no respondió correctamente. Intenta nuevamente.');
+    }
     if (!res.ok){ err.textContent=res.error||'Credenciales incorrectas'; err.hidden=false; return; }
 
     sessionToken = res.access_token;
-    currentUser = { role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, portals:res.portals };
+    activeSessionId = res.session_id || null;
+    if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
+    currentUser = { role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals };
 
     // 2. Derive vault key client-side (password still in memory)
     const userKey = await C.deriveKey(pw, res.userSalt);
@@ -836,7 +896,7 @@ async function handleLogin() {
       masterKey=null; sessionToken=null; vaultSecret=null; return;
     }
     sessionStorage.setItem('dtoken', sessionToken);
-    sessionStorage.setItem('dsession', JSON.stringify({role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, portals:res.portals}));
+    sessionStorage.setItem('dsession', JSON.stringify({role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
     await loadHome();
   } catch(e){ err.textContent='Error: '+e.message; err.hidden=false; }
@@ -846,22 +906,25 @@ async function loadHome() {
   const data=await A.get('/api/credentials');
   credentials=data.credentials||[];
   lastPollTs=Date.now();
-  showPortals(); startPolling();
+  try { await refreshClients(); openClients(); } catch { if(sessionToken) showPortals(); }
+  startPolling();
 }
 
-function lockVault() {
-  masterKey=null; vaultSecret=null; sessionToken=null; currentUser=null;
+function lockVault(message='') {
+  masterKey=null; vaultSecret=null; sessionToken=null; activeSessionId=null; currentUser=null;
   sessionStorage.removeItem('dtoken'); sessionStorage.removeItem('dsession'); sessionStorage.removeItem('dvault');
+  localStorage.removeItem('direct_session_id');
   stopPolling();
   show('view-login');
   document.getElementById('login-username').value='';
   document.getElementById('login-pw').value='';
   document.getElementById('login-username').focus();
+  if(message) toast(message,'warn');
 }
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 function showPortals() {
@@ -871,6 +934,51 @@ function showPortals() {
   // Show users button only for admin
   const btn=document.getElementById('btn-users');
   if (btn) btn.hidden = !(currentUser?.role==='admin');
+}
+
+async function refreshClients() {
+  const data=await A.get('/api/clients');
+  if(!data.ok) throw new Error(data.error||'No se pudieron cargar los clientes');
+  clients=Array.isArray(data.clients)?data.clients:[];
+}
+
+function openClients() {
+  const empty=clients.length===0;
+  document.getElementById('clients-count').textContent=String(clients.length);
+  document.getElementById('clients-subtitle').textContent=empty?'Tu empresa aún no tiene clientes.':'Clientes aislados para la empresa de tu perfil.';
+  document.getElementById('clients-empty').hidden=!empty;
+  document.getElementById('clients-dashboard').hidden=empty;
+  document.getElementById('clients-toolbar').hidden=empty;
+  const list=document.getElementById('clients-list'); list.textContent='';
+  for(const client of clients){
+    const card=document.createElement('article'); card.className='client-card';
+    const name=document.createElement('h3'); name.textContent=client.legal_name;
+    const id=document.createElement('p'); id.textContent=client.rnc?`RNC: ${client.rnc}`:client.cedula?`Cédula: ${client.cedula}`:'Sin identificador fiscal';
+    const details=document.createElement('p'); details.textContent=[client.email,client.phone].filter(Boolean).join(' · ')||'Importado desde '+(client.source==='excel'?'Excel':'registro manual');
+    card.append(name,id,details); list.appendChild(card);
+  }
+  show('view-clients');
+}
+
+function normalizedHeader(value){ return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/(^_|_$)/g,''); }
+function clientField(headers,row,names){ const i=headers.findIndex(h=>names.includes(h)); return i>=0?String(row[i]??'').trim():''; }
+async function importClientsFile(file){
+  if(!file) return;
+  if(file.size>8*1024*1024){ toast('El archivo no puede superar 8 MB','warn'); return; }
+  try{
+    if(typeof XLSX==='undefined') await new Promise((resolve,reject)=>{ const script=document.createElement('script'); script.src='/cami/vendor/xlsx.full.min.js'; script.onload=resolve; script.onerror=()=>reject(new Error('No se pudo cargar el lector de Excel')); document.head.appendChild(script); });
+    const buf=await file.arrayBuffer(); const wb=XLSX.read(buf,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    if(rows.length<2) throw new Error('El archivo no contiene filas para importar');
+    const headers=rows[0].map(normalizedHeader);
+    if(!headers.some(h=>['nombre','razon_social','profile_name'].includes(h))) throw new Error('Falta la columna Nombre, Razón social o profile_name');
+    const payload=rows.slice(1).filter(row=>row.some(cell=>String(cell).trim())).map(row=>({legal_name:clientField(headers,row,['nombre','razon_social','profile_name']),rnc:clientField(headers,row,['rnc']),cedula:clientField(headers,row,['cedula']),email:clientField(headers,row,['email','correo','correo_electronico']),phone:clientField(headers,row,['telefono','phone','celular'])}));
+    if(!payload.length) throw new Error('No se encontraron clientes válidos');
+    if(!confirm(`Se validarán e importarán ${payload.length} cliente(s) para esta empresa. ¿Continuar?`)) return;
+    const result=await A.post('/api/clients/import',{fileName:file.name,clients:payload});
+    if(!result.ok){ const detail=result.errors?.[0]; throw new Error(detail?`Fila ${detail.row}: ${detail.error}`:(result.error||'No se pudo importar')); }
+    await refreshClients(); openClients(); toast(`${result.imported_rows} cliente(s) importado(s). ${result.duplicate_rows||0} ya existían.`,'ok');
+  }catch(error){ toast(error.message||'No se pudo leer el Excel','err'); }
 }
 
 async function showUsers() {
@@ -888,9 +996,11 @@ async function renderUsersList() {
       if (user.access_direct) modules.push('Direct');
       if (user.access_cami) modules.push('CAMI');
       if (user.access_nala) modules.push('NALA');
+      if (user.access_ir2) modules.push('IR-2');
+      if (user.access_estimacion) modules.push('Estimación');
       const uname=(user.username||user.email||'?').replace('@direct.local','');
       const initials=uname.charAt(0).toUpperCase();
-      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala}).replace(/"/g,'&quot;');
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,access_cami:user.access_cami,access_nala:user.access_nala,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
@@ -923,7 +1033,7 @@ function toggleDirectPortals(on) {
   document.getElementById('portals-section').style.display = on ? '' : 'none';
 }
 
-function openUserModal(userData=null) {
+async function openUserModal(userData=null) {
   const isEdit = userData && userData.id;
   document.getElementById('modal-user-id').value = isEdit ? userData.id : '';
   document.getElementById('modal-user-title').textContent = isEdit ? 'Editar usuario' : 'Nuevo usuario';
@@ -931,6 +1041,13 @@ function openUserModal(userData=null) {
   document.getElementById('u-pw').value = '';
   document.getElementById('u-pw-label').textContent = isEdit ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña';
   document.getElementById('u-role').value = userData?.role || 'user';
+  const tenantSelect=document.getElementById('u-tenant');
+  tenantSelect.innerHTML='<option>Cargando empresa…</option>';
+  tenantSelect.textContent='';
+  const option=document.createElement('option');
+  option.value='current';
+  option.textContent='Empresa contable actual';
+  tenantSelect.appendChild(option);
   const directOn = userData ? (userData.access_direct !== false) : true;
   document.getElementById('u-access-direct').checked = directOn;
   toggleDirectPortals(directOn);
@@ -938,6 +1055,8 @@ function openUserModal(userData=null) {
   ['dgii','tss','trabajo','sirla','carnet','azul'].forEach(p => { document.getElementById('u-portal-'+p).checked = portals.includes(p); });
   document.getElementById('u-access-cami').checked = userData?.access_cami || false;
   document.getElementById('u-access-nala').checked = userData?.access_nala || false;
+  document.getElementById('u-access-ir2').checked = userData?.access_ir2 || false;
+  document.getElementById('u-access-estimacion').checked = userData?.access_estimacion || false;
   document.getElementById('user-err').hidden=true;
   document.getElementById('modal-user').hidden=false;
 }
@@ -952,6 +1071,8 @@ async function saveUser() {
   const portals_direct=access_direct?['dgii','tss','trabajo','sirla','carnet','azul'].filter(p=>document.getElementById('u-portal-'+p).checked):[];
   const access_cami=document.getElementById('u-access-cami').checked;
   const access_nala=document.getElementById('u-access-nala').checked;
+  const access_ir2=document.getElementById('u-access-ir2').checked;
+  const access_estimacion=document.getElementById('u-access-estimacion').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
   if (!username){err.textContent='Escribe un nombre de usuario';err.hidden=false;return;}
   if (!userId && !password){err.textContent='La contraseña es requerida';err.hidden=false;return;}
@@ -964,7 +1085,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={username, role, access_direct, portals_direct, access_cami, access_nala};
+    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion};
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
     else await A.post('/api/users',body);
@@ -1080,14 +1201,16 @@ function renderPortalGrid() {
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
-  if (currentUser?.access_cami) allowed.push('ir2');
-  if (currentUser?.access_cami) allowed.push('dgii-modulos');
+  if (currentUser?.access_ir2) allowed.push('ir2');
+  if (currentUser?.access_estimacion) allowed.push('dgii-modulos');
+  allowed.push('clients');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Accesos contables',        keys:['cami','nala','ir2'] },
     { label:'Estimación Fiscal',         keys:['dgii-modulos'] },
+    { label:'Gestión',                   keys:['clients'] },
   ];
 
   function makeCard(key,inst){
@@ -1098,11 +1221,11 @@ function renderPortalGrid() {
     card.className='p-card'+toolClass;
     const logoKey=key==='sirla'?'sisaril':key;
     const logoHtml=LOGOS[logoKey]?`<div class="p-logo" style="background:#fff;padding:4px">${LOGOS[logoKey]}</div>`:`<div class="p-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px'}">${inst.abbr}</div>`;
-    const toolFn=key==='nala'?'openNala()':key==='ir2'?'openIr2()':key==='dgii-modulos'?'openDgiiModulos()':'openCami()';
+    const toolFn=key==='nala'?'openNala()':key==='ir2'?'openIr2()':key==='dgii-modulos'?'openDgiiModulos()':key==='clients'?'openClients()':'openCami()';
     const bottomHtml=isTool
       ?`<button class="p-enter-btn" onclick="${toolFn}">ABRIR →</button>`
       :`<button class="p-enter-btn" onclick="openPortal('${key}')">VER EMPRESAS →</button>`;
-    const countLabel=key==='nala'?'Agente IA':key==='ir2'?'Declaración IR-2':key==='dgii-modulos'?'6 módulos activos':'Herramienta local';
+    const countLabel=key==='nala'?'Agente IA':key==='ir2'?'Declaración IR-2':key==='dgii-modulos'?'6 módulos activos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'Herramienta local';
     const countHtml=isTool
       ?`<span class="p-count has">● ${countLabel}</span>`
       :`<span class="p-count ${cos.length>0?'has':'empty'}">${cos.length>0?`● ${cos.length} empresa${cos.length>1?'s':''}` :'○ Sin empresas'}</span>`;
@@ -1158,6 +1281,21 @@ async function renderCompaniesView() {
   const list=document.getElementById('company-list');
   const cos=getCompanies(activePortal);
   list.innerHTML='';
+
+  // A new company account starts with no encrypted portal records. Give it a
+  // direct onboarding path instead of a blank list that looks like an error.
+  if (!cos.length) {
+    document.getElementById('company-search-wrap').hidden = true;
+    const existingBanner = document.getElementById('dupe-banner');
+    if (existingBanner) existingBanner.hidden = true;
+    const portalName = INST[activePortal]?.name || 'este portal';
+    list.innerHTML = `<section class="client-empty" style="margin:8px 0 16px">
+      <h2>No tienes ninguna empresa creada</h2>
+      <p>Sube el archivo de Excel para sincronizar los accesos de ${portalName} que necesites. La información quedará cifrada y asociada únicamente a tu empresa.</p>
+      <button class="client-upload" type="button" onclick="openImportModal()">Subir archivo y sincronizar accesos</button>
+    </section>`;
+    return;
+  }
 
   // Decrypt all entries first
   const decoded=[];
@@ -1306,6 +1444,11 @@ async function cleanAllDupes() {
 /* ── Auto-login ── */
 let _chUser='', _chPass='', _chCedula='', _chTarjeta='', _chUrl='', _chDgiiCodes=[];
 
+function parseDgiiCodes(value) {
+  if (Array.isArray(value)) return value.map(v => String(v ?? '').trim()).filter(Boolean);
+  return String(value || '').split(/[;,|\r\n]+/).map(v => v.trim()).filter(Boolean);
+}
+
 // ViewState cache: keyed by portal URL, short TTL so stale values don't accumulate
 const _vsCache = {};
 const _VS_TTL = 90000; // 90 seconds
@@ -1323,8 +1466,16 @@ async function prefetchViewState(credId) {
     try {
       const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
       const r = await fetch(CF_RELAY + '?url=' + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) });
-      if (r.ok) { const d = await r.json(); _vsCache[url].data = d; }
-    } catch {}
+      if (!r.ok) throw new Error('Relay no disponible');
+      _vsCache[url].data = await r.json();
+    } catch {
+      // The production relay may not know a newly moved government portal yet.
+      // Use the authenticated app relay so the current ViewState still accompanies TSS/SUIR.
+      try {
+        const d = await A.get('/api/relay/viewstate?url=' + encodeURIComponent(url));
+        if (!d.error) _vsCache[url].data = d;
+      } catch {}
+    }
   })();
 }
 
@@ -1344,8 +1495,24 @@ async function enterCompany(credId) {
   try { plain=await C.dec(masterKey,cred.iv,cred.ct); }
   catch { toast('Error al descifrar credenciales','err'); newTab?.close(); return; }
 
-  _chUser=plain.username||''; _chPass=plain.password||''; _chCedula=plain.cedula||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
-  _chDgiiCodes = plain.dgiiCodes ? plain.dgiiCodes.split(',').map(s=>s.trim()) : [];
+  _chUser=(instKey==='tss' ? (plain.tssRnc||plain.username) : plain.username)||'';
+  _chPass=(instKey==='tss' ? (plain.tssClass||plain.password) : plain.password)||'';
+  _chCedula=plain.cedula||plain.rnc||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
+  _chDgiiCodes = parseDgiiCodes(plain.dgiiCodes);
+
+  if (instKey==='tss' && (!_chUser || !_chPass || !_chCedula)) {
+    newTab?.close();
+    toast('La ficha de TSS está incompleta. Reimporta el Excel para sincronizar RNC, cédula y CLASS.','warn');
+    return;
+  }
+
+  // The SUIR WebForms form rejects a submission without its fresh ViewState.
+  // The tab was opened above, so this short wait cannot be blocked by popup rules.
+  if (inst?.directSubmit && loginUrl) {
+    prefetchViewState(credId);
+    const preload = _vsCache[loginUrl]?.promise;
+    if (preload) await Promise.race([preload, new Promise(resolve => setTimeout(resolve, 3500))]);
+  }
 
   // Show credential helper
   document.getElementById('ch-title').textContent=plain.companyName||'Credenciales';
@@ -1407,7 +1574,7 @@ async function enterCompany(credId) {
 
   // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs)
   if (newTab && loginUrl && !inst?.directOpen) {
-    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, newTab);
+    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab);
     // Portal auto-launched — no need to show the credential panel
     return;
   }
@@ -1416,17 +1583,21 @@ async function enterCompany(credId) {
   document.getElementById('cred-helper').hidden=false;
 }
 
-function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existingTab=null) {
+function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCodes=[], existingTab=null) {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
-  const userField = appConfig[institution+'_userField'] || aspF.user || inst.uf || null;
-  const passField = appConfig[institution+'_passField'] || aspF.pass || inst.pf || null;
-  const submitField = appConfig[institution+'_submitField'] || aspF.submit || null;
+  // TSS is WebForms and its exact fields are known. Ignore any stale custom
+  // portal configuration; a wrong override silently drops RNC and CLASS.
+  const fixedTssFields = institution === 'tss';
+  const userField = fixedTssFields ? aspF.user : (appConfig[institution+'_userField'] || aspF.user || inst.uf || null);
+  const passField = fixedTssFields ? aspF.pass : (appConfig[institution+'_passField'] || aspF.pass || inst.pf || null);
+  const submitField = fixedTssFields ? aspF.submit : (appConfig[institution+'_submitField'] || aspF.submit || null);
 
   // Build payload — credentials go in the URL hash (never sent to server)
   const payload = { url, user, pass };
   if (cedula) payload.cedula = cedula;
   if (tarjeta) payload.tarjeta = tarjeta;
+  if (Array.isArray(dgiiCodes) && dgiiCodes.length) payload.dgiiCodes = dgiiCodes;
   if (userField) payload.userField = userField;
   if (passField) payload.passField = passField;
   if (submitField) payload.submitField = submitField;
@@ -1442,14 +1613,26 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', existin
     if (!submitField && d.submitField) payload.submitField = d.submitField;
   }
 
+  // TSS/SUIR is an ASP.NET WebForms site. Submit its ViewState and credentials
+  // through the dedicated form relay instead of trying to render it in a proxy.
+  if (inst.directSubmit) {
+    const directUrl = '/autologin.html#' + btoa(encodeURIComponent(JSON.stringify(payload)));
+    if (existingTab) existingTab.location.href = directUrl;
+    else window.open(directUrl, '_blank');
+    return;
+  }
+
   // Use CF Worker proxy: fetches portal HTML server-side, injects autofill script.
   // Credentials are ONLY in the hash — never sent to the worker.
   const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
-  const proxyPayload = { user: payload.user, pass: payload.pass };
+  // A unique flow id keeps the relay's one-time DGII submission state scoped
+  // to this exact launch, never to an older browser tab or prior login.
+  const proxyPayload = { user: payload.user, pass: payload.pass, flow: String(Date.now()) + '-' + Math.random().toString(36).slice(2) };
   if (payload.cedula) proxyPayload.cedula = payload.cedula;
   if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;
+  if (payload.dgiiCodes) proxyPayload.dgiiCodes = payload.dgiiCodes;
   const hash = btoa(encodeURIComponent(JSON.stringify(proxyPayload)));
-  const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '#' + hash;
+  const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '&flow=' + encodeURIComponent(proxyPayload.flow) + '#' + hash;
 
   if (existingTab) {
     existingTab.location.href = proxyUrl;
@@ -1489,7 +1672,7 @@ async function chCopyOvi(field) {
 function chLaunch() {
   if (!_chUrl) return;
   if (INST[activePortal]?.directOpen) { window.open(_chUrl, '_blank'); return; }
-  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'');
+  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'', _chDgiiCodes||[]);
 }
 function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
 
@@ -1531,7 +1714,10 @@ async function openCompanyModal(credId) {
   const tarjetaRow=document.getElementById('co-tarjeta-row');
   const isDGII = activePortal==='dgii';
   codesRow.hidden = !isDGII;
-  tarjetaRow.hidden = isDGII; // DGII ya tiene su tarjeta de códigos; otros portales usan el campo tarjeta
+  tarjetaRow.hidden = false;
+  tarjetaRow.querySelector('label').innerHTML = isDGII
+    ? 'Tarjeta / código de acceso DGII <span style="color:var(--text3);font-weight:400;font-size:11px">(opcional)</span>'
+    : 'Tarjeta / Código adicional <span style="color:var(--text3);font-weight:400;font-size:11px">(opcional)</span>';
 
   if (credId) {
     document.getElementById('modal-co-title').textContent='Editar empresa';
@@ -1694,6 +1880,10 @@ function slugId(name) {
     .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40);
 }
 
+function importedCredentialId(companyName, institution) {
+  return `${slugId(companyName)}_${institution}`;
+}
+
 function openImportModal() {
   document.getElementById('modal-import').hidden=false;
   document.getElementById('import-preview').hidden=true;
@@ -1734,7 +1924,10 @@ async function parseExcel(file) {
   if(raw.length<3) throw new Error('El archivo no tiene datos suficientes');
 
   // Row 0 = column keys
-  const keys=raw[0].map(k=>String(k).trim().toLowerCase().replace(/\s+/g,'_'));
+  const keys=raw[0].map(normalizedHeader);
+  const requiredHeaders=['profile_name','dgii_username','dgii_password','dgii_cod_tarjetas','tesoreria_rnc_cedula','tesoreria_cedula','tesoreria_class','mintrabajo_rnc','mintrabajo_username','mintrabajo_password','idoppril_rnc_user','idoppril_password','azul_username','azul_password','cardnet_username','cardnet_password','onapi_email','onapi_password','formalizate_username','formalizate_password','camara_email','camara_password','citrus_username','citrus_password','citrus_company','sisalril_email','sisalril_password'];
+  const missingHeaders=requiredHeaders.filter(header=>!keys.includes(header));
+  if(missingHeaders.length) throw new Error('El archivo no corresponde a PARA SUBIR.xlsx. Faltan columnas: '+missingHeaders.slice(0,4).join(', '));
   const companies=[];
 
   for(let i=2;i<raw.length;i++){
@@ -1744,8 +1937,8 @@ async function parseExcel(file) {
 
     companies.push({
       name,
-      dgii:    {user:col('dgii_username'), pass:col('dgii_password')},
-      tss:     {user:col('tesoreria_rnc_cedula'), cedula:col('tesoreria_cedula'), pass:col('tesoreria_class')},
+      dgii:    {user:col('dgii_username'), pass:col('dgii_password'), tarjeta:col('dgii_tarjeta'), dgiiCodes:col('dgii_cod_tarjetas')},
+      tss:     {user:col('tesoreria_rnc_cedula'), rnc:col('tesoreria_rnc_cedula'), cedula:col('tesoreria_cedula'), pass:col('tesoreria_class'), classValue:col('tesoreria_class')},
       trabajo: {user:col('mintrabajo_username'), pass:col('mintrabajo_password'), rnc:col('mintrabajo_rnc')},
       idoppril:{user:col('idoppril_rnc_user'), pass:col('idoppril_password')},
       azul:    {user:col('azul_username'), pass:col('azul_password')},
@@ -1778,8 +1971,7 @@ async function startImport() {
   let processed=0;
 
   for(const co of rows){
-    const slug=slugId(co.name);
-    for(const inst of PORTALS){
+      for(const inst of PORTALS){
       const d=co[inst]; if(!d) continue;
       const hasUser=d.user&&d.user.length>0;
       const hasPass=d.pass&&d.pass.length>0;
@@ -1787,12 +1979,20 @@ async function startImport() {
 
       const plain={companyName:co.name, username:d.user||'', password:d.pass||''};
       if(d.cedula) plain.cedula=d.cedula;
+      if(inst==='tss') {
+        plain.tssRnc=d.rnc||d.user||'';
+        plain.tssClass=d.classValue||d.pass||'';
+      }
+      if(d.tarjeta) plain.tarjeta=d.tarjeta;
+      // The spreadsheet's dgii_cod_tarjetas value is the complete DGII code card.
+      // Keep it as entered (normally codes separated by commas) so its positions remain intact.
+      if(d.dgiiCodes) plain.dgiiCodes=d.dgiiCodes;
       if(d.rnc)    plain.rnc=d.rnc;
       if(d.company) plain.company=d.company;
 
       try {
         const {iv,ct}=await C.enc(masterKey,plain);
-        batch.push({id:`${slug}_${inst}`, institution:inst, category:'acceso', iv, ct});
+        batch.push({id:importedCredentialId(co.name,inst), institution:inst, category:'acceso', iv, ct});
       } catch {}
     }
     processed++;
@@ -1813,9 +2013,25 @@ async function startImport() {
     // Reload credentials from server
     const data=await A.get('/api/credentials');
     credentials=data.credentials||[];
+    // The Excel is the source of truth. Remove only older copies that decrypt
+    // to the exact same company and portal as a row that was just imported.
+    const importedIds=new Set(batch.map(item=>item.id));
+    const duplicateIds=[];
+    for(const credential of credentials){
+      if(importedIds.has(credential.id)) continue;
+      try {
+        const plain=await C.dec(masterKey,credential.iv,credential.ct);
+        const canonicalId=importedCredentialId(plain.companyName||'',credential.institution);
+        if(importedIds.has(canonicalId)) duplicateIds.push(credential.id);
+      } catch {}
+    }
+    let removedDuplicates=0;
+    for(const id of duplicateIds){
+      try { const deleted=await A.del(`/api/credentials/${id}`); if(deleted?.ok){ removedDuplicates++; credentials=credentials.filter(item=>item.id!==id); } } catch {}
+    }
     renderPortalGrid();
     if(activePortal) await renderCompaniesView();
-    toast(`Importadas ${res.count} credenciales de ${rows.length} empresas`,'ok');
+    toast(`Importadas ${res.count} credenciales de ${rows.length} empresas${removedDuplicates?`. ${removedDuplicates} duplicado(s) eliminado(s)`:''}`,'ok');
     setTimeout(closeImportModal,1500);
   } catch(e) {
     progTxt.textContent='Error: '+e.message;

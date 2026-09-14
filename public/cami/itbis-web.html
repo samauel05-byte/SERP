@@ -362,6 +362,8 @@ tbody td{
 }
 tbody tr:nth-child(even){background:var(--surface-2);}
 tbody tr:hover{background:var(--blue-lt);}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+#tb-sales-breakdown .total-row{font-weight:800;background:var(--blue-lt)!important;color:var(--blue-dk);border-top:2px solid var(--blue);}
 .tnote{font-size:.7rem;color:var(--muted);text-align:right;padding:6px 0;}
 
 /* ── IT-1 module ── */
@@ -685,11 +687,6 @@ tbody tr:nth-child(even){background:var(--surface-2);}
       <span>IT-1 Declaración</span>
       <span class="nav-badge" id="badge-it1">○</span>
     </div>
-    <div class="nav-item" data-nav="ir2">
-      <div class="ni-icon">IR2</div>
-      <span>IR-2 Declaración</span>
-      <span class="nav-badge" id="badge-ir2">○</span>
-    </div>
   </div>
 
   <div class="currency-box">
@@ -836,9 +833,6 @@ tbody tr:nth-child(even){background:var(--surface-2);}
   </section>
 
   <div class="dash" id="da-607" hidden>
-    <div class="slabel">Totales del período</div>
-    <div class="kpi-row" id="kpis-607"></div>
-
     <div class="manual-card" style="margin-bottom:24px;border-top-color:var(--violet);">
       <div class="slabel" style="margin-bottom:6px;">Ventas adicionales no incluidas en los archivos</div>
       <div class="field-help">Registra aquí solamente cobros que no estén ya incluidos en el 607, CardNET o Azul. Cada forma de pago tiene su propio campo.</div>
@@ -879,8 +873,17 @@ tbody tr:nth-child(even){background:var(--surface-2);}
       <div class="alert warn" id="sales-manual-alert" hidden style="margin-top:14px;"></div>
     </div>
 
+    <div class="slabel">Totales del período</div>
+    <div class="kpi-row" id="kpis-607"></div>
+
     <div class="slabel">Reporte global de ventas — 607 + CardNET + Azul + adicionales</div>
     <div class="kpi-row" id="kpis-sales-total"></div>
+
+    <div class="slabel">Resumen facturado por origen</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Origen</th><th class="num">Subtotal</th><th class="num">ITBIS</th><th class="num">Total facturado</th></tr></thead>
+      <tbody id="tb-sales-breakdown"></tbody>
+    </table></div>
 
     <div class="slabel">Por tasa de ITBIS</div>
     <div class="kpi-row" id="kpis-tasa-607"></div>
@@ -918,7 +921,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         <div class="field-grp"><label class="field-lbl" for="in-rnc">RNC / Cédula</label><input class="field-inp" id="in-rnc" autocomplete="off" placeholder="131000000"></div>
         <div class="field-grp"><label class="field-lbl" for="in-razon">Razón social / Nombre</label><input class="field-inp" id="in-razon" autocomplete="organization" placeholder="Nombre del contribuyente"></div>
         <div class="field-grp"><label class="field-lbl" for="in-periodo">Período</label><input class="field-inp" id="in-periodo" type="month"></div>
-        <div class="field-grp"><label class="field-lbl" for="in-tipo-declaracion">Formulario</label><select class="field-inp" id="in-tipo-declaracion"><option value="IT-1">IT-1 mensual</option><option value="IR-2">IR-2 anual</option></select></div>
+        <div class="field-grp"><label class="field-lbl" for="in-tipo-declaracion">Formulario</label><select class="field-inp" id="in-tipo-declaracion"><option value="IT-1">IT-1 mensual</option></select></div>
       </div>
       <div class="field-help" style="margin-top:10px;">RNC, razón social y período se colocarán automáticamente en el Anexo A y en el IT-1 oficial.</div>
     </div>
@@ -1778,9 +1781,9 @@ function renderCardTotal() {
 }
 
 function renderSalesConsolidated() {
-  const target=$('kpis-sales-total'),s7=STATE?.['607']?.summary;
+  const target=$('kpis-sales-total'),breakdown=$('tb-sales-breakdown'),s7=STATE?.['607']?.summary;
   if(!target)return;
-  if(!s7){target.innerHTML=kpiCard('Pendiente','Carga el reporte 607','m','Luego se sumarán CardNET y Azul.');return;}
+  if(!s7){target.innerHTML=kpiCard('Pendiente','Carga el reporte 607','m','Luego se sumarán CardNET y Azul.');if(breakdown)breakdown.innerHTML='<tr><td colspan="4" class="muted">Carga el 607 para ver el desglose facturado.</td></tr>';return;}
   const consumer=getConsumerSummary();
   const reports=Object.values(CARD_STATE).filter(Boolean);
   const cardRetention=r2(reports.reduce((n,r)=>n+(r.retencionAcreditable||0),0));
@@ -1807,9 +1810,25 @@ function renderSalesConsolidated() {
     kpiCard('VENTAS GLOBALES',fmtM(fiscalTotal),'g','607 + tarjetas únicas + ventas adicionales')+
     kpiCard('Efectivo global',fmtM(r2((s7.paymentSummary?.cash||0)+consumer.cash)),'c')+
     kpiCard('Tarjetas globales',fmtM(r2((s7.paymentSummary?.card||0)+card.additionalGross)),'v','Sin contar operaciones dos veces')+
-    kpiCard('ITBIS global de ventas',fmtM(r2(s7.totItbis+consumer.itbis+card.additionalItbis)),'a')+
+    kpiCard('ITBIS global de ventas',fmtM(getGlobalSalesItbis(s7)),'a','ITBIS de CardNET/Azul reportado + ventas adicionales')+
     kpiCard('Retenido por clientes',fmtM(s7.totRet),'m')+
     kpiCard('Retención computable reportada',fmtM(cardRetention),'r','Solo valor leído del reporte; no estimaciones');
+
+  if(breakdown){
+    const row=(name,subtotal,itbis,total,cls='')=>`<tr class="${cls}"><td>${name}</td><td class="num">${fmtM(subtotal)}</td><td class="num">${fmtM(itbis)}</td><td class="num">${fmtM(total)}</td></tr>`;
+    const rows=[];
+    const subtotal607=r2(s7.totGrav+s7.totExento),itbis607=r2(s7.totItbis),total607=r2(subtotal607+itbis607);
+    rows.push(row('607 — Archivo DGII',subtotal607,itbis607,total607));
+    [['CardNET',CARD_STATE.cardnet],['Azul',CARD_STATE.azul]].forEach(([name,report])=>{
+      if(!report)return;
+      const subtotal=r2(report.totalSujetoRetencion||report.monto||0),itbis=r2(report.itbis||report.itbisTarjeta||0);
+      rows.push(row(`${name} — Reporte de tarjeta`,subtotal,itbis,r2(subtotal+itbis)));
+    });
+    rows.push(row('Ventas manuales',consumer.net,consumer.itbis,consumer.gross));
+    const totalItbis=getGlobalSalesItbis(s7),totalSubtotal=r2(fiscalTotal-totalItbis);
+    rows.push(row('TOTAL FACTURADO GLOBAL',totalSubtotal,totalItbis,fiscalTotal,'total-row'));
+    breakdown.innerHTML=rows.join('');
+  }
 }
 
 function calculateIT1({debito,credito,importaciones,retenciones,saldo,abonos}) {
@@ -1828,6 +1847,16 @@ function getConsumerSummary() {
   const taxable=r2(read('in-b02-taxable')),exempt=r2(read('in-b02-exempt')),itbis=r2(read('in-b02-itbis'));
   const cash=r2(read('in-sale-cash')),transfer=r2(read('in-sale-transfer')),credit=r2(read('in-sale-credit')),other=r2(read('in-sale-other'));
   return {count,taxable,exempt,itbis,cash,transfer,credit,other,net:r2(taxable+exempt),gross:r2(taxable+exempt+itbis)};
+}
+
+// El ITBIS declarado por CardNET/Azul es la fuente fiscal del cobro con tarjeta.
+// Solo se estima desde el 607 cuando el reporte del procesador no lo incluye.
+function getGlobalSalesItbis(s7) {
+  const consumer=getConsumerSummary();
+  const reports=Object.values(CARD_STATE).filter(Boolean);
+  const reportedItbis=r2(reports.reduce((sum,report)=>sum+(report.itbis||0),0));
+  if(reportedItbis>0) return r2(reportedItbis+consumer.itbis);
+  return r2(s7.totItbis+consumer.itbis+getCardConsolidation(s7).additionalItbis);
 }
 
 function getCardConsolidation(s7) {
@@ -1909,7 +1938,7 @@ function updateIT1() {
   const importaciones=parseFloat($('in-importaciones').value)||0;
   const abonos=parseFloat($('in-abonos').value)||0;
   const cardRet=r2(Object.values(CARD_STATE).filter(Boolean).reduce((n,r)=>n+(r.retencionAcreditable||0),0));
-  const debito=r2(s7.totItbis+consumer.itbis+card.additionalItbis),credito=s6.totAdel,itbisRetVentas=r2(s7.totRet+cardRet);
+  const debito=getGlobalSalesItbis(s7),credito=s6.totAdel,itbisRetVentas=r2(s7.totRet+cardRet);
   const resultado=calculateIT1({debito,credito,importaciones,retenciones:itbisRetVentas,saldo,abonos});
   if(DISPLAY_CURRENCY!=='DOP'){
     alertEl.hidden=false;
@@ -2290,7 +2319,6 @@ document.querySelectorAll('.ir2-input,#ir2-rnc,#ir2-razon,#ir2-inicio,#ir2-fin')
 $('btn-xls-ir2').addEventListener('click',exportIR2Draft);$('btn-rst-ir2').addEventListener('click',resetIR2);
 
 ['in-saldo','in-importaciones','in-abonos','in-b02-count','in-b02-taxable','in-b02-exempt','in-b02-itbis','in-sale-cash','in-sale-transfer','in-sale-credit','in-sale-other'].forEach(id=>{$(id).addEventListener('input',()=>{updateIT1();renderSalesConsolidated();});});
-$('in-tipo-declaracion').addEventListener('change',e=>{if(e.target.value==='IR-2'){document.querySelector('[data-nav="ir2"]').click();showToast('IR-2 anual: carga el balance de comprobación del ejercicio.');}});
 $('btn-it1-dgii').addEventListener('click',exportIT1DGII);
 renderCardTotal();
 </script>

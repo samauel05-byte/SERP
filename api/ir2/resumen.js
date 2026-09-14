@@ -4,6 +4,12 @@ const { authenticate } = require('../../lib/auth');
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
+  const requestedType = req.method === 'POST' ? req.body?.tipo : req.query?.tipo;
+  const isEstimate = requestedType === 'estimacion';
+  const allowed = session.role === 'admin' || (isEstimate ? session.access_estimacion : session.access_ir2);
+  if (!allowed) {
+    return res.status(403).json({ error: isEstimate ? 'Sin acceso a Estimación Fiscal' : 'Sin acceso a IR-2' });
+  }
 
   try {
     if (req.method === 'GET') {

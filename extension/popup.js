@@ -173,6 +173,8 @@ async function fillCurrent(index) {
     username: data.username || data.user || '',
     password: data.password || data.pass || '',
     cedula:   data.cedula || '',
+    tarjeta:  data.tarjeta || '',
+    dgiiCodes: data.dgiiCodes ? data.dgiiCodes.split(/[,;|\n]+/).map(code => code.trim()).filter(Boolean) : [],
     portal:   host,
   };
 

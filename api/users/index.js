@@ -1,5 +1,6 @@
 const supabase = require('../../lib/supabase');
 const { authenticate } = require('../../lib/auth');
+const { requireTenant } = require('../../lib/tenant');
 
 module.exports = async (req, res) => {
   const session = await authenticate(req);
@@ -7,10 +8,30 @@ module.exports = async (req, res) => {
   if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
 
   try {
+    // Preserve the legacy user list while a pre-existing installation has not
+    // yet run the tenant migration. It is read-only; mutations remain blocked.
+    if (req.method === 'GET' && !session.tenantId) {
+      const { data: profiles, error } = await supabase
+        .from('direct_profiles')
+        .select('id, role, access_direct, access_cami, access_nala, portals_direct, created_at')
+        .order('created_at');
+      if (error) throw error;
+      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const emailMap = Object.fromEntries((authUsers || []).map(user => [user.id, (user.email || '').replace('@direct.local', '')]));
+      return res.json({ ok: true, users: (profiles || []).map(profile => ({
+        ...profile,
+        username: emailMap[profile.id] || '',
+        access_ir2: profile.access_cami === true,
+        access_estimacion: profile.access_cami === true,
+        access_clientes: true,
+      })) });
+    }
+    if (!requireTenant(res, session.tenantId)) return;
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
-        .select('id, role, access_direct, access_cami, access_nala, portals_direct, created_at')
+        .select('id, role, access_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes, portals_direct, created_at')
+        .eq('tenant_id', session.tenantId)
         .order('created_at');
 
       const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
@@ -24,6 +45,9 @@ module.exports = async (req, res) => {
         access_direct: p.access_direct !== false,
         access_cami: p.access_cami,
         access_nala: p.access_nala,
+        access_ir2: p.access_ir2,
+        access_estimacion: p.access_estimacion,
+        access_clientes: p.access_clientes !== false,
         portals_direct: p.portals_direct,
         created_at: p.created_at,
       }));
@@ -32,7 +56,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -45,10 +69,15 @@ module.exports = async (req, res) => {
 
       const { error: profileError } = await supabase.from('direct_profiles').insert({
         id: user.id,
+        tenant_id: session.tenantId,
         role: role || 'user',
         access_direct: access_direct !== false,
         access_cami: access_cami || false,
         access_nala: access_nala || false,
+        access_ir2: access_ir2 || false,
+        access_estimacion: access_estimacion || false,
+        // Client records are isolated by the tenant, not by a module checkbox.
+        access_clientes: true,
         portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         user_key_salt: userSalt || null,
         vault_key_iv: vaultKeyIv || null,
