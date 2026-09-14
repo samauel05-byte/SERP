@@ -358,11 +358,16 @@ export default {
     if(p.cedula && visible.length>1) fill(visible[0],p.cedula);
     fill(uEl,p.user||'');
     fill(pEl,p.pass||'');
+    if(p.tarjeta){
+      var tEl=document.querySelector('[name="tarjeta"],[name="token"],[name="codigo"],[name="codigoTarjeta"]');
+      if(!tEl){ var allInputs=Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=password]):not([type=submit])')); tEl=allInputs.find(function(i){return /(tarjeta|token|c[oó]digo)/i.test(i.name+' '+i.id+' '+(i.placeholder||''));}) || null; }
+      if(tEl) fill(tEl, p.tarjeta);
+    }
     var btn=document.querySelector('button[type="submit"],input[type="submit"]');
     setTimeout(function(){
       if(btn){btn.click();}
       else if(pEl){pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));}
-    },800);
+    },400);
   }
   function waitAndRun(n){
     if(document.querySelector('input[type="password"]')){run();return;}
@@ -614,6 +619,45 @@ export default {
 <\/script>`;
 
         html = html.includes('</body>') ? html.replace('</body>', autofillScript + '</body>') : html + autofillScript;
+
+        // Intercept <a href> link clicks that point to allowed portals and route
+        // them through the proxy so the session cookies (stored on workers.dev)
+        // are forwarded on every navigation — without this, clicking any menu
+        // link (e.g. DGII "Envío") would take the browser directly to the portal
+        // domain with no session cookies, causing an immediate logout.
+        const navInterceptor = `<script>(function(){
+  var W='${WORKER_ORIGIN}';
+  var F=${JSON.stringify(portalFlow)};
+  var HOSTS=${JSON.stringify(ALLOWED_HOSTS)};
+  function isAllowed(host){return HOSTS.some(function(h){return host===h||host.endsWith('.'+h);});}
+  function proxyHref(href){
+    try{
+      var u=new URL(href);
+      if(!isAllowed(u.hostname)) return null;
+      return W+'/proxy?url='+encodeURIComponent(href)+(F?'&flow='+encodeURIComponent(F):'');
+    }catch(e){return null;}
+  }
+  document.addEventListener('click',function(e){
+    var el=e.target;
+    while(el&&el.tagName!=='A') el=el.parentElement;
+    if(!el) return;
+    var href=el.getAttribute('href');
+    if(!href||/^(javascript:|#|mailto:|tel:)/i.test(href)) return;
+    var abs;
+    try{abs=new URL(href,location.href).href;}catch(er){return;}
+    var p=proxyHref(abs);
+    if(!p) return;
+    e.preventDefault();
+    e.stopPropagation();
+    window.location.href=p;
+  },true);
+  // Also patch window.location.assign / replace for JS-driven navigations
+  var _assign=window.location.assign.bind(window.location);
+  var _replace=window.location.replace.bind(window.location);
+  Object.defineProperty(window.location,'assign',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_assign(p||href);}});
+  Object.defineProperty(window.location,'replace',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_replace(p||href);}});
+})();<\/script>`;
+        html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + navInterceptor);
 
         const responseHeaders = new Headers({
           'Content-Type': 'text/html; charset=utf-8',

@@ -57,7 +57,7 @@
   try { params = JSON.parse(decodeURIComponent(atob(hash))); }
   catch { set('Error', 'Datos de acceso inválidos.', 'err'); return; }
 
-  const { url, user, pass, cedula,
+  const { url, user, pass, cedula, tarjeta,
     userField: configuredUserField, passField: configuredPassField, submitField: configuredSubmitField,
     hiddenFields: prefetchedFields, formAction: prefetchedAction } = params;
   if (!url || !user || !pass) { set('Error', 'Faltan datos de acceso.', 'err'); return; }
@@ -116,6 +116,7 @@
     passField,
     submitField: submitField || null,
     cedula: cedula || undefined,
+    tarjeta: tarjeta || undefined,
     hiddenFields,
   };
   const submitHash = btoa(encodeURIComponent(JSON.stringify(submitPayload)));

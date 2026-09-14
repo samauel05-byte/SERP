@@ -1590,13 +1590,13 @@ async function enterCompany(credId) {
   // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs)
   if (newTab && loginUrl && !inst?.directOpen) {
     autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab);
-    // Show fallback panel in case auto-login fails in this browser
+    // Update actions so if user manually opens the panel they get Reintentar + Abrir directo
     actions.innerHTML=`
       <button class="cred-btn cred-btn-launch" onclick="chLaunch()">Reintentar →</button>
       <button class="cred-btn" style="background:var(--surface);border:1px solid var(--border2);color:var(--text)" onclick="chOpenDirect()" title="Abre el portal sin auto-login, para pegarlo manualmente">Abrir directo</button>
       <button class="cred-btn cred-btn-dismiss" onclick="closeCredHelper()">Cerrar</button>`;
     document.getElementById('ch-sub').textContent = inst.name + ' · Auto-login en progreso — credenciales copiadas';
-    document.getElementById('cred-helper').hidden=false;
+    // Do NOT show the credential helper automatically — auto-login fires silently
     return;
   }
 
