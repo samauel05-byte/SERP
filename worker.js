@@ -205,7 +205,7 @@ export default {
             method: request.method === 'POST' ? 'POST' : 'GET',
             headers: forwardHeaders,
             body: postBody,
-            redirect: 'follow',
+            redirect: 'manual',
           });
           try {
             relaySetCookies = typeof portalRes.headers.getSetCookie === 'function'
@@ -214,6 +214,33 @@ export default {
           } catch(e) {
             const cookie = portalRes.headers.get('set-cookie');
             if(cookie) relaySetCookies = [cookie];
+          }
+          // With redirect:'manual' we intercept every redirect and send the browser
+          // to the proxy URL for the target. This preserves Set-Cookie headers that
+          // redirect:'follow' would swallow (e.g. the ASP.NET session cookie DGII
+          // sets on the login POST 302 redirect — without this the browser never
+          // receives the session cookie and DGII shows the login page again).
+          if (portalRes.status >= 300 && portalRes.status < 400) {
+            const locationHdr = portalRes.headers.get('location');
+            if (locationHdr) {
+              try {
+                const absLoc = new URL(locationHdr, targetUrl).href;
+                const locHost = new URL(absLoc).hostname;
+                const locIsAllowed = ALLOWED_HOSTS.some(h => locHost === h || locHost.endsWith('.' + h));
+                const rdrTarget = locIsAllowed
+                  ? WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(absLoc) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '')
+                  : absLoc;
+                const rdrHeaders = new Headers({ 'Location': rdrTarget, 'Cache-Control': 'no-store' });
+                for (const cookie of relaySetCookies) {
+                  let c = String(cookie).replace(/;\s*Domain=[^;]*/gi, '');
+                  if (flowCookiePrefix) c = c.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
+                  c = c.replace(/;\s*SameSite=None/gi, '; SameSite=Lax');
+                  if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
+                  rdrHeaders.append('Set-Cookie', c);
+                }
+                return new Response(null, { status: portalRes.status, headers: rdrHeaders });
+              } catch(e) {}
+            }
           }
           html = await portalRes.text();
 
@@ -230,6 +257,17 @@ export default {
               const actionUrl = new URL(action, targetUrl).href;
               return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
             } catch { return m; }
+          });
+          // Rewrite <meta http-equiv="refresh"> redirect URLs so they go through the proxy
+          cachedHtml = cachedHtml.replace(/(<meta\b[^>]+\bhttp-equiv=["']refresh["'][^>]*\bcontent=["'][^"']*;\s*url=)([^"' >]+)/gi, (m, pre, url) => {
+            try {
+              const absUrl = new URL(url.trim(), targetUrl).href;
+              const uh = new URL(absUrl).hostname;
+              if (ALLOWED_HOSTS.some(h => uh === h || uh.endsWith('.' + h))) {
+                return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(absUrl) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '');
+              }
+            } catch {}
+            return m;
           });
           if (canCachePage) await cacheStorage.put(cacheKey, new Response(cachedHtml, {
             headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=120' }
@@ -670,6 +708,17 @@ export default {
       var _origSet=_hd.set;
       Object.defineProperty(_lp,'href',{configurable:true,get:_hd.get,set:function(href){var p=proxyHref(String(href));_origSet.call(this,p||href);}});
     }
+  }catch(e){}
+  // Patch window.open — catches new-tab/window navigations that bypass the proxy
+  try{
+    var _origOpen=window.open;
+    window.open=function(url,target,features){
+      if(url&&typeof url==='string'&&!/^(javascript:|#|mailto:|tel:|about:|blob:)/i.test(url)){
+        var p=proxyHref(url);
+        if(p) return _origOpen.call(window,p,target,features);
+      }
+      return _origOpen.apply(window,arguments);
+    };
   }catch(e){}
   // Rewrite a form's action to go through the proxy (used by both submit paths below)
   function rewriteFormAction(form){
