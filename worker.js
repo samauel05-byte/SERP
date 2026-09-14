@@ -9,6 +9,7 @@ const ALLOWED_HOSTS = [
   'www.suir.gob.do',
   // Ministerio de Trabajo (OVI)
   'ovi.mt.gob.do',
+  'api.mt.gob.do',
   'mt.gob.do',
   'www.mt.gob.do',
   // SISARIL / SISALRIL
@@ -278,6 +279,9 @@ export default {
     var s=String(u);
     if(s.charAt(0)==='/') return R+'/api-proxy?url='+encodeURIComponent(O+s);
     if(s.indexOf(O)===0) return R+'/api-proxy?url='+encodeURIComponent(s);
+    // OVI serves its application at ovi.mt.gob.do but authenticates through
+    // the separate public API domain. Keep that request same-origin too.
+    if(s.indexOf('https://api.mt.gob.do')===0) return R+'/api-proxy?url='+encodeURIComponent(s);
     return null;
   }
   var _f=window.fetch;
