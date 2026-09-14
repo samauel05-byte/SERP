@@ -632,7 +632,7 @@ export default {
   var F=${JSON.stringify(portalFlow)};
   var HOSTS=${JSON.stringify(ALLOWED_HOSTS)};
   // The page is served at workers.dev/proxy?url=<portal-url>.
-  // Relative hrefs must be resolved against the REAL portal base, not location.href.
+  // Relative hrefs must resolve against the REAL portal base, not location.href.
   var sp=new URLSearchParams(location.search);
   var BASE=sp.get('url')||location.href;
   function isAllowed(host){return HOSTS.some(function(h){return host===h||host.endsWith('.'+h);});}
@@ -643,6 +643,10 @@ export default {
       return W+'/proxy?url='+encodeURIComponent(u.href)+(F?'&flow='+encodeURIComponent(F):'');
     }catch(e){return null;}
   }
+  // Capture raw assign/replace BEFORE any patching so we can call them without recursion
+  var _assign=window.location.assign.bind(window.location);
+  var _replace=window.location.replace.bind(window.location);
+  // Intercept <a href> clicks (capturing phase so it runs before any onclick)
   document.addEventListener('click',function(e){
     var el=e.target;
     while(el&&el.tagName!=='A') el=el.parentElement;
@@ -653,13 +657,32 @@ export default {
     if(!p) return;
     e.preventDefault();
     e.stopPropagation();
-    window.location.href=p;
+    _assign(p);
   },true);
-  // Also patch window.location.assign / replace for JS-driven navigations
-  var _assign=window.location.assign.bind(window.location);
-  var _replace=window.location.replace.bind(window.location);
+  // Patch location.assign / replace
   Object.defineProperty(window.location,'assign',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_assign(p||href);}});
   Object.defineProperty(window.location,'replace',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_replace(p||href);}});
+  // Patch Location.prototype.href setter — catches window.location.href='...' used by ASP.NET WebForms __doPostBack and menu scripts
+  try{
+    var _lp=Location.prototype;
+    var _hd=Object.getOwnPropertyDescriptor(_lp,'href');
+    if(_hd&&_hd.set){
+      var _origSet=_hd.set;
+      Object.defineProperty(_lp,'href',{configurable:true,get:_hd.get,set:function(href){var p=proxyHref(String(href));_origSet.call(this,p||href);}});
+    }
+  }catch(e){}
+  // Intercept form submits: rewrite absolute actions pointing at allowed hosts so they go through the proxy
+  document.addEventListener('submit',function(e){
+    var form=e.target;
+    if(!form||form.tagName!=='FORM') return;
+    var action=form.getAttribute('action')||'';
+    if(!action||/^(javascript:|#)/i.test(action)) return;
+    try{
+      var u=new URL(action,BASE);
+      if(!isAllowed(u.hostname)) return;
+      form.action=W+'/proxy?url='+encodeURIComponent(u.href)+(F?'&flow='+encodeURIComponent(F):'');
+    }catch(ex){}
+  },true);
 })();<\/script>`;
         html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + navInterceptor);
 
