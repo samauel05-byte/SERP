@@ -358,6 +358,11 @@ export default {
     if(p.cedula && visible.length>1) fill(visible[0],p.cedula);
     fill(uEl,p.user||'');
     fill(pEl,p.pass||'');
+    if(p.tarjeta){
+      var tEl=document.querySelector('[name="tarjeta"],[name="token"],[name="codigo"],[name="codigoTarjeta"]');
+      if(!tEl){ var allInputs=Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=password]):not([type=submit])')); tEl=allInputs.find(function(i){return /(tarjeta|token|c[oó]digo)/i.test(i.name+' '+i.id+' '+(i.placeholder||''));}) || null; }
+      if(tEl) fill(tEl, p.tarjeta);
+    }
     var btn=document.querySelector('button[type="submit"],input[type="submit"]');
     setTimeout(function(){
       if(btn){btn.click();}
