@@ -362,7 +362,7 @@ export default {
     setTimeout(function(){
       if(btn){btn.click();}
       else if(pEl){pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));}
-    },800);
+    },400);
   }
   function waitAndRun(n){
     if(document.querySelector('input[type="password"]')){run();return;}
