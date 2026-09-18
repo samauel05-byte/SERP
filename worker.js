@@ -232,7 +232,7 @@ export default {
                   : absLoc;
                 const rdrHeaders = new Headers({ 'Location': rdrTarget, 'Cache-Control': 'no-store' });
                 for (const cookie of relaySetCookies) {
-                  let c = String(cookie).replace(/;\s*Domain=[^;]*/gi, '');
+                  let c = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
                   if (flowCookiePrefix) c = c.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
                   c = c.replace(/;\s*SameSite=None/gi, '; SameSite=Lax');
                   if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
@@ -429,7 +429,7 @@ export default {
             if (c) spaCookies = [c];
           }
           for (const cookie of spaCookies) {
-            let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '');
+            let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '').replace(/;\s*[Pp]ath=[^;]*/g, '') + '; Path=/';
             c = c.replace(/;\s*[Ss]ame[Ss]ite=None/gi, '; SameSite=Lax');
             if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
             spaRespHeaders.append('Set-Cookie', c);
@@ -753,7 +753,7 @@ export default {
         // The browser is on workers.dev, so strip DGII's Domain attribute.
         // The relay forwards this cookie back to DGII on the next request.
         for (const cookie of relaySetCookies) {
-          let isolatedCookie = String(cookie).replace(/;\s*Domain=[^;]*/gi, '');
+          let isolatedCookie = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
           if (flowCookiePrefix) isolatedCookie = isolatedCookie.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
           responseHeaders.append('Set-Cookie', isolatedCookie);
         }
@@ -828,7 +828,7 @@ export default {
           if (c) setCookies = [c];
         }
         for (const cookie of setCookies) {
-          let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '');
+          let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '').replace(/;\s*[Pp]ath=[^;]*/g, '') + '; Path=/';
           c = c.replace(/;\s*[Ss]ame[Ss]ite=None/gi, '; SameSite=Lax');
           if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
           respHeaders.append('Set-Cookie', c);
