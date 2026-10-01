@@ -115,7 +115,7 @@ Los trabajos avanzan:
    select vault.create_secret('<NALA_WORKER_SECRET>', 'nala_worker_secret');
    select cron.schedule('nala-worker', '* * * * *', $$
      select net.http_post(
-       url := 'https://direct-save.vercel.app/api/nala/jobs/worker',
+       url := 'https://app.casalabs.com.do/api/nala/jobs/worker',
        headers := jsonb_build_object('Authorization', 'Bearer ' ||
          (select decrypted_secret from vault.decrypted_secrets where name = 'nala_worker_secret')),
        timeout_milliseconds := 60000);
@@ -153,14 +153,21 @@ en `tests/`; el producto llama a los servicios reales.
 `npm run nala:local` levanta el mismo entorno para usarlo en el navegador
 (`http://127.0.0.1:54380/nala/index.html`).
 
-## Lo que no se pudo verificar en este entorno
+## Estado en producción (01/10/2026)
 
-- **Extracción con OpenAI real**: no hay `OPENAI_API_KEY` en el entorno de
-  desarrollo. La integración está implementada (visión + PDF, esquema JSON
-  estricto) y probada con un sustituto que reproduce el contrato de la API; la
-  primera carga real en producción debe revisarse.
-- **Supabase Storage real y la migración en producción**: no se aplicó la
-  migración a la base de datos de producción ni se crearon secretos sin su
-  autorización.
+- **Migración**: aplicada en el proyecto Supabase de SERP; los datos existentes
+  quedaron intactos. Las funciones `nala_*` sólo las ejecuta el rol de servicio.
+- **Secretos**: `NALA_WORKER_SECRET` y `CRON_SECRET` creados en Vercel
+  (producción y preview); el secreto del worker también está en Supabase Vault.
+- **Worker**: `pg_cron` (`nala-worker`) llama cada minuto a
+  `https://app.casalabs.com.do/api/nala/jobs/worker`; responde 401 sin secreto y
+  200 con él. Vercel Cron hace además la recuperación diaria.
+
+## Pendiente de verificar
+
+- **Extracción con OpenAI real**: la integración (visión + PDF, esquema JSON
+  estricto) usa la misma `OPENAI_API_KEY` del asistente y está probada con un
+  sustituto del contrato de la API. Falta revisar en Auditoría el primer lote
+  real (se recomienda empezar con 3–5 facturas).
 - **Envío a la DGII**: la Oficina Virtual no tiene API pública; el envío y su
   resultado se registran manualmente en NALA.
