@@ -63,6 +63,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .p-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .p-logo{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;box-shadow:0 3px 10px rgba(0,0,0,.35);font-weight:800;position:relative;overflow:hidden}
 .p-info{flex:1;min-width:0}
+.official-logo{display:block;max-width:100%;max-height:100%;object-fit:contain}
 .p-name{font-size:14.5px;font-weight:700;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .p-count{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11.5px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .p-count::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--green)}
@@ -499,7 +500,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <label class="chk-row"><input type="checkbox" id="u-portal-dgii" checked> DGII</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-tss" checked> TSS</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-trabajo" checked> Min. Trabajo</label>
-        <label class="chk-row"><input type="checkbox" id="u-portal-sirla" checked> SISARIL</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-sirla" checked> SISALRIL</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-carnet"> Carnet</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-azul"> Azul</label>
       </div>
@@ -693,7 +694,7 @@ const INST = {
              // The relay preserves OVI's SPA requests and fills its three
              // fields (RNC/Cédula, usuario/correo y contraseña).
              uf:'usuario', pf:'contrasena' },
-  sirla:   { name:'SISARIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISARIL',
+  sirla:   { name:'SISALRIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISALRIL',
              url:'https://virtual.sisalril.gob.do/sisalrilvirtual/home/index/28',
              // SISALRIL uses an external identity provider; proxying its SPA
              // leaves it on a loading screen, so keep authentication on its origin.
@@ -954,8 +955,9 @@ async function loadHome(pending) {
   const [credData, clientData] = await (pending || fetchHomeData());
   credentials=credData.credentials||[];
   lastPollTs=Date.now();
-  if (clientData.ok) { clients=Array.isArray(clientData.clients)?clientData.clients:[]; openClients(); }
-  else if (sessionToken) showPortals();
+  if (clientData.ok) clients=Array.isArray(clientData.clients)?clientData.clients:[];
+  // Every sign-in lands on the system home (Accesos), never on a list.
+  if (sessionToken) showPortals();
   startPolling();
 }
 
@@ -1239,6 +1241,37 @@ function getCompanies(instKey) {
   return credentials.filter(c=>c.institution===instKey);
 }
 
+/* ── Official logos ──
+   Read live from each institution's website through /api/logo/:key (cached a
+   day), so a redesign there appears here automatically. The bundled logo is
+   shown first and stays if the site cannot be reached. */
+const OFFICIAL_LOGOS=new Set(['dgii','tss','trabajo','sirla','carnet','azul','idoppril','onapi','formalizate','camara']);
+const officialLogoLoads=new Map();
+function loadOfficialLogo(key){
+  if(!officialLogoLoads.has(key)) officialLogoLoads.set(key,new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>img.naturalWidth?resolve(img.src):reject(new Error('vacío'));
+    img.onerror=()=>reject(new Error('sin logo'));
+    img.src='/api/logo/'+encodeURIComponent(key);
+  }));
+  return officialLogoLoads.get(key);
+}
+function logoMarkup(key,inst,cls,pad,sizes){
+  const fallback=LOGOS[key==='sirla'?'sisaril':key];
+  const official=OFFICIAL_LOGOS.has(key)?` data-logo-key="${key}" data-logo-pad="${pad}"`:'';
+  return fallback
+    ?`<div class="${cls}"${official} style="background:#fff;padding:${pad}">${fallback}</div>`
+    :`<div class="${cls}"${official} style="background:${inst.grad};font-size:${inst.abbr.length>4?sizes[0]:inst.abbr.length>3?sizes[1]:sizes[2]}">${inst.abbr}</div>`;
+}
+function hydrateLogos(root){
+  root.querySelectorAll('[data-logo-key]').forEach(el=>{
+    loadOfficialLogo(el.dataset.logoKey).then(src=>{
+      const img=document.createElement('img'); img.src=src; img.alt=''; img.className='official-logo';
+      el.replaceChildren(img); el.style.background='#fff'; el.style.padding=el.dataset.logoPad;
+    }).catch(()=>{});
+  });
+}
+
 function renderPortalGrid() {
   const main=document.getElementById('portals-main');
   main.innerHTML='';
@@ -1271,8 +1304,7 @@ function renderPortalGrid() {
     card.title=inst.desc;
     card.setAttribute('aria-label',`Abrir ${inst.name}`);
     card.addEventListener('click',()=>isTool?(TOOL_OPEN[key]||openCami)():openPortal(key));
-    const logoKey=key==='sirla'?'sisaril':key;
-    const logoHtml=LOGOS[logoKey]?`<div class="p-logo" style="background:#fff;padding:4px">${LOGOS[logoKey]}</div>`:`<div class="p-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'9px':inst.abbr.length>3?'10px':'12px'}">${inst.abbr}</div>`;
+    const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
     const toolLabel=key==='nala'?'Agente IA 606/607':key==='ir2'?'Declaración de renta':key==='dgii-modulos'?'6 módulos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'Análisis 606/607 e IT-1';
     const countHtml=isTool
       ?`<div class="p-count">${toolLabel}</div>`
@@ -1298,6 +1330,7 @@ function renderPortalGrid() {
     for(const key of groupKeys) grid.appendChild(makeCard(key,INST[key]));
     main.appendChild(grid);
   }
+  hydrateLogos(main);
 }
 
 /* ── Companies view ── */
@@ -1306,8 +1339,7 @@ async function renderCompaniesView() {
   const hasUrl=!!(appConfig[activePortal+'_loginUrl']||inst?.url);
 
   // banner
-  const logoKey2=activePortal==='sirla'?'sisaril':activePortal;
-  const bannerLogo=LOGOS[logoKey2]?`<div class="banner-logo" style="background:#fff;padding:3px">${LOGOS[logoKey2]}</div>`:`<div class="banner-logo" style="background:${inst.grad};font-size:${inst.abbr.length>4?'10px':inst.abbr.length>3?'11px':'13px'}">${inst.abbr}</div>`;
+  const bannerLogo=logoMarkup(activePortal,inst,'banner-logo','3px',['10px','11px','13px']);
   document.getElementById('portal-banner').innerHTML=`
     <div class="portal-banner">
       ${bannerLogo}
@@ -1320,6 +1352,7 @@ async function renderCompaniesView() {
         Configurar URL
       </button>
     </div>`;
+  hydrateLogos(document.getElementById('portal-banner'));
 
   // list — decrypt all, deduplicate by company name (keep newest updated_at)
   const list=document.getElementById('company-list');
