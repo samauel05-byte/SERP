@@ -1,7 +1,8 @@
 {
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/api/poll", "destination": "/api/credentials?poll=1" }
+    { "source": "/api/poll", "destination": "/api/credentials?poll=1" },
+    { "source": "/api/nala/:path*", "destination": "/api/nala?route=:path*" }
   ],
   "headers": [
     {
@@ -17,5 +18,8 @@
   ],
   "functions": {
     "api/**/*.js": { "maxDuration": 60 }
-  }
+  },
+  "crons": [
+    { "path": "/api/nala/jobs/worker", "schedule": "17 6 * * *" }
+  ]
 }
