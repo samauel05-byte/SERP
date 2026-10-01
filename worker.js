@@ -821,6 +821,33 @@ export default {
       return W+'/proxy?url='+encodeURIComponent(u.href)+(F?'&flow='+encodeURIComponent(F):'');
     }catch(e){return null;}
   }
+  // Background requests (jQuery/fetch: "Buscar" cédula, RNC lookups) go to
+  // the portal itself. From the relay page the browser blocks them (CORS) and
+  // they would carry no session. Send them through the relay with the flow.
+  function apiHref(u){
+    try{
+      var a=new URL(String(u),BASE);
+      if(a.origin===location.origin||!/^https?:$/.test(a.protocol)||!isAllowed(a.hostname)) return null;
+      return W+'/api-proxy?url='+encodeURIComponent(a.href)+(F?'&flow='+encodeURIComponent(F):'');
+    }catch(e){return null;}
+  }
+  try{
+    var _xo=XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open=function(m,u){
+      var a=Array.prototype.slice.call(arguments),p=apiHref(u); if(p) a[1]=p;
+      return _xo.apply(this,a);
+    };
+  }catch(e){}
+  try{
+    var _fe=window.fetch;
+    if(_fe) window.fetch=function(input,init){
+      var u=typeof input==='string'||input instanceof URL?String(input):(input&&input.url);
+      var p=u&&apiHref(u);
+      if(!p) return _fe.apply(this,arguments);
+      if(typeof input==='string'||input instanceof URL) return _fe.call(this,p,init);
+      return _fe.call(this,new Request(p,input),init);
+    };
+  }catch(e){}
   // Capture raw assign/replace BEFORE any patching so we can call them without recursion
   var _assign=window.location.assign.bind(window.location);
   var _replace=window.location.replace.bind(window.location);
@@ -988,6 +1015,15 @@ export default {
       for (const [k, v] of request.headers.entries()) {
         if (!skip.has(k.toLowerCase())) fwdHeaders[k] = v;
       }
+      // Pages opened through /proxy keep their portal cookies scoped to the
+      // flow (serp_<flow>_name). Their background requests send the flow too.
+      const apiFlow = /^[A-Za-z0-9_-]{6,120}$/.test(reqUrl.searchParams.get('flow') || '') ? reqUrl.searchParams.get('flow') : '';
+      const apiPrefix = apiFlow ? 'serp_' + apiFlow + '_' : '';
+      if (apiPrefix) {
+        for (const k of Object.keys(fwdHeaders)) if (k.toLowerCase() === 'cookie') delete fwdHeaders[k];
+        const scoped = (request.headers.get('Cookie') || '').split(';').map(v => v.trim()).filter(v => v.startsWith(apiPrefix)).map(v => v.slice(apiPrefix.length));
+        if (scoped.length) fwdHeaders['Cookie'] = scoped.join('; ');
+      }
       fwdHeaders['Host'] = target.host;
       fwdHeaders['Origin'] = target.origin;
       fwdHeaders['Referer'] = target.origin + '/';
@@ -1017,7 +1053,7 @@ export default {
               const absLoc = new URL(v, targetUrl).href;
               const locHost = new URL(absLoc).hostname;
               if (ALLOWED_HOSTS.some(h => locHost === h || locHost.endsWith('.' + h))) {
-                respHeaders.set('Location', WORKER_ORIGIN + '/api-proxy?url=' + encodeURIComponent(absLoc));
+                respHeaders.set('Location', WORKER_ORIGIN + '/api-proxy?url=' + encodeURIComponent(absLoc) + (apiFlow ? '&flow=' + encodeURIComponent(apiFlow) : ''));
               } else {
                 respHeaders.set('Location', v);
               }
@@ -1029,12 +1065,15 @@ export default {
 
         // Rewrite Set-Cookie: strip Domain so cookies store on workers.dev, fix SameSite
         let setCookies = [];
-        try { setCookies = apiRes.headers.getAll('set-cookie'); } catch(e) {
+        try {
+          setCookies = typeof apiRes.headers.getSetCookie === 'function' ? apiRes.headers.getSetCookie() : apiRes.headers.getAll('set-cookie');
+        } catch(e) {
           const c = apiRes.headers.get('set-cookie');
           if (c) setCookies = [c];
         }
         for (const cookie of setCookies) {
           let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '').replace(/;\s*[Pp]ath=[^;]*/g, '') + '; Path=/';
+          if (apiPrefix) c = c.replace(/^([^=;]+)/, apiPrefix + '$1');
           c = c.replace(/;\s*[Ss]ame[Ss]ite=None/gi, '; SameSite=Lax');
           if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
           respHeaders.append('Set-Cookie', c);

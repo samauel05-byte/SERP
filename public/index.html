@@ -759,7 +759,10 @@ const INST = {
              uf:'email', pf:'password' },
   formalizate:{ name:'Formalízate', desc:'Portal Formalízate · Registro de empresas',grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'FZ',
              uf:'usuario', pf:'contrasena' },
-  camara:  { name:'Cámara',     desc:'Cámara de Comercio y Producción',             grad:'linear-gradient(135deg,#92400e 0%,#f59e0b 100%)', abbr:'CC',
+  camara:  { name:'Cámara',     desc:'Cámara de Comercio y Producción · Solicitud de firma digital', grad:'linear-gradient(135deg,#92400e 0%,#f59e0b 100%)', abbr:'CC',
+             // Public form (no login): opened through the relay like DGII so
+             // its buttons, lookups and steps keep working inside Direct.
+             url:'https://www.camarasantodomingo.do/solicitudes/FormularioWeb/', openRelay:true,
              uf:'email', pf:'password' },
   citrus:  { name:'Citrus',     desc:'Portal Citrus · Pagos y servicios',           grad:'linear-gradient(135deg,#065f46 0%,#059669 100%)', abbr:'CT',
              uf:'usuario', pf:'contrasena' },
@@ -1280,6 +1283,15 @@ window.addEventListener('message', e => {
 });
 
 
+// Portals without login (e.g. Cámara's request form) open straight through
+// the relay, in their own session, so every button and lookup works.
+function openRelayPortal(instKey) {
+  const url=appConfig[instKey+'_loginUrl']||INST[instKey]?.url;
+  if(!url){ toast('Configura la URL del portal en ⚙️','warn'); return; }
+  const flow=String(Date.now())+'-'+Math.random().toString(36).slice(2);
+  window.open('https://portal-rd-relay.samauel05.workers.dev/proxy?url='+encodeURIComponent(url)+'&flow='+encodeURIComponent(flow),'_blank');
+}
+
 function openPortal(instKey) {
   activePortal=instKey;
   renderCompaniesView();
@@ -1330,6 +1342,7 @@ function renderPortalGrid() {
     const allPortals=['dgii','tss','trabajo','sirla','carnet','azul'];
     const userPortals=Array.isArray(currentUser?.portals)?currentUser.portals:allPortals;
     allowed.push(...(currentUser?.role==='admin'?allPortals:userPortals));
+    allowed.push('camara');
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
@@ -1346,16 +1359,16 @@ function renderPortalGrid() {
   const PLAY='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
   const TOOL_OPEN={nala:openNala, ir2:openIr2, 'dgii-modulos':openDgiiModulos, clients:openClients, cami:openCami};
   function makeCard(key,inst){
-    const isTool=!!inst.tool;
+    const isTool=!!inst.tool||!!inst.openRelay;
     const cos=isTool?[]:getCompanies(key);
     const card=document.createElement('button');
     card.type='button';
     card.className='p-card'+(key==='nala'?' p-card-nala':'');
     card.title=inst.desc;
     card.setAttribute('aria-label',`Abrir ${inst.name}`);
-    card.addEventListener('click',()=>isTool?(TOOL_OPEN[key]||openCami)():openPortal(key));
+    card.addEventListener('click',()=>inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key));
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
-    const toolLabel=key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
+    const toolLabel=inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
     const countHtml=isTool
       ?`<div class="p-count">${toolLabel}</div>`
       :`<div class="p-count${cos.length?'':' empty'}">${cos.length?`${cos.length} empresa${cos.length>1?'s':''}`:'Sin empresas'}</div>`;
