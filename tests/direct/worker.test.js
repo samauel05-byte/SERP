@@ -17,6 +17,7 @@ test.before(async () => {
   globalThis.caches = { default: { match: async () => null, put: async () => {} } };
   globalThis.fetch = async (url, init = {}) => {
     seen = { url: String(url), headers: init.headers || {} };
+    if (/appconfig\.production\.json/.test(url)) return new Response('{"remoteServiceBaseUrl":"https://api.mt.gob.do","appBaseUrl":"https://ovi.mt.gob.do"}', { headers: { 'content-type': 'application/json' } });
     if (/reporte\.aspx/.test(url)) return new Response(Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0xff]), { headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename="r.pdf"' } });
     if (init.headers?.['X-MicrosoftAjax']) return new Response('1|#||4|12|updatePanel|x|', { headers: { 'content-type': 'text/plain; charset=utf-8', 'set-cookie': 'ASP.NET_SessionId=abc; path=/; HttpOnly' } });
     return new Response(PAGE, { headers: { 'content-type': 'text/html; charset=utf-8', 'set-cookie': 'ASP.NET_SessionId=abc; domain=.dgii.gov.do; path=/ofv; HttpOnly' } });
@@ -96,4 +97,17 @@ test('los botones <a href="#"> de DGII no recargan la misma página', async () =
   const html = await (await proxied('https://www.dgii.gov.do/ofv/msgNotificaciones.aspx')).text();
   assert.match(html, /if\(href&&href\.charAt\(0\)==='#'\)\{\s*e\.preventDefault\(\);/);
   assert.match(html, /if\(u\.hash&&u\.href\.split\('#'\)\[0\]===here\.href\.split\('#'\)\[0\]\)\{e\.preventDefault\(\);return;\}/);
+});
+
+test('Ministerio de Trabajo (OVI): la app carga por el relay y se queda en él', async () => {
+  const html = await (await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login')))).text();
+  assert.match(html, /<base href="https:\/\/portal-rd-relay\.samauel05\.workers\.dev\/r\/ovi\.mt\.gob\.do\/">/);
+  assert.match(html, /Object\.setPrototypeOf\(XHRProxy,_X\)/, 'XMLHttpRequest.DONE sigue existiendo');
+  assert.match(html, /a\[1\]=p\|\|u;\s*return _o\.apply\(null,a\);/, 'no convierte las peticiones en sincrónicas');
+  const cfg = await (await worker.fetch(new Request('https://relay.test/r/ovi.mt.gob.do/assets/appconfig.production.json'))).json();
+  assert.strictEqual(cfg.appBaseUrl, 'https://portal-rd-relay.samauel05.workers.dev/r/ovi.mt.gob.do');
+  assert.strictEqual(cfg.remoteServiceBaseUrl, 'https://api.mt.gob.do');
+  const nav = await worker.fetch(new Request('https://relay.test/r/ovi.mt.gob.do/app/main', { headers: { 'Sec-Fetch-Dest': 'document' } }));
+  assert.strictEqual(nav.status, 302);
+  assert.match(nav.headers.get('location'), /\/proxy\?url=https%3A%2F%2Fovi\.mt\.gob\.do%2Fapp%2Fmain$/);
 });
