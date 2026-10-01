@@ -47,11 +47,11 @@
       const iv = setInterval(() => {
         hash = location.hash.slice(1);
         waited += 100;
-        if (hash || waited >= 5000) { clearInterval(iv); resolve(); }
+        if (hash || waited >= 20000) { clearInterval(iv); resolve(); }
       }, 100);
     });
   }
-  if (!hash) { set('Error', 'No se recibieron datos de acceso.', 'err'); return; }
+  if (!hash) { set('Error', 'No se recibieron datos de acceso. Cierra esta pestaña y vuelve a darle a ENTRAR en Direct.', 'err'); return; }
 
   let params;
   try { params = JSON.parse(decodeURIComponent(atob(hash))); }
