@@ -71,3 +71,13 @@ test('postbacks parciales (UpdatePanel) reciben la respuesta delta de DGII', asy
   assert.strictEqual(await res.text(), '1|#||4|12|updatePanel|x|');
   assert.match(res.headers.get('set-cookie'), /^serp_flow123456_ASP\.NET_SessionId=abc/);
 });
+
+test('robot de la tarjeta DGII: búsquedas bien escapadas y ayuda si no puede llenar', async () => {
+  const html = await (await proxied('https://www.dgii.gov.do/ofv/login.aspx')).text();
+  // In the page the regex must keep its backslashes (\s), otherwise it looks for a literal "s".
+  assert.ok(html.includes('/c[oó]digo\\s+introducido\\s+es\\s+incorrecto/i'));
+  assert.ok(html.includes('posici[oó]n|coordenada|c[oó]digo|n[uú]mero|casilla)\\D{0,25}?(\\d{1,3})\\D{0,40}?tarjeta'));
+  assert.match(html, /function looseCardInput\(cfg\)/);
+  assert.match(html, /function showCardHelp\(position\)/);
+  assert.match(html, /no tiene la tarjeta de códigos guardada en Direct/);
+});
