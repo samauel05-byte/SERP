@@ -76,7 +76,7 @@ module.exports = async (req, res) => {
   try {
     if (route === 'jobs/worker' && ['GET', 'POST'].includes(req.method)) {
       if (!workerAuthorized(req)) return res.status(401).json({ error: 'No autorizado' });
-      return res.json(await pipeline.runJobs({ tenantId: null, budgetMs: 45000 }));
+      return res.json(await pipeline.runJobs({ tenantId: null, budgetMs: 55000 }));
     }
     const match = ROUTES.map(([method, re, fn]) => ({ method, m: re.exec(route), fn })).filter(r => r.m);
     if (!match.length) return res.status(404).json({ error: 'Ruta no encontrada' });

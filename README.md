@@ -65,7 +65,7 @@ Contraseña del usuario (solo en memoria del navegador)
 |--------|-------------|
 | **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login |
 | **Cami** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 |
-| **NALA** | Chat IA para contabilidad dominicana |
+| **NALA** | Flujo fiscal 606/607: carga masiva, extracción OCR/IA, validación, auditoría, aprobación y exportación DGII; chat IA e IR-17 (ver `docs/nala/README.md`) |
 | **Clientes** | Gestión de los clientes de la empresa operadora mediante Excel |
 
 ---
