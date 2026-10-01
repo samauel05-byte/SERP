@@ -91,3 +91,9 @@ test('una pestaña que abre la ruta de datos del relay ve la DGII, no el texto J
   assert.match(data.headers.get('content-type'), /json/);
   assert.ok(Array.isArray((await data.json()).hiddenFields));
 });
+
+test('los botones <a href="#"> de DGII no recargan la misma página', async () => {
+  const html = await (await proxied('https://www.dgii.gov.do/ofv/msgNotificaciones.aspx')).text();
+  assert.match(html, /if\(href&&href\.charAt\(0\)==='#'\)\{\s*e\.preventDefault\(\);/);
+  assert.match(html, /if\(u\.hash&&u\.href\.split\('#'\)\[0\]===here\.href\.split\('#'\)\[0\]\)\{e\.preventDefault\(\);return;\}/);
+});
