@@ -850,7 +850,21 @@ export default {
     var _xo=XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open=function(m,u){
       var a=Array.prototype.slice.call(arguments),p=apiHref(u); if(p) a[1]=p;
+      this.__serpApi=!!p; this.__serpXrw=false;
       return _xo.apply(this,a);
+    };
+    // On the portal the page's own requests are same-origin, so jQuery marks
+    // them X-Requested-With; seen from the relay it skips that header, and
+    // portals that answer only "Ajax" requests left their lists loading.
+    var _xh=XMLHttpRequest.prototype.setRequestHeader;
+    XMLHttpRequest.prototype.setRequestHeader=function(k){
+      if(String(k).toLowerCase()==='x-requested-with') this.__serpXrw=true;
+      return _xh.apply(this,arguments);
+    };
+    var _xs=XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send=function(){
+      if(this.__serpApi&&!this.__serpXrw){try{_xh.call(this,'X-Requested-With','XMLHttpRequest');}catch(e){}}
+      return _xs.apply(this,arguments);
     };
   }catch(e){}
   try{
@@ -1042,6 +1056,16 @@ export default {
       fwdHeaders['Host'] = target.host;
       fwdHeaders['Origin'] = target.origin;
       fwdHeaders['Referer'] = target.origin + '/';
+      // The page making the request is the Referer a browser would send.
+      try {
+        const pageRef = new URL(request.headers.get('Referer') || '');
+        const pageUrl = pageRef.origin === reqUrl.origin && pageRef.pathname === '/proxy' ? pageRef.searchParams.get('url') : '';
+        if (pageUrl && new URL(pageUrl).hostname === target.hostname) {
+          fwdHeaders['Referer'] = pageUrl;
+          // Same-origin on the portal: a GET there carries no Origin header.
+          if (request.method === 'GET' || request.method === 'HEAD') delete fwdHeaders['Origin'];
+        }
+      } catch {}
       fwdHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36';
 
       let body = null;
