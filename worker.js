@@ -568,10 +568,28 @@ export default {
         if(code) list.push(code);
       });
     });
+    // A card stored on one line separated only by spaces ("4521 8834 1290")
+    // is still one value per position.
+    if(list.length === 1 && /\\s/.test(list[0])) list = list[0].split(/\\s+/).filter(Boolean);
+    // Numbered cards ("1: 4521", "2-8834", "3=1290", "4) 7781") give the
+    // position explicitly; use it instead of the order.
+    var numbered = {}, allNumbered = list.length > 0;
+    list.forEach(function(item){
+      var m = item.match(/^(\\d{1,3})\\s*[-:=).]\\s*(\\S+)$/);
+      if(m) numbered[parseInt(m[1], 10)] = m[2]; else allNumbered = false;
+    });
+    if(!allNumbered){
+      // "1: 4521 2: 8834" on one line: pairs separated by spaces.
+      var joined = list.join(' '), pairs = joined.match(/(\\d{1,3})\\s*[-:=).]\\s*(\\S+)/g);
+      if(pairs && pairs.length > 1 && joined.replace(/(\\d{1,3})\\s*[-:=).]\\s*(\\S+)/g, '').trim() === ''){
+        numbered = {}; allNumbered = true;
+        pairs.forEach(function(pair){ var m = pair.match(/^(\\d{1,3})\\s*[-:=).]\\s*(\\S+)$/); numbered[parseInt(m[1], 10)] = m[2]; });
+      }
+    }
     // Return one token only. A comma/newline in the result means it is not a
     // valid single card position and must never be submitted as the full card.
-    var selected = String(list[position - 1] || '').trim();
-    return /^[^,;|\\r\\n]+$/.test(selected) ? selected : '';
+    var selected = String(allNumbered ? (numbered[position] || '') : (list[position - 1] || '')).trim();
+    return /^[^,;|\\r\\n\\s]+$/.test(selected) ? selected : '';
   }
   function cardInput(cfg){
     var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;

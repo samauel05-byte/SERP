@@ -81,3 +81,19 @@ test('robot de la tarjeta DGII: búsquedas bien escapadas y ayuda si no puede ll
   assert.match(html, /function showCardHelp\(position\)/);
   assert.match(html, /no tiene la tarjeta de códigos guardada en Direct/);
 });
+
+test('código de la tarjeta según la posición, con cualquier formato guardado', async () => {
+  const html = await (await proxied('https://www.dgii.gov.do/ofv/login.aspx')).text();
+  const fn = html.match(/function cardCodeForPosition\(codes, position\)\{[\s\S]*?\n  \}/)[0];
+  const code = new Function(fn + '; return cardCodeForPosition;')();
+  assert.strictEqual(code(['A1', 'B2', 'C3'], 3), 'C3');
+  assert.strictEqual(code('A1,B2,C3', 2), 'B2');
+  assert.strictEqual(code('A1\nB2\nC3', 3), 'C3');
+  assert.strictEqual(code(['A1, B2; C3'], 2), 'B2');
+  assert.strictEqual(code('4521 8834 1290', 3), '1290');
+  assert.strictEqual(code('1: 4521 2: 8834 3: 1290', 2), '8834');
+  assert.strictEqual(code('1-4521\n2-8834\n3-1290', 3), '1290');
+  assert.strictEqual(code(['3=1290', '1=4521', '2=8834'], 1), '4521');
+  assert.strictEqual(code('4521 8834', 5), '');
+  assert.strictEqual(code('A1,B2', 0), '');
+});
