@@ -797,7 +797,17 @@ export default {
     while(el&&el.tagName!=='A') el=el.parentElement;
     if(!el||!el.getAttribute) return;
     var href=el.getAttribute('href');
-    if(!href||/^(javascript:|#|mailto:|tel:)/i.test(href)) return;
+    // DGII buttons are <a href="#"> with the real action in an onclick. With
+    // the DGII <base>, "#" points at the portal page itself, so following it
+    // reloaded the same page and cancelled the button's own navigation.
+    // Cancel only the "#" jump; the button's handlers still run.
+    if(href&&href.charAt(0)==='#'){
+      e.preventDefault();
+      var id=href.slice(1),t=id&&(document.getElementById(id)||document.getElementsByName(id)[0]);
+      if(t&&t.scrollIntoView) t.scrollIntoView();
+      return;
+    }
+    if(!href||/^(javascript:|mailto:|tel:)/i.test(href)) return;
     var p=proxyHref(href);
     if(!p) return;
     e.preventDefault();
@@ -828,6 +838,9 @@ export default {
           if(!e.cancelable||e.hashChange||e.downloadRequest||e.formData) return;
           var u=new URL(e.destination.url);
           if(u.origin===location.origin||!isAllowed(u.hostname)) return;
+          // A jump to an anchor of this same page is not a navigation.
+          var here=new URL(BASE,location.href);
+          if(u.hash&&u.href.split('#')[0]===here.href.split('#')[0]){e.preventDefault();return;}
           var p=proxyHref(u.href); if(!p) return;
           e.preventDefault(); _assign(p);
         }catch(ex){}
