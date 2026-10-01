@@ -228,7 +228,7 @@ create index if not exists nala_events_batch_idx on public.nala_events (batch_id
 create index if not exists nala_events_tenant_idx on public.nala_events (tenant_id, id desc);
 
 create or replace function public.nala_events_immutable() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   if tg_op = 'DELETE' and not exists (select 1 from public.direct_tenants where id = old.tenant_id) then
     return old; -- borrado en cascada de un tenant eliminado
