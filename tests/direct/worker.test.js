@@ -18,6 +18,7 @@ test.before(async () => {
   globalThis.fetch = async (url, init = {}) => {
     seen = { url: String(url), headers: init.headers || {} };
     if (/appconfig\.production\.json/.test(url)) return new Response('{"remoteServiceBaseUrl":"https://api.mt.gob.do","appBaseUrl":"https://ovi.mt.gob.do"}', { headers: { 'content-type': 'application/json' } });
+    if (/GetPadronElectoral/.test(url)) return new Response('{"error":false}', { headers: { 'content-type': 'application/json', 'set-cookie': 'AspxAutoDetectCookieSupport=1; path=/' } });
     if (/reporte\.aspx/.test(url)) return new Response(Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0xff]), { headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename="r.pdf"' } });
     if (init.headers?.['X-MicrosoftAjax']) return new Response('1|#||4|12|updatePanel|x|', { headers: { 'content-type': 'text/plain; charset=utf-8', 'set-cookie': 'ASP.NET_SessionId=abc; path=/; HttpOnly' } });
     return new Response(PAGE, { headers: { 'content-type': 'text/html; charset=utf-8', 'set-cookie': 'ASP.NET_SessionId=abc; domain=.dgii.gov.do; path=/ofv; HttpOnly' } });
@@ -110,4 +111,14 @@ test('Ministerio de Trabajo (OVI): la app carga por el relay y se queda en él',
   const nav = await worker.fetch(new Request('https://relay.test/r/ovi.mt.gob.do/app/main', { headers: { 'Sec-Fetch-Dest': 'document' } }));
   assert.strictEqual(nav.status, 302);
   assert.match(nav.headers.get('location'), /\/proxy\?url=https%3A%2F%2Fovi\.mt\.gob\.do%2Fapp%2Fmain$/);
+});
+
+test('las consultas en segundo plano de un portal (Cámara: Buscar cédula) usan la sesión del flujo', async () => {
+  const html = await (await proxied('https://www.camarasantodomingo.do/solicitudes/FormularioWeb/')).text();
+  assert.match(html, /function apiHref\(u\)/);
+  assert.match(html, /XMLHttpRequest\.prototype\.open=function/);
+  const res = await worker.fetch(new Request('https://relay.test/api-proxy?url=' + encodeURIComponent('https://www.camarasantodomingo.do/solicitudes/FormularioWeb/Solicitud/GetPadronElectoral?documento=1') + '&flow=flow123456', { headers: { Cookie: 'serp_flow123456_ASP.NET_SessionId=s1; serp_otroflujo_ASP.NET_SessionId=s2; otra=x' } }));
+  assert.strictEqual(seen.headers.Cookie, 'ASP.NET_SessionId=s1', 'solo las cookies de este flujo, sin el prefijo');
+  assert.deepStrictEqual(await res.json(), { error: false });
+  assert.match(res.headers.getSetCookie()[0], /^serp_flow123456_AspxAutoDetectCookieSupport=1;/);
 });
