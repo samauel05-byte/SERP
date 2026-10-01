@@ -750,7 +750,9 @@ export default {
         // the relay that storage is the autofill's: the company payload kept
         // for the next screen (the code-card step) was erased, so the card was
         // never filled. Keep the relay's own "serp-" keys when the page clears.
-        const storageGuard = `<script>(function(){try{var s=window.sessionStorage,c=s.clear.bind(s);s.clear=function(){var keep={};for(var i=0;i<s.length;i++){var k=s.key(i);if(k&&k.indexOf('serp-')===0)keep[k]=s.getItem(k);}c();for(var k in keep)s.setItem(k,keep[k]);};}catch(e){}})();<\/script>`;
+        // Patched on Storage.prototype: assigning sessionStorage.clear directly is
+        // ignored by Safari/iOS (it stores a "clear" item instead).
+        const storageGuard = `<script>(function(){try{var P=Storage.prototype,c=P.clear;P.clear=function(){if(this!==window.sessionStorage)return c.call(this);var keep={},i,k;for(i=0;i<this.length;i++){k=this.key(i);if(k&&k.indexOf('serp-')===0)keep[k]=this.getItem(k);}c.call(this);for(k in keep)this.setItem(k,keep[k]);};}catch(e){}})();<\/script>`;
         html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + storageGuard + navInterceptor);
 
         const responseHeaders = new Headers({
