@@ -1025,6 +1025,21 @@ export default {
     // Default route — fetch portal page and extract hidden fields (ViewState etc.)
     const { searchParams } = reqUrl;
     const targetUrl = searchParams.get('url');
+    // This route answers Direct's background requests with JSON. A browser
+    // tab that lands here (a page navigation) must see the portal instead of
+    // that JSON: send it to the proxied page, keeping the flow if present.
+    const isNavigation = request.headers.get('Sec-Fetch-Mode') === 'navigate'
+      || request.headers.get('Sec-Fetch-Dest') === 'document'
+      || (!request.headers.get('Sec-Fetch-Mode') && /text\/html/i.test(request.headers.get('Accept') || ''));
+    if (isNavigation && request.method === 'GET') {
+      let portal = null;
+      try { portal = targetUrl ? new URL(targetUrl) : null; } catch {}
+      if (portal && /^https?:$/.test(portal.protocol) && ALLOWED_HOSTS.some(h => portal.hostname === h || portal.hostname.endsWith('.' + h))) {
+        const flow = searchParams.get('flow');
+        const to = WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(portal.href) + (flow && /^[A-Za-z0-9_-]{6,120}$/.test(flow) ? '&flow=' + encodeURIComponent(flow) : '');
+        return new Response(null, { status: 302, headers: { Location: to, 'Cache-Control': 'no-store' } });
+      }
+    }
     if (!targetUrl) return json({ error: 'url requerida' }, 400);
 
     let target;

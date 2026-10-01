@@ -81,3 +81,13 @@ test('una ventana abierta sin flujo usa la última sesión de ese portal', async
   }));
   assert.strictEqual(seen.headers.Cookie, 'ASP.NET_SessionId=abc');
 });
+
+test('una pestaña que abre la ruta de datos del relay ve la DGII, no el texto JSON', async () => {
+  const nav = await worker.fetch(new Request('https://relay.test/?url=' + encodeURIComponent('https://www.dgii.gov.do/ofv/login.aspx'), { headers: { 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document', Accept: 'text/html' } }));
+  assert.strictEqual(nav.status, 302);
+  assert.match(nav.headers.get('location'), /\/proxy\?url=https%3A%2F%2Fwww\.dgii\.gov\.do%2Fofv%2Flogin\.aspx$/);
+  // Direct's own background request still receives the form data as JSON.
+  const data = await worker.fetch(new Request('https://relay.test/?url=' + encodeURIComponent('https://www.dgii.gov.do/ofv/login.aspx'), { headers: { 'Sec-Fetch-Mode': 'cors', Accept: '*/*' } }));
+  assert.match(data.headers.get('content-type'), /json/);
+  assert.ok(Array.isArray((await data.json()).hiddenFields));
+});
