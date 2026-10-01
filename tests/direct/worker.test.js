@@ -146,3 +146,8 @@ test('las consultas de la página llevan X-Requested-With y la página real como
   assert.strictEqual(seen.headers['x-requested-with'], 'XMLHttpRequest');
   assert.ok(!('Origin' in seen.headers), 'un GET del mismo sitio no lleva Origin');
 });
+
+test('Trabajo (OVI): el aviso "Portal no disponible" no tapa la app después de entrar', async () => {
+  const html = await (await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login')))).text();
+  assert.match(html, /!document\.querySelector\('input,button,a\[href\]'\)&&shown\.length<40/);
+});
