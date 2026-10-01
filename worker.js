@@ -260,6 +260,14 @@ export default {
               return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
             } catch { return m; }
           });
+          // Iframes written in the page (notices, documents) load through the relay.
+          cachedHtml = cachedHtml.replace(/(<iframe\b[^>]*\bsrc=["'])([^"']+)(["'])/gi, (m, pre, src, post) => {
+            try {
+              const abs = new URL(src.replace(/&amp;/gi, '&'), targetUrl);
+              if (!/^https?:$/.test(abs.protocol) || !ALLOWED_HOSTS.some(h => abs.hostname === h || abs.hostname.endsWith('.' + h))) return m;
+              return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(abs.href) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
+            } catch { return m; }
+          });
           // Rewrite <meta http-equiv="refresh"> redirect URLs so they go through the proxy
           cachedHtml = cachedHtml.replace(/(<meta\b[^>]+\bhttp-equiv=["']refresh["'][^>]*\bcontent=["'][^"']*;\s*url=)([^"' >]+)/gi, (m, pre, url) => {
             try {
@@ -786,7 +794,22 @@ export default {
         // Patched on Storage.prototype: assigning sessionStorage.clear directly is
         // ignored by Safari/iOS (it stores a "clear" item instead).
         const storageGuard = `<script>(function(){try{var P=Storage.prototype,c=P.clear;P.clear=function(){if(this!==window.sessionStorage)return c.call(this);var keep={},i,k;for(i=0;i<this.length;i++){k=this.key(i);if(k&&k.indexOf('serp-')===0)keep[k]=this.getItem(k);}c.call(this);for(k in keep)this.setItem(k,keep[k]);};}catch(e){}})();<\/script>`;
-        html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + storageGuard + navInterceptor);
+        // DGII opens notices and documents in windows (colorbox iframes) whose
+        // src points at dgii.gov.do. Loaded from there they carry no session
+        // (the cookies live on the relay) and DGII refuses to be framed, so the
+        // window came up blank. Route iframe sources through the relay too.
+        const frameRelay = `<script>(function(){try{
+  var W='${WORKER_ORIGIN}',F=${JSON.stringify(portalFlow)},H=${JSON.stringify(ALLOWED_HOSTS)};
+  var B=new URLSearchParams(location.search).get('url')||location.href;
+  function px(v){try{var u=new URL(String(v),B);if(u.origin===location.origin||!/^https?:$/.test(u.protocol))return null;
+    if(!H.some(function(h){return u.hostname===h||u.hostname.endsWith('.'+h);}))return null;
+    return W+'/proxy?url='+encodeURIComponent(u.href)+(F?'&flow='+encodeURIComponent(F):'');}catch(e){return null;}}
+  var d=Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype,'src');
+  if(d&&d.set)Object.defineProperty(HTMLIFrameElement.prototype,'src',{configurable:true,enumerable:d.enumerable,get:d.get,set:function(v){var p=px(v);d.set.call(this,p||v);}});
+  var sa=Element.prototype.setAttribute;
+  Element.prototype.setAttribute=function(n,v){if(this.tagName==='IFRAME'&&String(n).toLowerCase()==='src'){var p=px(v);if(p)v=p;}return sa.call(this,n,v);};
+}catch(e){}})();<\/script>`;
+        html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + storageGuard + frameRelay + navInterceptor);
 
         const responseHeaders = new Headers({
           'Content-Type': 'text/html; charset=utf-8',
