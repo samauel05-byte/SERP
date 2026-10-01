@@ -87,10 +87,15 @@ test('validate: 607 payment breakdown and consumer summary', () => {
   assert.ok(validate({ format: '607', period: '202607', client, fields: { ...sale, pago_tarjeta: '590.00' } }).issues.some(i => i.code === 'FECHA_POSTERIOR_PERIODO'));
 });
 
-test('validate: duplicates are critical and reference the other record', () => {
-  const r = validate({ format: '606', period: '202608', client, fields: base606, duplicates: [{ id: 'other', status: 'approved', where: 'lote Agosto' }] });
-  const dup = r.issues.find(i => i.code === 'DUPLICADO');
+test('validate: a repeated invoice is blocked with a clear message; the original is not', () => {
+  const copy = validate({ format: '606', period: '202608', client, fields: base606,
+    duplicates: [{ id: 'other', status: 'approved', previous: true, where: 'el lote «Compras agosto» (08/2026)', state: 'aprobada el 05/08/2026', export: 'DGII_F_606_101010632_202608.TXT (enviado a la DGII)' }] });
+  const dup = copy.issues.find(i => i.code === 'DUPLICADO');
   assert.equal(dup.severity, 'critical'); assert.equal(dup.ref, 'other');
+  assert.match(dup.message, /^Esta factura ya fue procesada: el NCF B0100000123 de 130000001 está aprobada el 05\/08\/2026 en el lote «Compras agosto» \(08\/2026\) y exportada en DGII_F_606_101010632_202608\.TXT \(enviado a la DGII\)/);
+  const original = validate({ format: '606', period: '202608', client, fields: base606, correctedFields: Object.keys(base606), duplicates: [{ id: 'later', status: 'pending_review', previous: false, where: 'el lote «Repetido»' }] });
+  assert.equal(original.critical_count, 0);
+  assert.equal(original.issues.find(i => i.code === 'COPIA_POSTERIOR').severity, 'info');
 });
 
 test('606 TXT matches the official macro layout', () => {

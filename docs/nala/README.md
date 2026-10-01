@@ -17,13 +17,27 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 | Panel de control | Indicadores del período (consolidado o por empresa), tendencia de 12 meses y empresas con pendientes. |
 | Dashboard por empresa | Lotes, pendientes, aprobadas, observaciones y exportaciones de la empresa activa. |
 | Empresas clientes | Las mismas empresas de SERP (`direct_clients`); registro, edición, búsqueda y configuración contable (tipos por defecto, desglose bienes/servicios, régimen, cierre). |
-| Consulta RNC | Estructura, dígito verificador (algoritmo de las herramientas DGII) y **consulta oficial** a la Consulta RNC de dgii.gov.do, por separado. Si la DGII no responde, se informa y no se da por verificado. |
+| Consulta RNC | De quién es (razón social, nombre comercial), estado, actividad, régimen, facturador electrónico, aviso de Adecuación/Transformación (Consulta RNC de dgii.gov.do) y **antigüedad**: fecha de constitución o inicio de operaciones del archivo oficial `DGII_RNC.zip`. Estructura y dígito verificador se muestran aparte. Deudas, pagos y "al día" **no son públicos** (Código Tributario, art. 47): la pantalla lo explica en vez de suponerlos. |
 | Carga masiva y lotes | JPG, PNG, PDF y ZIP (RAR se rechaza con aviso). Empresa, mes, año, formato y nombre. Originales en almacenamiento privado con huella SHA-256. Progreso, duración, reintentos y errores por documento. |
 | Auditoría fiscal | Vista por lote y vista unificada; original a la izquierda (zoom, rotación, páginas) y datos a la derecha en formulario u hoja; anterior/siguiente, deshacer, guardar, aprobar, revertir, reubicar, excluir; historial completo. |
 | Exportar DGII 606/607 | Por empresa y período, consolidado o por lotes. Vista previa con errores y advertencias; TXT y Excel desde la misma instantánea; seguimiento generado → enviado → aceptado/rechazado. |
 | Equipo y oficiales | Roles (supervisor, oficial, auditor, sólo lectura), empresas asignadas y ajustes de permisos; validados en el servidor. |
 | Configuración | Integraciones, límites, tolerancia de conciliación, retención documental y plantillas de Excel personalizado. |
 | Asistente NALA | El chat contable y la lectura rápida 606/607/IR-17 existentes, sin cambios (`public/nala/asistente.html`). |
+
+## Facturas repetidas
+
+- **Mismo archivo otra vez** (misma huella SHA-256, en cualquier lote de la
+  empresa operadora): no se sube ni se vuelve a leer. El usuario ve al instante
+  *"Esta factura ya fue cargada el 05/08/2026 en el lote «Compras agosto»
+  (Cliente Uno SRL, 606 08/2026). Comprobantes: B0100000101 aprobada. No se
+  vuelve a leer."* Lo mismo para copias dentro de un ZIP.
+- **Misma factura en otro archivo** (mismo NCF y contraparte, por ejemplo
+  escaneada de nuevo): la copia posterior queda bloqueada con *"Esta factura ya
+  fue procesada: el NCF … está aprobada el … en el lote … y exportada en …"*;
+  no se puede aprobar. La original no se bloquea. El lote muestra un aviso con
+  el botón **Descartar repetidas** y la auditoría el botón **Descartar esta
+  copia**; cada descarte queda en el historial.
 
 ## Arquitectura
 

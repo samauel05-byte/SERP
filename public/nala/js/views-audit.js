@@ -181,6 +181,8 @@
     root.innerHTML = `<div class="stack">
       <div class="row"><button class="btn" data-href="${back}">← Volver a la lista</button><button class="btn" id="prev" ${pos <= 0 ? 'disabled' : ''}>◀ Anterior</button><span class="muted">${pos >= 0 ? `${pos + 1} de ${ids.length}` : ''}</span><button class="btn" id="next" ${pos < 0 || pos >= ids.length - 1 ? 'disabled' : ''}>Siguiente ▶</button>
         <span class="spacer" style="flex:1"></span>${NALA.badge(inv.status)} <span class="badge">${inv.format}</span> <span class="muted">${esc(d.client.legal_name)} · ${period(inv.period)}${d.batch ? ` · lote <a href="#/lotes/${d.batch.id}">${esc(d.batch.name)}</a>` : ''}${d.reallocated ? ' · <span class="badge info">Reubicada</span>' : ''}</span></div>
+      ${inv.issues.some(i => i.code === 'DUPLICADO') && inv.status !== 'excluded' ? `<div class="issue critical" style="font-size:14px;padding:12px"><span class="ico">⛔</span><span><b>Factura repetida.</b> ${esc(inv.issues.find(i => i.code === 'DUPLICADO').message)}</span>
+        <a class="btn sm" href="#/auditoria/${inv.issues.find(i => i.code === 'DUPLICADO').ref}">Ver la original</a>${NALA.can('exclude') && inv.status !== 'approved' ? '<button class="btn sm danger" id="discard-copy">Descartar esta copia</button>' : ''}</div>` : ''}
       ${d.lock.locked_by_other ? '<div class="issue warning"><span class="ico">🔒</span>Otro usuario está editando este comprobante. Se muestra en sólo lectura hasta que lo libere.</div>' : ''}
       ${inv.status === 'approved' ? `<div class="issue info"><span class="ico">✓</span>Aprobado ${NALA.dateTime(inv.approved_at)}${inv.approval_reason ? ` · motivo: ${esc(inv.approval_reason)}` : ''}. Para editar, revierta la aprobación.</div>` : ''}
       <div class="audit">
@@ -298,6 +300,9 @@
       const reason = await NALA.askReason('Excluir comprobante', { extra: '<p class="muted" style="margin-bottom:8px">No se reporta ni se cuenta en los indicadores. Puede restaurarse.</p>' });
       if (!reason) return;
       try { await NALA.api('POST', `invoices/${inv.id}/exclude`, { reason }); NALA.toast('Excluido', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
+    });
+    root.querySelector('#discard-copy')?.addEventListener('click', async () => {
+      try { await NALA.api('POST', `invoices/${inv.id}/exclude`, { reason: `Factura repetida. ${inv.issues.find(i => i.code === 'DUPLICADO').message}`.slice(0, 500) }); NALA.dirty = false; NALA.toast('Copia descartada', 'ok'); if (ids[pos + 1]) navTo(1); else NALA.route(); } catch (e) { handleConflict(e); }
     });
     root.querySelector('#restore')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `invoices/${inv.id}/restore`, { reason: '' }); NALA.toast('Restaurado', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }

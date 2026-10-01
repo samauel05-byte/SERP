@@ -8,7 +8,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../../..');
 const JWT_SECRET = 'nala-local-test-secret-0123456789abcdef';
-const PORTS = { postgrest: 54301, gateway: 54321, app: 54380, openai: 54390 };
+const PORTS = { postgrest: 54301, gateway: 54321, app: 54380, openai: 54390, dgii: 54395 };
 
 async function waitFor(url, tries = 60) {
   for (let i = 0; i < tries; i++) {
@@ -42,10 +42,13 @@ async function startStack({ resetDb = true, openai = true } = {}) {
     process.env.OPENAI_API_KEY = 'sk-test-local';
     process.env.NALA_OPENAI_BASE_URL = `http://127.0.0.1:${PORTS.openai}/v1`;
   }
+  const dgii = await require('./fake-dgii').start({ port: PORTS.dgii });
+  process.env.NALA_DGII_RNC_URL = `http://127.0.0.1:${PORTS.dgii}/consultas/rnc.aspx`;
+  process.env.NALA_DGII_RNC_ZIP_URL = `http://127.0.0.1:${PORTS.dgii}/RNC/DGII_RNC.zip`;
   const app = await require('./vercel-dev').start({ port: PORTS.app });
   return {
     base: `http://127.0.0.1:${PORTS.app}`, gatewayUrl: process.env.SUPABASE_URL, openaiUrl: `http://127.0.0.1:${PORTS.openai}`, storageDir, fakeOpenai,
-    async stop() { app.close(); fakeOpenai?.server.close(); await gateway.close(); postgrest.kill(); },
+    async stop() { app.close(); dgii.close(); fakeOpenai?.server.close(); await gateway.close(); postgrest.kill(); },
   };
 }
 

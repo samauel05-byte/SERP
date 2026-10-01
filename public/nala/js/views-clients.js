@@ -96,12 +96,21 @@
     },
   };
 
+  function age(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const now = new Date(); let years = now.getFullYear() - y; let months = now.getMonth() + 1 - m;
+    if (now.getDate() < d) months -= 1;
+    if (months < 0) { years -= 1; months += 12; }
+    const parts = [years ? `${years} año${years === 1 ? '' : 's'}` : '', months ? `${months} mes${months === 1 ? '' : 'es'}` : ''].filter(Boolean);
+    return { date: `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`, text: parts.join(' y ') || 'menos de un mes' };
+  }
+
   NALA.views.rnc = {
     title: 'Consulta RNC',
     async render(root, { params }) {
       root.innerHTML = `<div class="stack" style="max-width:760px">
         <div class="card"><h2>Consulta de RNC o cédula</h2>
-          <p class="muted" style="margin-bottom:10px">NALA distingue tres cosas: la <b>estructura</b> (cantidad de dígitos), el <b>dígito verificador</b> (algoritmo de las herramientas DGII) y la <b>consulta oficial</b> a la DGII (Consulta RNC de dgii.gov.do). Sólo la consulta oficial indica si el contribuyente está inscrito y su estado.</p>
+          <p class="muted" style="margin-bottom:10px">Muestra de quién es el RNC, su estado, actividad, régimen, antigüedad y cumplimiento según la DGII. NALA distingue tres comprobaciones: la <b>estructura</b> (cantidad de dígitos), el <b>dígito verificador</b> (algoritmo de las herramientas DGII) y la <b>consulta oficial</b> a la DGII (Consulta RNC de dgii.gov.do). Sólo la consulta oficial indica si el contribuyente está inscrito y su estado.</p>
           <form class="row" id="rf"><label class="f" style="flex:1"><span>RNC o cédula</span><input id="rv" inputmode="numeric" placeholder="101010632" value="${esc(params.id || '')}"></label><button class="btn primary">Consultar</button></form></div>
         <div id="rres"></div></div>`;
       const run = async refresh => {
@@ -112,7 +121,19 @@
           const s = r.structure; const o = r.official;
           const rows = o?.status === 'ok' && o.found ? Object.entries(o.data).map(([k, val]) => `<tr><th style="position:static">${esc(k.replace(/_/g, ' '))}</th><td>${esc(val)}</td></tr>`).join('') : '';
           const known = (NALA.state.clients || []).find(c => c.rnc === s.digits || c.cedula === s.digits);
-          out.innerHTML = `<div class="grid cols-2">
+          const reg = r.registry; const of = o?.status === 'ok' && o.found ? o.data : null;
+          const since = reg?.found && reg.fecha_constitucion ? age(reg.fecha_constitucion) : null;
+          const estado = of?.estado || reg?.estado;
+          const estadoCls = /ACTIVO/i.test(estado || '') ? 'ok' : (estado ? 'crit' : '');
+          const summary = (of || reg?.found) ? `<div class="card" style="margin-bottom:12px"><h2>${esc(of?.nombre || reg?.nombre || '')}${estado ? ` <span class="badge ${estadoCls}">${esc(estado)}</span>` : ''}</h2>
+            <div class="grid kpis">
+              <div class="kpi"><div class="label">Nombre comercial</div><div>${esc(of?.nombre_comercial || reg?.nombre_comercial || '—')}</div></div>
+              <div class="kpi"><div class="label">Actividad económica</div><div>${esc(of?.actividad_economica || reg?.actividad || '—')}</div></div>
+              <div class="kpi"><div class="label">Régimen de pagos</div><div>${esc(of?.regimen_pagos || reg?.regimen || '—')}</div></div>
+              <div class="kpi"><div class="label">${s.kind === 'rnc' ? 'Fecha de constitución' : 'Inicio de operaciones'}</div><div>${since ? `<b>${esc(since.date)}</b><br><span class="muted">hace ${esc(since.text)}</span>` : '—'}</div></div>
+              <div class="kpi"><div class="label">Facturador electrónico</div><div>${esc(of?.facturador_electronico || '—')}</div></div>
+            </div></div>` : '';
+          out.innerHTML = `${summary}<div class="grid cols-2">
             <div class="card"><h2>1 · Estructura</h2>${s.structureValid ? `<span class="badge ok">Válida</span> ${s.kind === 'rnc' ? 'RNC de 9 dígitos (Tipo Id 1)' : 'Cédula de 11 dígitos (Tipo Id 2)'}` : `<span class="badge crit">Inválida</span> ${esc(s.message)}`}</div>
             <div class="card"><h2>2 · Dígito verificador</h2>${s.structureValid ? (s.checkDigitValid ? '<span class="badge ok">Correcto</span>' : '<span class="badge warn">No coincide</span> <span class="muted">Puede ser un error de digitación; confirme con la consulta oficial.</span>') : '<span class="muted">No aplica</span>'}</div></div>
             <div class="card" style="margin-top:12px"><h2>3 · Consulta oficial DGII<span class="spacer"></span>${s.structureValid ? '<button class="btn sm" id="rrefresh">Consultar de nuevo</button>' : ''}</h2>
@@ -122,7 +143,16 @@
               ${o?.fetched_at ? `<p class="muted" style="margin-top:8px">Fuente: <a href="${esc(o.source_url)}" target="_blank" rel="noopener">${esc(o.source)}</a> · ${NALA.dateTime(o.fetched_at)}${o.cached ? ' · resultado guardado (máx. 24 h)' : ''}</p>` : ''}
               ${o?.found && !known && NALA.can('clients_manage') ? `<button class="btn primary" id="radd" style="margin-top:8px">Registrar como empresa cliente</button>` : ''}
               ${known ? `<p style="margin-top:8px">Ya registrada como <b>${esc(known.legal_name)}</b>.</p>` : ''}
-            </div>`;
+            </div>
+            <div class="card" style="margin-top:12px"><h2>4 · Antigüedad (archivo oficial de RNC)</h2>
+              ${!reg ? '<span class="muted">No aplica.</span>' : reg.status === 'unavailable' ? `<div class="issue warning"><span class="ico">!</span>${esc(reg.message)}</div>`
+                : !reg.found ? '<span class="muted">No aparece en el archivo de RNC publicado por la DGII.</span>'
+                : `${since ? `${s.kind === 'rnc' ? 'Constituida' : 'Inicio de operaciones'} el <b>${esc(since.date)}</b> — hace <b>${esc(since.text)}</b>.` : 'El archivo no indica fecha de constitución o inicio de operaciones.'}
+                  <p class="muted" style="margin-top:6px">La DGII publica la fecha de constitución (empresas) o de inicio de operaciones (personas), no la fecha de inscripción del RNC. Fuente: <a href="${esc(reg.source_url)}" target="_blank" rel="noopener">${esc(reg.source)}</a>${reg.file_date ? ` · publicado ${esc(NALA.dateTime(reg.file_date))}` : ''}.</p>`}</div>
+            <div class="card" style="margin-top:12px"><h2>5 · Cumplimiento con la DGII</h2><div class="stack" style="gap:6px">
+              ${estado ? `<div class="issue ${estadoCls === 'ok' ? 'info' : 'critical'}"><span class="ico">${estadoCls === 'ok' ? '✓' : '✕'}</span>Estado en la DGII: <b>${esc(estado)}</b>${estadoCls === 'ok' ? '' : ' — no está activo; sus comprobantes pueden ser rechazados.'}</div>` : ''}
+              ${o?.adecuacion ? `<div class="issue ${o.adecuacion.status === 'pendiente' ? 'warning' : 'info'}"><span class="ico">${o.adecuacion.status === 'pendiente' ? '!' : '✓'}</span>${esc(o.adecuacion.message)}</div>` : ''}
+              <div class="issue warning"><span class="ico">🔒</span><span><b>Deudas y si está al día:</b> ${esc(r.debts.message)}</span></div></div></div>`;
           out.querySelector('#rrefresh')?.addEventListener('click', () => run(true));
           out.querySelector('#radd')?.addEventListener('click', async () => {
             await NALA.api('POST', 'clients', { legal_name: o.data.nombre, [s.kind === 'rnc' ? 'rnc' : 'cedula']: s.digits });

@@ -107,7 +107,8 @@ test('lote 606: idempotencia, registro de archivos, RAR y duplicados', async () 
   const files = await upload('admin', state.batch606, ['factura-alfa.jpg', 'factura-beta.png', 'lote-varias.pdf', 'escaneada.pdf', 'otra-empresa.jpg', 'simbolo-dolar.jpg', 'paquete.zip', 'facturas.rar']);
   assert.match(files.find(f => f.name === 'facturas.rar').error, /RAR/);
   const dupReg = await ok('admin', 'POST', `batches/${state.batch606}/files`, { files: [{ name: 'copia.jpg', size: fs.statSync(path.join(dir, 'factura-alfa.jpg')).size, sha256: sha(fs.readFileSync(path.join(dir, 'factura-alfa.jpg'))) }] });
-  assert.equal(dupReg.files[0].already, true);
+  assert.match(dupReg.files[0].error, /^Esta factura ya fue cargada el \d{2}\/\d{2}\/\d{4} en el lote «Compras agosto»/);
+  assert.equal(dupReg.files[0].upload_url, undefined);
 });
 
 test('recuperación: un trabajo tomado por un proceso caído se recupera al vencer el arrendamiento', async () => {
@@ -141,8 +142,14 @@ test('procesamiento en segundo plano con reintentos, ZIP, PDF de varias facturas
   assert.ok(codes(state.inv.delta).includes('TASA_REQUERIDA'));
   assert.ok(codes(state.inv.otra).includes('EMPRESA_INCORRECTA'));
   assert.ok(codes(state.inv.dolar).includes('MONEDA_NO_IDENTIFICADA'));
-  assert.ok(codes(state.inv.alfa).includes('DUPLICADO'));
-  assert.equal(list.invoices.filter(i => i.ncf === 'B0100000101').length, 2);
+  const copies = list.invoices.filter(i => i.ncf === 'B0100000101');
+  assert.equal(copies.length, 2);
+  state.copy = copies.find(i => codes(i).includes('DUPLICADO'));
+  state.inv.alfa = copies.find(i => i !== state.copy);
+  assert.ok(state.copy, 'la copia posterior queda marcada');
+  assert.match(state.copy.issues.find(i => i.code === 'DUPLICADO').message, /^Esta factura ya fue procesada: el NCF B0100000101 de 131999999 está en revisión desde el .* en el lote «Compras agosto»/);
+  assert.ok(codes(state.inv.alfa).includes('COPIA_POSTERIOR'));
+  assert.equal(state.inv.alfa.critical_count === 0 || !codes(state.inv.alfa).includes('DUPLICADO'), true);
   const pdfInvoices = list.invoices.filter(i => i.document_id === d.documents.find(x => x.original_name === 'lote-varias.pdf').id);
   assert.deepEqual(pdfInvoices.map(i => i.page_from).sort(), [1, 1, 2]);
   assert.equal(state.inv.delta.fields.monto_bienes, '100.00');
@@ -171,12 +178,13 @@ test('reprocesar fallidos no duplica y respeta correcciones humanas', async () =
 });
 
 test('auditoría: versión, bloqueo, guardar ≠ aprobar, críticos bloquean, advertencias con motivo', async () => {
+  const copy = (await ok('admin', 'GET', `invoices/${state.copy.id}`)).invoice;
+  assert.equal((await api('admin', 'POST', `invoices/${copy.id}/approve`, { version: copy.version })).status, 422, 'la copia repetida no se aprueba');
+  const discarded = await ok('admin', 'POST', `batches/${state.batch606}/discard-duplicates`);
+  assert.equal(discarded.discarded, 1);
+  assert.equal((await ok('admin', 'GET', `invoices/${copy.id}`)).invoice.status, 'excluded');
   const alfa = (await ok('admin', 'GET', `invoices/${state.inv.alfa.id}`)).invoice;
-  assert.equal((await api('admin', 'POST', `invoices/${alfa.id}/approve`, { version: alfa.version })).status, 422, 'duplicado bloquea');
-  // Exclude the duplicate copy that came from the PDF, then the original can be approved.
-  const list = await ok('admin', 'GET', `invoices?batch_id=${state.batch606}&q=B0100000101`);
-  const copy = list.invoices.find(i => i.id !== alfa.id);
-  await ok('admin', 'POST', `invoices/${copy.id}/exclude`, { reason: 'Copia duplicada en PDF' });
+  assert.ok(!alfa.issues.some(i => i.code === 'COPIA_POSTERIOR'), 'al descartar la copia, la original queda limpia');
   // Concurrency: oficial locks the invoice; admin cannot save meanwhile.
   await ok('oficial', 'POST', `invoices/${alfa.id}/lock`);
   const fresh = (await ok('admin', 'GET', `invoices/${alfa.id}`));
@@ -317,6 +325,26 @@ test('permisos por empresa asignada y enlaces directos', async () => {
   assert.equal((await api('otraadmin', 'GET', `batches/${state.batch606}`)).status, 404);
   assert.equal((await api('otraadmin', 'GET', 'stats')).data.stats.invoices, 0);
   assert.equal((await api('oficial', 'PUT', 'settings', { settings: {} })).status, 403);
+});
+
+test('volver a enviar una factura ya leída: se rechaza con un mensaje claro', async () => {
+  const b = (await ok('admin', 'POST', 'batches', { client_id: CLIENT_UNO, format: '606', period: '202609', name: 'Reenvío' })).batch;
+  const files = await upload('admin', b.id, ['factura-alfa.jpg']);
+  assert.match(files[0].error, /^Esta factura ya fue cargada el \d{2}\/\d{2}\/\d{4} en el lote «Compras agosto» \(Cliente Uno SRL, 606 08\/2026\)\. Comprobantes: B0100000101 aprobada\. No se vuelve a leer\.$/);
+  assert.equal((await ok('admin', 'GET', `batches/${b.id}`)).documents.length, 0, 'no se registra ni se vuelve a leer');
+});
+
+test('consulta RNC: dueño, estado, antigüedad, adecuación y aviso de deudas', async () => {
+  const r = await ok('admin', 'GET', 'rnc/101-01063-2');
+  assert.equal(r.structure.checkDigitValid, true);
+  assert.equal(r.official.found, true);
+  assert.equal(r.official.data.nombre, 'BANCO POPULAR DOMINICANO S A BANCO MULTIPLE');
+  assert.equal(r.registry.found, true);
+  assert.equal(r.registry.fecha_constitucion, '1984-08-15');
+  assert.match(r.debts.message, /no publica deudas/);
+  const missing = await ok('admin', 'GET', 'rnc/130000009');
+  assert.equal(missing.official.found, false);
+  assert.match(missing.official.data.message, /no se encuentra inscrito/);
 });
 
 test('worker programado protegido por secreto', async () => {

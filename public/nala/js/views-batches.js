@@ -44,10 +44,10 @@
     const prepared = [];
     for (const file of files) { report(file.name, 'Calculando huella…'); prepared.push({ file, sha256: await sha256(file) }); }
     const reg = await NALA.api('POST', `batches/${batchId}/files`, { files: prepared.map(p => ({ name: p.file.name, size: p.file.size, sha256: p.sha256 })) });
-    let okCount = 0;
+    let okCount = 0; let repeated = 0;
     for (const r of reg.files) {
       const p = prepared.find(x => x.file.name === r.name);
-      if (r.error) { report(r.name, `✕ ${r.error}`, 'crit'); continue; }
+      if (r.error) { report(r.name, r.already_processed ? r.error : `✕ ${r.error}`, 'crit'); if (r.already_processed) repeated++; continue; }
       if (r.already && !r.upload_url) { report(r.name, 'Ya estaba en el lote (misma huella)', 'warn'); continue; }
       try {
         await put(r.upload_url, p.file, f => report(r.name, `Subiendo ${Math.round(f * 100)}%`));
@@ -55,6 +55,7 @@
         report(r.name, '✓ Recibido', 'ok'); okCount++;
       } catch (e) { report(r.name, `✕ ${e.message}`, 'crit'); }
     }
+    if (repeated) NALA.toast(`${repeated} factura(s) ya habían sido cargadas antes y no se vuelven a leer.`, 'err');
     return okCount;
   }
 
@@ -77,7 +78,7 @@
     const listEl = root.querySelector('#flist');
     const status = {};
     const draw = () => {
-      listEl.innerHTML = selected.length ? `<div class="table-wrap"><table><tr><th>Archivo</th><th class="num">Tamaño</th><th>Estado</th></tr>${selected.map(f => `<tr><td>${esc(f.name)}</td><td class="num">${(f.size / 1024).toFixed(0)} KB</td><td>${status[f.name] ? `<span class="badge ${status[f.name][1] || ''}">${esc(status[f.name][0])}</span>` : ''}</td></tr>`).join('')}</table></div>` : '';
+      listEl.innerHTML = selected.length ? `<div class="table-wrap"><table><tr><th>Archivo</th><th class="num">Tamaño</th><th>Estado</th></tr>${selected.map(f => `<tr><td>${esc(f.name)}</td><td class="num">${(f.size / 1024).toFixed(0)} KB</td><td>${status[f.name] ? (status[f.name][0].length > 40 ? `<div class="issue ${status[f.name][1] === 'crit' ? 'critical' : 'warning'}"><span class="ico">✕</span>${esc(status[f.name][0])}</div>` : `<span class="badge ${status[f.name][1] || ''}">${esc(status[f.name][0])}</span>`) : ''}</td></tr>`).join('')}</table></div>` : '';
       root.querySelector('#go').disabled = !selected.length;
     };
     const add = list => {
@@ -106,10 +107,11 @@
         }
         const files = selected.filter(f => !/\.rar$/i.test(f.name));
         const uploaded = await uploadFiles(target.id, files, (name, msg, cls) => { status[name] = [msg, cls]; draw(); });
-        if (uploaded) await NALA.api('POST', `batches/${target.id}/start`);
+        if (!uploaded) { btn.disabled = false; return; }
+        await NALA.api('POST', `batches/${target.id}/start`);
         NALA.toast(`${uploaded} archivo(s) recibidos; procesamiento en segundo plano.`, 'ok');
         NALA.pump();
-        setTimeout(() => NALA.go(`#/lotes/${target.id}`), 600);
+        setTimeout(() => NALA.go(`#/lotes/${target.id}`), Object.values(status).some(x => x[1] === 'crit') ? 4000 : 600);
       } catch (e) { NALA.fail(e); btn.disabled = false; }
     });
   }
@@ -172,6 +174,7 @@
         <div class="card kpi clickable" data-href="#/auditoria?batch=${b.id}&has=duplicates"><div class="label">Duplicados</div><div class="value">${int(st.duplicates)}</div></div>
         <div class="card kpi clickable" data-href="#/auditoria?batch=${b.id}&status=approved"><div class="label">Aprobados</div><div class="value" style="color:var(--ok)">${int(st.approved)}</div></div>
       </div>
+      <div id="dups"></div>
       <div class="card"><h2>Documentos y trabajos</h2><div class="table-wrap"><table><tr><th>Archivo</th><th>Tipo</th><th class="num">Págs.</th><th>Estado</th><th class="num">Trabajos</th><th class="num">Duración</th><th></th></tr>
         ${top.map(doc => docRow(doc) + children(doc.id).map(ch => docRow(ch, true)).join('')).join('') || '<tr><td colspan="7" class="empty">Sin documentos.</td></tr>'}</table></div>
         ${d.jobs.some(j => j.status === 'failed') ? `<div class="stack" style="margin-top:10px">${d.jobs.filter(j => j.status === 'failed').map(j => `<div class="issue critical"><span class="ico">✕</span>${esc(j.kind === 'prepare' ? 'Preparación' : `Extracción págs. ${j.payload.page_from}-${j.payload.page_to}`)} falló tras ${j.attempts} intento(s): ${esc(j.last_error || '')}</div>`).join('')}</div>` : ''}</div>
@@ -183,6 +186,18 @@
     root.querySelector('#reproc')?.addEventListener('click', async () => {
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: true }); NALA.toast(`${r.requeued} documento(s) en cola de nuevo`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
     });
+    if (st.duplicates) NALA.api('GET', `invoices?batch_id=${b.id}&has=duplicates`).then(r => {
+      const el = root.querySelector('#dups'); if (!el) return;
+      const repeated = r.invoices.filter(i => i.issues.some(x => x.code === 'DUPLICADO'));
+      if (!repeated.length) return;
+      el.innerHTML = `<div class="card" style="border-color:var(--crit)"><h2 style="color:var(--crit)">⛔ ${repeated.length} factura(s) de este lote ya habían sido procesadas<span class="spacer"></span>
+        ${NALA.can('exclude') ? '<button class="btn danger" id="discard">Descartar repetidas</button>' : ''}</h2>
+        <div class="stack" style="gap:6px">${repeated.map(i => `<div class="issue critical"><span class="ico">✕</span><span><b class="mono">${esc(i.ncf)}</b> — ${esc(i.issues.find(x => x.code === 'DUPLICADO').message)}</span><a class="btn sm" href="#/auditoria/${i.id}?batch=${b.id}">Ver</a></div>`).join('')}</div></div>`;
+      el.querySelector('#discard')?.addEventListener('click', async () => {
+        if (!(await NALA.modal({ title: 'Descartar facturas repetidas', body: `<p>Se excluirán ${repeated.length} copia(s) que repiten facturas ya procesadas. Las originales no cambian y queda registrado en el historial.</p>`, okText: 'Descartar', okClass: 'danger' }))) return;
+        try { const res = await NALA.api('POST', `batches/${b.id}/discard-duplicates`); NALA.toast(`${res.discarded} copia(s) descartadas`, 'ok'); NALA.route(); } catch (e) { NALA.fail(e); }
+      });
+    }).catch(() => {});
     NALA.api('GET', `events?batch_id=${b.id}&limit=100`).then(r => {
       const el = root.querySelector('#tl'); if (!el) return;
       el.innerHTML = r.events.map(e => `<div><b>${esc(NALA.actionLabel(e.action))}</b> · ${NALA.dateTime(e.created_at)}${e.reason ? ` · ${esc(e.reason)}` : ''}</div>`).join('') || '<span class="muted">Sin eventos.</span>';
