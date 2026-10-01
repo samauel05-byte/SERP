@@ -98,19 +98,22 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-cfg-portal{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text2);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;flex-shrink:0}
 .btn-cfg-portal:hover{background:rgba(255,255,255,.1);color:var(--text)}
 
-.company-list{display:flex;flex-direction:column;gap:12px}
-.company-card{background:linear-gradient(145deg,var(--surface) 0%,var(--bg2) 100%);border:1px solid var(--border);border-radius:var(--r);display:flex;align-items:center;gap:14px;padding:16px 16px;transition:border-color .15s,box-shadow .15s;position:relative;overflow:hidden}
-.company-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.03) 0%,transparent 60%);pointer-events:none}
-.company-card:hover{border-color:var(--border2);box-shadow:var(--glow)}
-.company-initial{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;background:linear-gradient(135deg,var(--p1),var(--accent))}
-.company-info{flex:1;min-width:0}
-.company-name{font-size:14px;font-weight:700;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.company-user{font-size:11.5px;color:var(--text2);margin-top:2px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.company-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.btn-enter-company{background:linear-gradient(135deg,var(--p1) 0%,var(--accent) 100%);color:#fff;border:none;border-radius:8px;height:36px;padding:0 16px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;font-family:'Outfit',sans-serif;position:relative;overflow:hidden;box-shadow:0 3px 10px rgba(37,99,235,.3);transition:all .15s;white-space:nowrap}
-.btn-enter-company::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 50%)}
-.btn-enter-company:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-edit-co{width:32px;height:36px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .15s}
+.company-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px;margin-bottom:10px}
+@media(max-width:540px){.company-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}}
+/* Companies are small square tiles, like the portals on the home screen:
+   the whole tile enters the company; the pencil edits it. */
+.company-card{background:linear-gradient(145deg,var(--surface) 0%,var(--bg2) 100%);border:1px solid var(--border);border-radius:16px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 6px 8px;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s;position:relative;cursor:pointer;text-align:center;min-width:0}
+.company-card[hidden]{display:none}
+.company-card:hover{transform:translateY(-2px);box-shadow:var(--sc),var(--glow);border-color:var(--border2)}
+.company-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.company-initial{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;background:linear-gradient(135deg,var(--p1),var(--accent));box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.company-info{width:100%;min-width:0}
+.company-name{font-size:12px;font-weight:700;letter-spacing:-.1px;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
+.company-user{font-size:10.5px;color:var(--text2);margin-top:2px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.company-card .p-play{pointer-events:none}
+.company-card:hover .p-play{transform:scale(1.12);box-shadow:0 5px 14px rgba(37,99,235,.5)}
+.btn-edit-co{position:absolute;top:7px;left:7px;width:24px;height:24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .15s;padding:0}
+.btn-edit-co svg{width:11px;height:11px}
 .btn-edit-co:hover{background:rgba(255,255,255,.1);color:var(--text2)}
 
 .add-company-btn{width:100%;height:46px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.12);border-radius:var(--r);color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;font-family:'Outfit',sans-serif;margin-top:4px}
@@ -1489,18 +1492,26 @@ async function renderCompaniesView() {
     const item=document.createElement('div');
     item.className='company-card';
     item.dataset.name=(plain.companyName||'').toLowerCase();
+    item.tabIndex=0;
+    item.setAttribute('role','button');
+    item.title=(plain.companyName||'Sin nombre')+' · Entrar';
+    item.setAttribute('aria-label','Entrar a '+(plain.companyName||'la empresa'));
     item.innerHTML=`
+      <button class="btn-edit-co" type="button" title="Editar" aria-label="Editar empresa">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
       <div class="company-initial">${initial}</div>
       <div class="company-info">
         <div class="company-name">${plain.companyName||'Sin nombre'}</div>
         <div class="company-user">${plain.username||''}</div>
       </div>
-      <div class="company-actions">
-        <button class="btn-enter-company" onclick="enterCompany('${cred.id}')" onmouseenter="prefetchViewState('${cred.id}')" ontouchstart="prefetchViewState('${cred.id}')">ENTRAR</button>
-        <button class="btn-edit-co" title="Editar" onclick="openCompanyModal('${cred.id}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-      </div>`;
+      <span class="p-play" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg></span>`;
+    const enter=()=>enterCompany(cred.id);
+    item.addEventListener('click',enter);
+    item.addEventListener('keydown',e=>{ if(e.target===item&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); enter(); } });
+    item.addEventListener('mouseenter',()=>prefetchViewState(cred.id));
+    item.addEventListener('touchstart',()=>prefetchViewState(cred.id),{passive:true});
+    item.querySelector('.btn-edit-co').addEventListener('click',e=>{ e.stopPropagation(); openCompanyModal(cred.id); });
     list.appendChild(item);
   }
 }
