@@ -200,10 +200,6 @@ export default {
             }
           }
           if (request.method === 'POST' && request.headers.get('Content-Type')) forwardHeaders['Content-Type'] = request.headers.get('Content-Type');
-          // ASP.NET UpdatePanels post in the background and expect DGII's
-          // compact "delta" answer; without this header DGII returns a full page.
-          const msAjax = request.headers.get('X-MicrosoftAjax');
-          if (msAjax) forwardHeaders['X-MicrosoftAjax'] = msAjax;
           // DGII redirects its WebForms POST. Buffer the body once so the
           // runtime can safely retransmit it after that redirect.
           const postBody = request.method === 'POST' ? await request.arrayBuffer() : undefined;
@@ -248,15 +244,6 @@ export default {
               } catch(e) {}
             }
           }
-          const portalType = portalRes.headers.get('content-type') || '';
-          if (msAjax || (portalType && !/text\/html|application\/xhtml/i.test(portalType))) {
-            const rawHeaders = new Headers({ 'Cache-Control': 'no-store' });
-            if (portalType) rawHeaders.set('Content-Type', portalType);
-            const disposition = portalRes.headers.get('content-disposition');
-            if (disposition) rawHeaders.set('Content-Disposition', disposition);
-            for (const cookie of relaySetCookies) rawHeaders.append('Set-Cookie', relayCookie(cookie, flowCookiePrefix));
-            return new Response(portalRes.body, { status: portalRes.status, headers: rawHeaders });
-          }
           html = await portalRes.text();
 
           // Cache raw HTML (before autofill injection) for 2 minutes
@@ -269,18 +256,10 @@ export default {
           }
           cachedHtml = cachedHtml.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
             try {
-              const actionUrl = new URL(action.replace(/&amp;/gi, '&'), targetUrl).href;
+              const actionUrl = new URL(action, targetUrl).href;
               return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
             } catch { return m; }
           });
-          // DGII's menus navigate with inline onclick='location.href="/OFV/..."'.
-          // Browsers do not allow location.href to be intercepted, and with the
-          // DGII <base> those clicks would leave the proxy without the session
-          // (DGII then asks to log in again). Point them at __serpLoc instead,
-          // which the navigation script below routes through the proxy.
-          cachedHtml = cachedHtml
-            .replace(/\b(?:window\.|document\.|self\.|top\.)?location\.href\s*=(?!=)/g, '__serpLoc.href=')
-            .replace(/\b(?:window\.|document\.|self\.|top\.)?location\.(assign|replace)\s*\(/g, '__serpLoc.$1(');
           // Rewrite <meta http-equiv="refresh"> redirect URLs so they go through the proxy
           cachedHtml = cachedHtml.replace(/(<meta\b[^>]+\bhttp-equiv=["']refresh["'][^>]*\bcontent=["'][^"']*;\s*url=)([^"' >]+)/gi, (m, pre, url) => {
             try {
@@ -535,11 +514,7 @@ export default {
       Array.from(document.querySelectorAll('[title],[data-original-title],[aria-label]')).map(function(el){
         return el.getAttribute('title') || el.getAttribute('data-original-title') || el.getAttribute('aria-label') || '';
       }).join(' ');
-    var match = text.match(/c[oó]digo\\s*(?:(?:n[uú]mero|n[ºo]\\.?)(?:\\s*(?:de|#))?)?\\s*:?\\s*(\\d{1,3})/i)
-      // Other wordings of the same request, e.g. "posición 15 de su tarjeta"
-      // or "Tarjeta de códigos - código No. 15". They must mention the card.
-      || text.match(/(?:posici[oó]n|coordenada|c[oó]digo|n[uú]mero|casilla)\\D{0,25}?(\\d{1,3})\\D{0,40}?tarjeta/i)
-      || text.match(/tarjeta\\D{0,60}?(?:posici[oó]n|coordenada|c[oó]digo|n[uú]mero|casilla)\\D{0,12}?(\\d{1,3})(?!\\d)/i);
+    var match = text.match(/c[oó]digo\\s*(?:(?:n[uú]mero|n[ºo]\\.?)(?:\\s*(?:de|#))?)?\\s*:?\\s*(\\d{1,3})/i);
     var position = match ? parseInt(match[1], 10) : 0;
     if(position > 0){
       // DGII replaces the request with only an error after a failed attempt.
@@ -548,7 +523,7 @@ export default {
       try { sessionStorage.setItem('serp-dgii-card-position', String(position)); } catch(e) {}
       return position;
     }
-    if(/c[oó]digo\\s+introducido\\s+es\\s+incorrecto/i.test(text)){
+    if(/c[oó]digo\s+introducido\s+es\s+incorrecto/i.test(text)){
       try {
         var previous = parseInt(sessionStorage.getItem('serp-dgii-card-position') || '0', 10);
         return previous > 0 ? previous : 0;
@@ -568,28 +543,10 @@ export default {
         if(code) list.push(code);
       });
     });
-    // A card stored on one line separated only by spaces ("4521 8834 1290")
-    // is still one value per position.
-    if(list.length === 1 && /\\s/.test(list[0])) list = list[0].split(/\\s+/).filter(Boolean);
-    // Numbered cards ("1: 4521", "2-8834", "3=1290", "4) 7781") give the
-    // position explicitly; use it instead of the order.
-    var numbered = {}, allNumbered = list.length > 0;
-    list.forEach(function(item){
-      var m = item.match(/^(\\d{1,3})\\s*[-:=).]\\s*(\\S+)$/);
-      if(m) numbered[parseInt(m[1], 10)] = m[2]; else allNumbered = false;
-    });
-    if(!allNumbered){
-      // "1: 4521 2: 8834" on one line: pairs separated by spaces.
-      var joined = list.join(' '), pairs = joined.match(/(\\d{1,3})\\s*[-:=).]\\s*(\\S+)/g);
-      if(pairs && pairs.length > 1 && joined.replace(/(\\d{1,3})\\s*[-:=).]\\s*(\\S+)/g, '').trim() === ''){
-        numbered = {}; allNumbered = true;
-        pairs.forEach(function(pair){ var m = pair.match(/^(\\d{1,3})\\s*[-:=).]\\s*(\\S+)$/); numbered[parseInt(m[1], 10)] = m[2]; });
-      }
-    }
     // Return one token only. A comma/newline in the result means it is not a
     // valid single card position and must never be submitted as the full card.
-    var selected = String(allNumbered ? (numbered[position] || '') : (list[position - 1] || '')).trim();
-    return /^[^,;|\\r\\n\\s]+$/.test(selected) ? selected : '';
+    var selected = String(list[position - 1] || '').trim();
+    return /^[^,;|\\r\\n]+$/.test(selected) ? selected : '';
   }
   function cardInput(cfg){
     var el = cfg && cfg.tarjeta ? q(cfg.tarjeta) : null;
@@ -618,64 +575,8 @@ export default {
     // card code in Usuario or overwrite another value.
     return null;
   }
-  // Used only on a screen that explicitly asks for a card position: the
-  // single visible input that is not Usuario/Clave is the code box.
-  function looseCardInput(cfg){
-    var user = cfg ? q(cfg.user) : null, pass = cfg ? q(cfg.pass) : null;
-    var others = Array.from(document.querySelectorAll('input')).filter(function(input){
-      if(input === user || input === pass || input.disabled || input.readOnly) return false;
-      if(input.closest && input.closest('#serp-card-help')) return false;
-      if(/^(hidden|submit|button|image|checkbox|radio|file)$/i.test(input.type || 'text')) return false;
-      var r = input.getBoundingClientRect(); return r.width > 0 && r.height > 0;
-    });
-    return others.length === 1 ? others[0] : null;
-  }
-  // Small Direct panel shown on DGII's card screen when the code cannot be
-  // filled automatically, so the user is never left guessing why.
-  function showCardHelp(position){
-    if(document.getElementById('serp-card-help')) return;
-    var codes = p.dgiiCodes, single = p.tarjeta || '';
-    var box = document.createElement('div');
-    box.id = 'serp-card-help';
-    box.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;max-width:320px;background:#0b1b33;color:#fff;border-radius:12px;padding:14px 16px;font:14px/1.45 system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)';
-    function close(){ box.remove(); }
-    function put(code){
-      var el = cardInput(PORTALS['${hostname}']) || looseCardInput(PORTALS['${hostname}']);
-      if(el){ el.value=''; fill(el, code); el.focus(); }
-      return !!el;
-    }
-    var title = '<strong style="display:block;margin-bottom:6px">Direct · Tarjeta de códigos</strong>';
-    if(!codes && !single){
-      box.innerHTML = title + 'Esta empresa no tiene la tarjeta de códigos guardada en Direct. Agrégala en Direct → DGII → editar empresa → “Códigos de tarjeta DGII”. Si usa Token digital, escribe el código de la app DGII Móvil.';
-    } else if(position){
-      var code = codes ? cardCodeForPosition(codes, position) : single;
-      var stored = 0;
-      if(codes) for(var i = 1; i <= 400; i++) if(cardCodeForPosition(codes, i)) stored++;
-      box.innerHTML = title + (code ? 'Código número ' + position + ': <strong style="font-size:18px;letter-spacing:1px">' + code.replace(/[<>&]/g,'') + '</strong>' : 'La DGII pide el código número <strong>' + position + '</strong>, pero la tarjeta guardada en Direct para esta empresa ' + (stored ? 'tiene solo ' + stored + ' código' + (stored === 1 ? '' : 's') : 'no tiene códigos que se puedan leer') + '. Revisa en Direct → DGII → editar empresa → “Códigos de tarjeta DGII” que estén todos, en orden, separados por comas o uno por línea.');
-      if(code && put(code)) box.innerHTML += '<div style="margin-top:6px;opacity:.85">Ya lo escribí en la casilla; pulsa el botón de DGII para continuar.</div>';
-    } else {
-      box.innerHTML = title + '¿Qué número de código pide la DGII? <div style="display:flex;gap:6px;margin-top:8px"><input id="serp-card-pos" inputmode="numeric" style="flex:1;padding:6px 8px;border-radius:8px;border:0;color:#000" placeholder="Ej: 15"><button id="serp-card-go" type="button" style="padding:6px 12px;border-radius:8px;border:0;background:#10b981;color:#fff;font-weight:700">Llenar</button></div><div id="serp-card-msg" style="margin-top:6px"></div>';
-      setTimeout(function(){
-        var go = document.getElementById('serp-card-go');
-        if(go) go.onclick = function(){
-          var n = parseInt(document.getElementById('serp-card-pos').value, 10);
-          var code = n > 0 ? (codes ? cardCodeForPosition(codes, n) : single) : '';
-          var msg = document.getElementById('serp-card-msg');
-          if(!code){ msg.textContent = 'No hay código ' + (n || '') + ' en la tarjeta guardada.'; return; }
-          try { sessionStorage.setItem('serp-dgii-card-position', String(n)); } catch(e) {}
-          msg.textContent = put(code) ? 'Listo: escrito en la casilla. Pulsa el botón de DGII.' : 'Código ' + n + ': ' + code;
-        };
-      }, 0);
-    }
-    var x = document.createElement('button');
-    x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label','Cerrar');
-    x.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:0;color:#fff;font-size:18px;cursor:pointer';
-    x.onclick = close; box.appendChild(x);
-    (document.body || document.documentElement).appendChild(box);
-  }
 
   function run(){
-    var cardCode = '', cardEl = null;
     var cfg = PORTALS['${hostname}'];
     var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
     var cardPosition = isDgii ? requestedCardPosition() : 0;
@@ -702,21 +603,18 @@ export default {
     if(cfg && cfg.tarjeta){
       // dgiiCodes is a positional card: item 1 is the code for position 1, etc.
       // A single tarjeta value remains supported for portals that do not use a code card.
-      cardCode = p.tarjeta || '';
+      var cardCode = p.tarjeta || '';
       if(p.dgiiCodes){
         cardCode = cardCodeForPosition(p.dgiiCodes, cardPosition);
       }
       if(cardCode) {
-        cardEl = cardInput(cfg) || (cardPosition ? looseCardInput(cfg) : null);
+        var cardEl = cardInput(cfg);
         if(cardEl) { cardEl.value=''; fill(cardEl, cardCode); }
       }
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]') || document.querySelector('button:not([type="button"])');
     setTimeout(function(){
-      // DGII's own scripts may clear or re-render the Tarjeta box after load:
-      // write the code again right before continuing.
-      if(cardCode && cardEl && cardEl.value !== cardCode) fill(cardEl, cardCode);
       if(btn) {
         // The following DGII page stays on the relay. Its temporary tab-local
         // payload is used only if it asks for a code-card position.
@@ -728,7 +626,7 @@ export default {
         pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));
         pEl.dispatchEvent(new KeyboardEvent('keypress',{key:'Enter',keyCode:13,bubbles:true}));
       }
-    }, cardCode && cardEl ? 450 : 180);
+    }, 180);
   }
 
   // DGII may render its card prompt after the password field. Do not submit
@@ -741,7 +639,7 @@ export default {
       var cfg = PORTALS['${hostname}'];
       var position = requestedCardPosition();
       var code = p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '');
-      var cardField = cardInput(cfg) || (position ? looseCardInput(cfg) : null);
+      var cardField = cardInput(cfg);
       // DGII has two consecutive screens. The first only has Usuario/Clave;
       // submit it immediately. On the second screen it requests a position
       // from the code card, and only then wait for that exact card value.
@@ -751,23 +649,11 @@ export default {
       if (!position && !hasSubmittedDgiiFirstPage()) { run(); return; }
       // Send one card attempt only. If DGII rejects it, leave the page still
       // instead of repeatedly submitting the same value.
-      // On the card step let DGII's own page scripts finish (they reset the
-      // Tarjeta box while loading) before writing the code.
-      if (position && document.readyState !== 'complete') { setTimeout(function(){ waitAndRun(remaining); }, 150); return; }
       if (cardField && code && !hasSubmittedDgiiCard(position)) { run(); return; }
-      // The card screen is unambiguous (a position and its box). If the stored
-      // card has no code for it, tell the user now instead of waiting silently.
-      if (position && cardField && !code && !hasSubmittedDgiiCard(position)) { showCardHelp(position); return; }
     }
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
     // DGII must never be submitted without the requested position on the card.
     else if (pEl && !isDgii) run();
-    else if (isDgii && hasSubmittedDgiiFirstPage()) {
-      var cfgH = PORTALS['${hostname}'];
-      var posH = requestedCardPosition();
-      // Only on the card screen: it asks for a position or shows a code box.
-      if (posH || cardInput(cfgH) || looseCardInput(cfgH)) showCardHelp(posH);
-    }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); });
   else waitAndRun(100);
@@ -813,36 +699,9 @@ export default {
     e.stopPropagation();
     _assign(p);
   },true);
-  // Inline page code calls __serpLoc instead of location (rewritten by the relay).
-  window.__serpLoc={
-    get href(){return BASE;},
-    set href(v){var p=proxyHref(String(v));_assign(p||String(v));},
-    assign:function(v){var p=proxyHref(String(v));_assign(p||String(v));},
-    replace:function(v){var p=proxyHref(String(v));_replace(p||String(v));},
-    toString:function(){return BASE;}
-  };
-  // location.assign/replace are unforgeable in modern browsers: redefining
-  // them throws. Keep trying for old engines, but never let the error stop
-  // the form and window.open protection below from being installed.
-  try{Object.defineProperty(window.location,'assign',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_assign(p||href);}});}catch(e){}
-  try{Object.defineProperty(window.location,'replace',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_replace(p||href);}});}catch(e){}
-  // Catch-all where the Navigation API exists (Chrome, Edge, Android): any
-  // other navigation that would leave the proxy for the portal is sent back
-  // through it, so the session cookies travel with it. POSTs are covered by
-  // the form patches below.
-  try{
-    if(window.navigation&&navigation.addEventListener){
-      navigation.addEventListener('navigate',function(e){
-        try{
-          if(!e.cancelable||e.hashChange||e.downloadRequest||e.formData) return;
-          var u=new URL(e.destination.url);
-          if(u.origin===location.origin||!isAllowed(u.hostname)) return;
-          var p=proxyHref(u.href); if(!p) return;
-          e.preventDefault(); _assign(p);
-        }catch(ex){}
-      });
-    }
-  }catch(e){}
+  // Patch location.assign / replace
+  Object.defineProperty(window.location,'assign',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_assign(p||href);}});
+  Object.defineProperty(window.location,'replace',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_replace(p||href);}});
   // Patch Location.prototype.href setter — catches window.location.href='...' used by ASP.NET WebForms __doPostBack and menu scripts
   try{
     var _lp=Location.prototype;
@@ -886,13 +745,6 @@ export default {
       _origFormSubmit.call(this);
     };
   }catch(e){}
-  try{
-    var _origRequestSubmit=HTMLFormElement.prototype.requestSubmit;
-    if(_origRequestSubmit) HTMLFormElement.prototype.requestSubmit=function(){
-      rewriteFormAction(this);
-      return _origRequestSubmit.apply(this,arguments);
-    };
-  }catch(e){}
 })();<\/script>`;
         html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + navInterceptor);
 
@@ -902,7 +754,11 @@ export default {
         });
         // The browser is on workers.dev, so strip DGII's Domain attribute.
         // The relay forwards this cookie back to DGII on the next request.
-        for (const cookie of relaySetCookies) responseHeaders.append('Set-Cookie', relayCookie(cookie, flowCookiePrefix));
+        for (const cookie of relaySetCookies) {
+          let isolatedCookie = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
+          if (flowCookiePrefix) isolatedCookie = isolatedCookie.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
+          responseHeaders.append('Set-Cookie', isolatedCookie);
+        }
         return new Response(html, { headers: responseHeaders });
       } catch(e) {
         return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
@@ -1059,14 +915,6 @@ export default {
     }
   },
 };
-
-// The browser is on workers.dev, so a portal cookie loses its Domain, is
-// scoped to the launch's flow and is sent back to the portal by the relay.
-function relayCookie(cookie, flowCookiePrefix) {
-  let c = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
-  if (flowCookiePrefix) c = c.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
-  return c;
-}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
