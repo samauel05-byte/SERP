@@ -236,6 +236,10 @@ export default {
             }
           }
           if (request.method === 'POST' && request.headers.get('Content-Type')) forwardHeaders['Content-Type'] = request.headers.get('Content-Type');
+          // ASP.NET UpdatePanels post in the background and expect DGII's
+          // compact "delta" answer; without this header DGII returns a full page.
+          const msAjax = request.headers.get('X-MicrosoftAjax');
+          if (msAjax) forwardHeaders['X-MicrosoftAjax'] = msAjax;
           // DGII redirects its WebForms POST. Buffer the body once so the
           // runtime can safely retransmit it after that redirect.
           const postBody = request.method === 'POST' ? await request.arrayBuffer() : undefined;
@@ -280,6 +284,15 @@ export default {
               } catch(e) {}
             }
           }
+          const portalType = portalRes.headers.get('content-type') || '';
+          if (msAjax || (portalType && !/text\/html|application\/xhtml/i.test(portalType))) {
+            const rawHeaders = new Headers({ 'Cache-Control': 'no-store' });
+            if (portalType) rawHeaders.set('Content-Type', portalType);
+            const disposition = portalRes.headers.get('content-disposition');
+            if (disposition) rawHeaders.set('Content-Disposition', disposition);
+            for (const cookie of relaySetCookies) rawHeaders.append('Set-Cookie', relayCookie(cookie, flowCookiePrefix));
+            return new Response(portalRes.body, { status: portalRes.status, headers: rawHeaders });
+          }
           html = await portalRes.text();
 
           // Cache raw HTML (before autofill injection) for 2 minutes
@@ -308,7 +321,7 @@ export default {
           });
           cachedHtml = cachedHtml.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
             try {
-              const actionUrl = new URL(action, targetUrl).href;
+              const actionUrl = new URL(action.replace(/&amp;/gi, '&'), targetUrl).href;
               return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(actionUrl) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
             } catch { return m; }
           });
@@ -320,6 +333,14 @@ export default {
               return pre + WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(abs.href) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '') + post;
             } catch { return m; }
           });
+          // DGII's menus navigate with inline onclick='location.href="/OFV/..."'.
+          // Browsers do not allow location.href to be intercepted, and with the
+          // DGII <base> those clicks would leave the proxy without the session
+          // (DGII then asks to log in again). Point them at __serpLoc instead,
+          // which the navigation script below routes through the proxy.
+          cachedHtml = cachedHtml
+            .replace(/\b(?:window\.|document\.|self\.|top\.)?location\.href\s*=(?!=)/g, '__serpLoc.href=')
+            .replace(/\b(?:window\.|document\.|self\.|top\.)?location\.(assign|replace)\s*\(/g, '__serpLoc.$1(');
           // Rewrite <meta http-equiv="refresh"> redirect URLs so they go through the proxy
           cachedHtml = cachedHtml.replace(/(<meta\b[^>]+\bhttp-equiv=["']refresh["'][^>]*\bcontent=["'][^"']*;\s*url=)([^"' >]+)/gi, (m, pre, url) => {
             try {
@@ -792,9 +813,36 @@ export default {
     e.stopPropagation();
     _assign(p);
   },true);
-  // Patch location.assign / replace
-  Object.defineProperty(window.location,'assign',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_assign(p||href);}});
-  Object.defineProperty(window.location,'replace',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_replace(p||href);}});
+  // Inline page code calls __serpLoc instead of location (rewritten by the relay).
+  window.__serpLoc={
+    get href(){return BASE;},
+    set href(v){var p=proxyHref(String(v));_assign(p||String(v));},
+    assign:function(v){var p=proxyHref(String(v));_assign(p||String(v));},
+    replace:function(v){var p=proxyHref(String(v));_replace(p||String(v));},
+    toString:function(){return BASE;}
+  };
+  // location.assign/replace are unforgeable in modern browsers: redefining
+  // them throws. Keep trying for old engines, but never let the error stop
+  // the form and window.open protection below from being installed.
+  try{Object.defineProperty(window.location,'assign',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_assign(p||href);}});}catch(e){}
+  try{Object.defineProperty(window.location,'replace',{configurable:true,writable:true,value:function(href){var p=proxyHref(href);_replace(p||href);}});}catch(e){}
+  // Catch-all where the Navigation API exists (Chrome, Edge, Android): any
+  // other navigation that would leave the proxy for the portal is sent back
+  // through it, so the session cookies travel with it. POSTs are covered by
+  // the form patches below.
+  try{
+    if(window.navigation&&navigation.addEventListener){
+      navigation.addEventListener('navigate',function(e){
+        try{
+          if(!e.cancelable||e.hashChange||e.downloadRequest||e.formData) return;
+          var u=new URL(e.destination.url);
+          if(u.origin===location.origin||!isAllowed(u.hostname)) return;
+          var p=proxyHref(u.href); if(!p) return;
+          e.preventDefault(); _assign(p);
+        }catch(ex){}
+      });
+    }
+  }catch(e){}
   // Patch Location.prototype.href setter — catches window.location.href='...' used by ASP.NET WebForms __doPostBack and menu scripts
   try{
     var _lp=Location.prototype;
@@ -838,6 +886,13 @@ export default {
       _origFormSubmit.call(this);
     };
   }catch(e){}
+  try{
+    var _origRequestSubmit=HTMLFormElement.prototype.requestSubmit;
+    if(_origRequestSubmit) HTMLFormElement.prototype.requestSubmit=function(){
+      rewriteFormAction(this);
+      return _origRequestSubmit.apply(this,arguments);
+    };
+  }catch(e){}
 })();<\/script>`;
         // DGII's login page runs window.sessionStorage.clear() on load. Through
         // the relay that storage is the autofill's: the company payload kept
@@ -869,11 +924,7 @@ export default {
         });
         // The browser is on workers.dev, so strip DGII's Domain attribute.
         // The relay forwards this cookie back to DGII on the next request.
-        for (const cookie of relaySetCookies) {
-          let isolatedCookie = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
-          if (flowCookiePrefix) isolatedCookie = isolatedCookie.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
-          responseHeaders.append('Set-Cookie', isolatedCookie);
-        }
+        for (const cookie of relaySetCookies) responseHeaders.append('Set-Cookie', relayCookie(cookie, flowCookiePrefix));
         return new Response(html, { headers: responseHeaders });
       } catch(e) {
         return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
@@ -1030,6 +1081,14 @@ export default {
     }
   },
 };
+
+// The browser is on workers.dev, so a portal cookie loses its Domain, is
+// scoped to the launch's flow and is sent back to the portal by the relay.
+function relayCookie(cookie, flowCookiePrefix) {
+  let c = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
+  if (flowCookiePrefix) c = c.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
+  return c;
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
