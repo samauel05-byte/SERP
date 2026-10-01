@@ -506,6 +506,11 @@ export default {
     el.dispatchEvent(new Event('change',{bubbles:true}));
     el.dispatchEvent(new Event('blur',{bubbles:true}));
   }
+  // DGII rejects a wrong code with "Acceso denegado: El código introducido no
+  // es válido" (older wording: "... es incorrecto").
+  function dgiiCardRejected(text){
+    return /c[oó]digo\\s+introducido\\s+(?:no\\s+es\\s+v[aá]lido|es\\s+incorrecto)/i.test(text || ((document.body && document.body.innerText) || ''));
+  }
   function requestedCardPosition(){
     // DGII renders text such as: "Favor introducir el código número: 3 de su tarjeta".
     // Read labels and tooltip attributes too; DGII sometimes renders its hint
@@ -523,7 +528,7 @@ export default {
       try { sessionStorage.setItem('serp-dgii-card-position', String(position)); } catch(e) {}
       return position;
     }
-    if(/c[oó]digo\s+introducido\s+es\s+incorrecto/i.test(text)){
+    if(dgiiCardRejected(text)){
       try {
         var previous = parseInt(sessionStorage.getItem('serp-dgii-card-position') || '0', 10);
         return previous > 0 ? previous : 0;
@@ -620,6 +625,7 @@ export default {
         // payload is used only if it asks for a code-card position.
         if(isDgii && !cardPosition) markDgiiFirstPageSubmitted();
         if(isDgii && cardPosition) markDgiiCardSubmitted(cardPosition);
+        if(isDgii && cardPosition){ try { sessionStorage.setItem('serp-dgii-last-card', JSON.stringify({ position: cardPosition, code: (cardInput(cfg) || {}).value || '' })); } catch(e) {} }
         btn.click();
       } else if(pEl) {
         // Fallback: press Enter on the password field
@@ -631,6 +637,29 @@ export default {
 
   // DGII may render its card prompt after the password field. Do not submit
   // until both its input and the requested card code are available.
+  function showRejectedCard(position, cardField, cfg){
+    if(document.getElementById('serp-card-help')) return;
+    var last = null; try { last = JSON.parse(sessionStorage.getItem('serp-dgii-last-card') || 'null'); } catch(e) {}
+    var stored = 0; if(p.dgiiCodes) for(var i = 1; i <= 400; i++) if(cardCodeForPosition(p.dgiiCodes, i)) stored++;
+    var code = position ? (p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '')) : '';
+    var esc = function(v){ return String(v).replace(/[<>&"]/g, ''); };
+    var box = document.createElement('div');
+    box.id = 'serp-card-help';
+    box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483647;max-width:420px;margin:0 auto;background:#0b1b33;color:#fff;border-radius:12px;padding:14px 16px;font:14px/1.45 system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)';
+    var html = '<strong style="display:block;margin-bottom:6px">Direct · Tarjeta de códigos</strong>';
+    html += 'La DGII rechazó el código' + (last && last.position ? ' de la posición <strong>' + esc(last.position) + '</strong>' + (last.code ? ' (Direct envió <strong>' + esc(last.code) + '</strong>)' : '') : '') + '. No lo intento de nuevo solo para no bloquear el acceso.';
+    html += '<div style="margin-top:6px">La tarjeta guardada en Direct tiene <strong>' + stored + '</strong> códigos. Compara con la tarjeta física: si no coinciden, corrígelos en Direct → DGII → editar empresa.</div>';
+    if(position && code) html += '<div style="margin-top:8px">Ahora pide la posición <strong>' + position + '</strong>: en Direct es <strong style="font-size:18px;letter-spacing:1px">' + esc(code) + '</strong> <button type="button" id="serp-card-use" style="margin-left:6px;padding:5px 10px;border-radius:8px;border:0;background:#10b981;color:#fff;font-weight:700">Escribirlo</button></div>';
+    else if(position) html += '<div style="margin-top:8px">Ahora pide la posición <strong>' + position + '</strong>, que no está en la tarjeta guardada.</div>';
+    box.innerHTML = html;
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Cerrar');
+    x.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:0;color:#fff;font-size:18px;cursor:pointer';
+    x.onclick = function(){ box.remove(); }; box.appendChild(x);
+    (document.body || document.documentElement).appendChild(box);
+    var use = document.getElementById('serp-card-use');
+    if(use) use.onclick = function(){ var el = cardField || cardInput(cfg); if(el){ el.value = ''; fill(el, code); el.focus(); } use.textContent = 'Escrito ✓'; };
+  }
+
   function waitAndRun(remaining) {
     var pEl = document.querySelector('input[type="password"]');
     var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
@@ -647,6 +676,10 @@ export default {
       // returns another password page without requesting a numbered card code,
       // it is a normal server response, not an instruction to submit again.
       if (!position && !hasSubmittedDgiiFirstPage()) { run(); return; }
+      // DGII rejected a code. Do not try again on our own (repeated wrong codes
+      // can lock the company's access): show what was sent and the code for
+      // the new position so the user can compare with the physical card.
+      if (dgiiCardRejected()) { if (position || remaining <= 0) { showRejectedCard(position, cardField, cfg); return; } }
       // Send one card attempt only. If DGII rejects it, leave the page still
       // instead of repeatedly submitting the same value.
       if (cardField && code && !hasSubmittedDgiiCard(position)) { run(); return; }
