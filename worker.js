@@ -152,6 +152,42 @@ export default {
 
     // /proxy — fetch portal login page, inject autofill script, return to browser
     // Credentials arrive only in the URL hash (never reaches this server)
+    // /r/<host>/<path> — portal assets (stylesheets and what they reference:
+    // fonts, background images) served from the relay origin. Path form keeps
+    // relative url(...) references inside the CSS on the relay as well.
+    if (reqUrl.pathname.startsWith('/r/') && (request.method === 'GET' || request.method === 'HEAD')) {
+      const m = reqUrl.pathname.match(/^\/r\/([^/]+)(\/.*)$/);
+      if (!m || !ALLOWED_HOSTS.some(h => m[1] === h || m[1].endsWith('.' + h))) return new Response('Recurso no permitido', { status: 403 });
+      const assetUrl = 'https://' + m[1] + m[2] + reqUrl.search;
+      const assetCache = caches.default;
+      const assetKey = new Request('https://cache.proxy/asset/' + encodeURIComponent(assetUrl));
+      const hit = await assetCache.match(assetKey);
+      if (hit) return hit;
+      let assetRes;
+      try {
+        assetRes = await fetch(assetUrl, { headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+          'Accept': request.headers.get('Accept') || '*/*',
+          'Referer': 'https://' + m[1] + '/',
+        } });
+      } catch (e) { return new Response('No se pudo obtener el recurso', { status: 502 }); }
+      const assetHeaders = new Headers({ 'Access-Control-Allow-Origin': '*', 'Cache-Control': assetRes.ok ? 'public, max-age=86400' : 'no-store' });
+      const assetType = assetRes.headers.get('content-type');
+      if (assetType) assetHeaders.set('Content-Type', assetType);
+      let assetBody = assetRes.body;
+      if (/text\/css/i.test(assetType || '')) {
+        // Root-relative and absolute portal URLs inside the CSS ("/OFV/...",
+        // "https://www.dgii.gov.do/...") also go through /r/<host>.
+        const host = m[1];
+        assetBody = (await assetRes.text())
+          .replace(/(url\(\s*["']?|@import\s+["'])\/(?!\/)/gi, (all, pre) => pre + '/r/' + host + '/')
+          .replace(/(url\(\s*["']?|@import\s+["'])https?:\/\/([^/"')\s]+)\//gi, (all, pre, h) => ALLOWED_HOSTS.some(a => h === a || h.endsWith('.' + a)) ? pre + '/r/' + h + '/' : all);
+      }
+      const out = new Response(assetBody, { status: assetRes.status, headers: assetHeaders });
+      if (assetRes.ok) await assetCache.put(assetKey, out.clone());
+      return out;
+    }
+
     if (reqUrl.pathname === '/proxy') {
       const targetUrl = reqUrl.searchParams.get('url');
       const rawFlow = reqUrl.searchParams.get('flow') || '';
@@ -247,13 +283,29 @@ export default {
           html = await portalRes.text();
 
           // Cache raw HTML (before autofill injection) for 2 minutes
-          const origin2 = target.origin;
+          // The page's own URL, not the site root: relative paths such as
+          // "Seguridad/SolicitarClave.aspx" or "imagenes/logo.png" resolve
+          // exactly as they do on the portal.
+          const baseHref = targetUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
           let cachedHtml = html;
           if (cachedHtml.match(/<head(\s[^>]*)?>/i)) {
-            cachedHtml = cachedHtml.replace(/<head(\s[^>]*)?>/i, `<head$1><base href="${origin2}/">`);
+            cachedHtml = cachedHtml.replace(/<head(\s[^>]*)?>/i, (m, a) => `<head${a || ''}><base href="${baseHref}">`);
           } else {
-            cachedHtml = `<base href="${origin2}/">` + cachedHtml;
+            cachedHtml = `<base href="${baseHref}">` + cachedHtml;
           }
+          // Stylesheets load through the relay (path form /r/<host>/<path>): the
+          // fonts and images they reference then resolve to the relay too, so
+          // the browser accepts DGII's icon fonts, which it blocks cross-site.
+          cachedHtml = cachedHtml.replace(/<link\b[^>]*>/gi, tag => {
+            if (!/\brel=["']?stylesheet/i.test(tag)) return tag;
+            return tag.replace(/(\bhref=["'])([^"']+)(["'])/i, (m, pre, href, post) => {
+              try {
+                const abs = new URL(href.replace(/&amp;/gi, '&'), targetUrl);
+                if (!/^https?:$/.test(abs.protocol) || !ALLOWED_HOSTS.some(h => abs.hostname === h || abs.hostname.endsWith('.' + h))) return m;
+                return pre + WORKER_ORIGIN + '/r/' + abs.hostname + abs.pathname + abs.search + post;
+              } catch { return m; }
+            });
+          });
           cachedHtml = cachedHtml.replace(/(<form\b[^>]+\baction=["'])([^"']+)(["'])/gi, (m, pre, action, post) => {
             try {
               const actionUrl = new URL(action, targetUrl).href;
