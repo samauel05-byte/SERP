@@ -748,7 +748,9 @@ const INST = {
              // fields (RNC/Cédula, usuario/correo y contraseña).
              uf:'usuario', pf:'contrasena' },
   sirla:   { name:'SISALRIL',     desc:'Superintendencia de Salud y Riesgos Lab.',   grad:'linear-gradient(135deg,#1a5c24 0%,#2d8a30 100%)', abbr:'SISALRIL',
-             url:'https://virtual.sisalril.gob.do/sisalrilvirtual/home/index/28',
+             // /ofv sends straight to SISALRIL's login (the old
+             // /sisalrilvirtual/home/index/28 route now answers 404).
+             url:'https://virtual.sisalril.gob.do/ofv',
              // SISALRIL uses an external identity provider; proxying its SPA
              // leaves it on a loading screen, so keep authentication on its origin.
              uf:'email', pf:'password', directOpen:true },
@@ -767,6 +769,11 @@ const INST = {
              // its buttons, lookups and steps keep working inside Direct.
              url:'https://www.camarasantodomingo.do/solicitudes/FormularioWeb/', openRelay:true,
              uf:'email', pf:'password' },
+  digisign:{ name:'Digisign',   desc:'Digisign · Facturación electrónica',          grad:'linear-gradient(135deg,#0c4a6e 0%,#0284c7 100%)', abbr:'DS',
+             // Opens the portal itself for the user to log in; no autofill.
+             url:'https://facturacion.digisign.do/login', openDirect:true },
+  gdmail:  { name:'Correo GD',   desc:'GD Línea · Correo web (Webmail)',              grad:'linear-gradient(135deg,#334155 0%,#64748b 100%)', abbr:'GD',
+             url:'https://mail.gdlinea.com/webmail/', openDirect:true },
   citrus:  { name:'Citrus',     desc:'Portal Citrus · Pagos y servicios',           grad:'linear-gradient(135deg,#065f46 0%,#059669 100%)', abbr:'CT',
              uf:'usuario', pf:'contrasena' },
   cami:    { name:'CAMI',        desc:'Acceso contable · Análisis 606/607 e IT-1',   grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
@@ -1295,6 +1302,13 @@ function openRelayPortal(instKey) {
   window.open('https://portal-rd-relay.samauel05.workers.dev/proxy?url='+encodeURIComponent(url)+'&flow='+encodeURIComponent(flow),'_blank');
 }
 
+// Portals the user logs into by hand: open the site itself, nothing filled.
+function openDirectPortal(instKey) {
+  const url=appConfig[instKey+'_loginUrl']||INST[instKey]?.url;
+  if(!url){ toast('Configura la URL del portal en ⚙️','warn'); return; }
+  window.open(url,'_blank','noopener');
+}
+
 function openPortal(instKey) {
   activePortal=instKey;
   renderCompaniesView();
@@ -1310,7 +1324,7 @@ function getCompanies(instKey) {
    Read live from each institution's website through /api/logo/:key (cached a
    day), so a redesign there appears here automatically. The bundled logo is
    shown first and stays if the site cannot be reached. */
-const OFFICIAL_LOGOS=new Set(['dgii','tss','trabajo','sirla','carnet','azul','idoppril','onapi','formalizate','camara']);
+const OFFICIAL_LOGOS=new Set(['dgii','tss','trabajo','sirla','carnet','azul','idoppril','onapi','formalizate','camara','digisign','gdmail']);
 const officialLogoLoads=new Map();
 function loadOfficialLogo(key){
   if(!officialLogoLoads.has(key)) officialLogoLoads.set(key,new Promise((resolve,reject)=>{
@@ -1345,7 +1359,7 @@ function renderPortalGrid() {
     const allPortals=['dgii','tss','trabajo','sirla','carnet','azul'];
     const userPortals=Array.isArray(currentUser?.portals)?currentUser.portals:allPortals;
     allowed.push(...(currentUser?.role==='admin'?allPortals:userPortals));
-    allowed.push('camara');
+    allowed.push('camara','digisign','gdmail');
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
@@ -1356,22 +1370,23 @@ function renderPortalGrid() {
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
+    { label:'Facturación y correo',     keys:['digisign','gdmail'] },
     { label:'Herramientas contables',   keys:['nala','cami','ir2','dgii-modulos','clients'] },
   ];
 
   const PLAY='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
   const TOOL_OPEN={nala:openNala, ir2:openIr2, 'dgii-modulos':openDgiiModulos, clients:openClients, cami:openCami};
   function makeCard(key,inst){
-    const isTool=!!inst.tool||!!inst.openRelay;
+    const isTool=!!inst.tool||!!inst.openRelay||!!inst.openDirect;
     const cos=isTool?[]:getCompanies(key);
     const card=document.createElement('button');
     card.type='button';
     card.className='p-card'+(key==='nala'?' p-card-nala':'');
     card.title=inst.desc;
     card.setAttribute('aria-label',`Abrir ${inst.name}`);
-    card.addEventListener('click',()=>inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key));
+    card.addEventListener('click',()=>inst.openDirect?openDirectPortal(key):inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key));
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
-    const toolLabel=inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
+    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
     const countHtml=isTool
       ?`<div class="p-count">${toolLabel}</div>`
       :`<div class="p-count${cos.length?'':' empty'}">${cos.length?`${cos.length} empresa${cos.length>1?'s':''}`:'Sin empresas'}</div>`;
