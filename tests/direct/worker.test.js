@@ -136,3 +136,13 @@ test('en los demás portales el robot envía el inicio de sesión una sola vez',
   assert.match(html, /var onceKey = 'serp-login-submitted-' \+ \(p\.flow \|\| hash\);/);
   assert.match(html, /if \(sessionStorage\.getItem\(onceKey\) === '1'\) return;/);
 });
+
+test('las consultas de la página llevan X-Requested-With y la página real como Referer (Azul: Localidad)', async () => {
+  const html = await (await proxied('https://portal.azul.com.do/Statements')).text();
+  assert.match(html, /_xh\.call\(this,'X-Requested-With','XMLHttpRequest'\)/);
+  const page = 'https://portal.azul.com.do/Statements';
+  await worker.fetch(new Request('https://relay.test/api-proxy?url=' + encodeURIComponent('https://portal.azul.com.do/Ajax/LocationsAutoComplete?_=1') + '&flow=flow123456', { headers: { 'X-Requested-With': 'XMLHttpRequest', Referer: 'https://relay.test/proxy?url=' + encodeURIComponent(page) + '&flow=flow123456' } }));
+  assert.strictEqual(seen.headers.Referer, page);
+  assert.strictEqual(seen.headers['x-requested-with'], 'XMLHttpRequest');
+  assert.ok(!('Origin' in seen.headers), 'un GET del mismo sitio no lleva Origin');
+});
