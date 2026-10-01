@@ -535,7 +535,11 @@ export default {
       Array.from(document.querySelectorAll('[title],[data-original-title],[aria-label]')).map(function(el){
         return el.getAttribute('title') || el.getAttribute('data-original-title') || el.getAttribute('aria-label') || '';
       }).join(' ');
-    var match = text.match(/c[oó]digo\\s*(?:(?:n[uú]mero|n[ºo]\\.?)(?:\\s*(?:de|#))?)?\\s*:?\\s*(\\d{1,3})/i);
+    var match = text.match(/c[oó]digo\\s*(?:(?:n[uú]mero|n[ºo]\\.?)(?:\\s*(?:de|#))?)?\\s*:?\\s*(\\d{1,3})/i)
+      // Other wordings of the same request, e.g. "posición 15 de su tarjeta"
+      // or "Tarjeta de códigos - código No. 15". They must mention the card.
+      || text.match(/(?:posici[oó]n|coordenada|c[oó]digo|n[uú]mero|casilla)\\D{0,25}?(\\d{1,3})\\D{0,40}?tarjeta/i)
+      || text.match(/tarjeta\\D{0,60}?(?:posici[oó]n|coordenada|c[oó]digo|n[uú]mero|casilla)\\D{0,12}?(\\d{1,3})(?!\\d)/i);
     var position = match ? parseInt(match[1], 10) : 0;
     if(position > 0){
       // DGII replaces the request with only an error after a failed attempt.
@@ -544,7 +548,7 @@ export default {
       try { sessionStorage.setItem('serp-dgii-card-position', String(position)); } catch(e) {}
       return position;
     }
-    if(/c[oó]digo\s+introducido\s+es\s+incorrecto/i.test(text)){
+    if(/c[oó]digo\\s+introducido\\s+es\\s+incorrecto/i.test(text)){
       try {
         var previous = parseInt(sessionStorage.getItem('serp-dgii-card-position') || '0', 10);
         return previous > 0 ? previous : 0;
@@ -596,6 +600,59 @@ export default {
     // card code in Usuario or overwrite another value.
     return null;
   }
+  // Used only on a screen that explicitly asks for a card position: the
+  // single visible input that is not Usuario/Clave is the code box.
+  function looseCardInput(cfg){
+    var user = cfg ? q(cfg.user) : null, pass = cfg ? q(cfg.pass) : null;
+    var others = Array.from(document.querySelectorAll('input')).filter(function(input){
+      if(input === user || input === pass || input.disabled || input.readOnly) return false;
+      if(input.closest && input.closest('#serp-card-help')) return false;
+      if(/^(hidden|submit|button|image|checkbox|radio|file)$/i.test(input.type || 'text')) return false;
+      var r = input.getBoundingClientRect(); return r.width > 0 && r.height > 0;
+    });
+    return others.length === 1 ? others[0] : null;
+  }
+  // Small Direct panel shown on DGII's card screen when the code cannot be
+  // filled automatically, so the user is never left guessing why.
+  function showCardHelp(position){
+    if(document.getElementById('serp-card-help')) return;
+    var codes = p.dgiiCodes, single = p.tarjeta || '';
+    var box = document.createElement('div');
+    box.id = 'serp-card-help';
+    box.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;max-width:320px;background:#0b1b33;color:#fff;border-radius:12px;padding:14px 16px;font:14px/1.45 system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)';
+    function close(){ box.remove(); }
+    function put(code){
+      var el = cardInput(PORTALS['${hostname}']) || looseCardInput(PORTALS['${hostname}']);
+      if(el){ el.value=''; fill(el, code); el.focus(); }
+      return !!el;
+    }
+    var title = '<strong style="display:block;margin-bottom:6px">Direct · Tarjeta de códigos</strong>';
+    if(!codes && !single){
+      box.innerHTML = title + 'Esta empresa no tiene la tarjeta de códigos guardada en Direct. Agrégala en Direct → DGII → editar empresa → “Códigos de tarjeta DGII”. Si usa Token digital, escribe el código de la app DGII Móvil.';
+    } else if(position){
+      var code = codes ? cardCodeForPosition(codes, position) : single;
+      box.innerHTML = title + (code ? 'Código número ' + position + ': <strong style="font-size:18px;letter-spacing:1px">' + code.replace(/[<>&]/g,'') + '</strong>' : 'La tarjeta guardada en Direct no tiene el código número ' + position + '. Revisa los códigos de esta empresa en Direct.');
+      if(code && put(code)) box.innerHTML += '<div style="margin-top:6px;opacity:.85">Ya lo escribí en la casilla; pulsa el botón de DGII para continuar.</div>';
+    } else {
+      box.innerHTML = title + '¿Qué número de código pide la DGII? <div style="display:flex;gap:6px;margin-top:8px"><input id="serp-card-pos" inputmode="numeric" style="flex:1;padding:6px 8px;border-radius:8px;border:0;color:#000" placeholder="Ej: 15"><button id="serp-card-go" type="button" style="padding:6px 12px;border-radius:8px;border:0;background:#10b981;color:#fff;font-weight:700">Llenar</button></div><div id="serp-card-msg" style="margin-top:6px"></div>';
+      setTimeout(function(){
+        var go = document.getElementById('serp-card-go');
+        if(go) go.onclick = function(){
+          var n = parseInt(document.getElementById('serp-card-pos').value, 10);
+          var code = n > 0 ? (codes ? cardCodeForPosition(codes, n) : single) : '';
+          var msg = document.getElementById('serp-card-msg');
+          if(!code){ msg.textContent = 'No hay código ' + (n || '') + ' en la tarjeta guardada.'; return; }
+          try { sessionStorage.setItem('serp-dgii-card-position', String(n)); } catch(e) {}
+          msg.textContent = put(code) ? 'Listo: escrito en la casilla. Pulsa el botón de DGII.' : 'Código ' + n + ': ' + code;
+        };
+      }, 0);
+    }
+    var x = document.createElement('button');
+    x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label','Cerrar');
+    x.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:0;color:#fff;font-size:18px;cursor:pointer';
+    x.onclick = close; box.appendChild(x);
+    (document.body || document.documentElement).appendChild(box);
+  }
 
   function run(){
     var cfg = PORTALS['${hostname}'];
@@ -629,7 +686,7 @@ export default {
         cardCode = cardCodeForPosition(p.dgiiCodes, cardPosition);
       }
       if(cardCode) {
-        var cardEl = cardInput(cfg);
+        var cardEl = cardInput(cfg) || (cardPosition ? looseCardInput(cfg) : null);
         if(cardEl) { cardEl.value=''; fill(cardEl, cardCode); }
       }
     }
@@ -660,7 +717,7 @@ export default {
       var cfg = PORTALS['${hostname}'];
       var position = requestedCardPosition();
       var code = p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '');
-      var cardField = cardInput(cfg);
+      var cardField = cardInput(cfg) || (position ? looseCardInput(cfg) : null);
       // DGII has two consecutive screens. The first only has Usuario/Clave;
       // submit it immediately. On the second screen it requests a position
       // from the code card, and only then wait for that exact card value.
@@ -675,6 +732,12 @@ export default {
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
     // DGII must never be submitted without the requested position on the card.
     else if (pEl && !isDgii) run();
+    else if (isDgii && hasSubmittedDgiiFirstPage()) {
+      var cfgH = PORTALS['${hostname}'];
+      var posH = requestedCardPosition();
+      // Only on the card screen: it asks for a position or shows a code box.
+      if (posH || cardInput(cfgH) || looseCardInput(cfgH)) showCardHelp(posH);
+    }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); });
   else waitAndRun(100);
