@@ -194,8 +194,8 @@ export default {
       // The flow is not a credential; it scopes portal cookies to one client
       // tab so opening a second company cannot inherit the first company's
       // DGII session.
-      const portalFlow = /^[A-Za-z0-9_-]{6,120}$/.test(rawFlow) ? rawFlow : '';
-      const flowCookiePrefix = portalFlow ? 'serp_' + portalFlow + '_' : '';
+      let portalFlow = /^[A-Za-z0-9_-]{6,120}$/.test(rawFlow) ? rawFlow : '';
+      let flowCookiePrefix = portalFlow ? 'serp_' + portalFlow + '_' : '';
       if (!targetUrl) return new Response('Missing url parameter', { status: 400 });
 
       let target;
@@ -204,6 +204,17 @@ export default {
       if (!ALLOWED_HOSTS.some(h => target.hostname === h || target.hostname.endsWith('.' + h))) {
         return new Response('Portal no permitido', { status: 403 });
       }
+
+      // A popup or page the portal opens without our flow parameter must stay
+      // in the same session: fall back to the last flow used for this portal
+      // in this browser (remembered in a relay cookie).
+      const lastFlowName = 'serp_lastflow_' + portalKey(target.hostname);
+      if (!portalFlow) {
+        const remembered = (request.headers.get('Cookie') || '').split(';').map(v => v.trim()).find(v => v.startsWith(lastFlowName + '='));
+        const value = remembered ? remembered.slice(lastFlowName.length + 1) : '';
+        if (/^[A-Za-z0-9_-]{6,120}$/.test(value)) { portalFlow = value; flowCookiePrefix = 'serp_' + portalFlow + '_'; }
+      }
+      const lastFlowCookie = portalFlow ? lastFlowName + '=' + portalFlow + '; Path=/; HttpOnly; Secure; SameSite=Lax' : '';
 
       // Cache the raw login page HTML (without autofill script) for 2 minutes
       // so repeat opens of slow government portals are nearly instant.
@@ -273,6 +284,7 @@ export default {
                   ? WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(absLoc) + (portalFlow ? '&flow=' + encodeURIComponent(portalFlow) : '')
                   : absLoc;
                 const rdrHeaders = new Headers({ 'Location': rdrTarget, 'Cache-Control': 'no-store' });
+                if (lastFlowCookie) rdrHeaders.append('Set-Cookie', lastFlowCookie);
                 for (const cookie of relaySetCookies) {
                   let c = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
                   if (flowCookiePrefix) c = c.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
@@ -287,6 +299,7 @@ export default {
           const portalType = portalRes.headers.get('content-type') || '';
           if (msAjax || (portalType && !/text\/html|application\/xhtml/i.test(portalType))) {
             const rawHeaders = new Headers({ 'Cache-Control': 'no-store' });
+            if (lastFlowCookie) rawHeaders.append('Set-Cookie', lastFlowCookie);
             if (portalType) rawHeaders.set('Content-Type', portalType);
             const disposition = portalRes.headers.get('content-disposition');
             if (disposition) rawHeaders.set('Content-Disposition', disposition);
@@ -925,6 +938,7 @@ export default {
         // The browser is on workers.dev, so strip DGII's Domain attribute.
         // The relay forwards this cookie back to DGII on the next request.
         for (const cookie of relaySetCookies) responseHeaders.append('Set-Cookie', relayCookie(cookie, flowCookiePrefix));
+        if (lastFlowCookie) responseHeaders.append('Set-Cookie', lastFlowCookie);
         return new Response(html, { headers: responseHeaders });
       } catch(e) {
         return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
@@ -1084,6 +1098,12 @@ export default {
 
 // The browser is on workers.dev, so a portal cookie loses its Domain, is
 // scoped to the launch's flow and is sent back to the portal by the relay.
+// DGII lives on several hostnames (www.dgii.gov.do, dgii.gov.do, ...): one key per portal.
+function portalKey(hostname) {
+  const parts = String(hostname).toLowerCase().split('.');
+  return parts.slice(-3).join('_').replace(/[^a-z0-9_]/g, '');
+}
+
 function relayCookie(cookie, flowCookiePrefix) {
   let c = String(cookie).replace(/;\s*Domain=[^;]*/gi, '').replace(/;\s*Path=[^;]*/gi, '') + '; Path=/';
   if (flowCookiePrefix) c = c.replace(/^([^=;]+)/, flowCookiePrefix + '$1');

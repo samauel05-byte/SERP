@@ -52,7 +52,7 @@ test('la acción del formulario conserva todos sus parámetros', async () => {
 
 test('la cookie de sesión queda en el proxy, aislada por flujo', async () => {
   const res = await proxied('https://www.dgii.gov.do/ofv/login.aspx');
-  const cookie = res.headers.get('set-cookie');
+  const cookie = res.headers.getSetCookie().find(c => /ASP\.NET_SessionId/.test(c));
   assert.match(cookie, /^serp_flow123456_ASP\.NET_SessionId=abc/);
   assert.doesNotMatch(cookie, /domain=/i);
   assert.match(cookie, /Path=\/$/);
@@ -69,5 +69,15 @@ test('postbacks parciales (UpdatePanel) reciben la respuesta delta de DGII', asy
   const res = await proxied('https://www.dgii.gov.do/ofv/Default.aspx', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-MicrosoftAjax': 'Delta=true' }, body: 'a=1' });
   assert.strictEqual(seen.headers['X-MicrosoftAjax'], 'Delta=true');
   assert.strictEqual(await res.text(), '1|#||4|12|updatePanel|x|');
-  assert.match(res.headers.get('set-cookie'), /^serp_flow123456_ASP\.NET_SessionId=abc/);
+  assert.ok(res.headers.getSetCookie().some(c => /^serp_flow123456_ASP\.NET_SessionId=abc/.test(c)));
+});
+
+test('una ventana abierta sin flujo usa la última sesión de ese portal', async () => {
+  const first = await proxied('https://www.dgii.gov.do/ofv/login.aspx');
+  const remembered = first.headers.getSetCookie().find(c => c.startsWith('serp_lastflow_dgii_gov_do='));
+  assert.match(remembered, /^serp_lastflow_dgii_gov_do=flow123456;.*HttpOnly/);
+  await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://dgii.gov.do/ofv/aviso.aspx'), {
+    headers: { Cookie: 'serp_lastflow_dgii_gov_do=flow123456; serp_flow123456_ASP.NET_SessionId=abc; serp_otro999999_ASP.NET_SessionId=zzz' },
+  }));
+  assert.strictEqual(seen.headers.Cookie, 'ASP.NET_SessionId=abc');
 });
