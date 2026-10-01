@@ -649,7 +649,9 @@ export default {
       box.innerHTML = title + 'Esta empresa no tiene la tarjeta de códigos guardada en Direct. Agrégala en Direct → DGII → editar empresa → “Códigos de tarjeta DGII”. Si usa Token digital, escribe el código de la app DGII Móvil.';
     } else if(position){
       var code = codes ? cardCodeForPosition(codes, position) : single;
-      box.innerHTML = title + (code ? 'Código número ' + position + ': <strong style="font-size:18px;letter-spacing:1px">' + code.replace(/[<>&]/g,'') + '</strong>' : 'La tarjeta guardada en Direct no tiene el código número ' + position + '. Revisa los códigos de esta empresa en Direct.');
+      var stored = 0;
+      if(codes) for(var i = 1; i <= 400; i++) if(cardCodeForPosition(codes, i)) stored++;
+      box.innerHTML = title + (code ? 'Código número ' + position + ': <strong style="font-size:18px;letter-spacing:1px">' + code.replace(/[<>&]/g,'') + '</strong>' : 'La DGII pide el código número <strong>' + position + '</strong>, pero la tarjeta guardada en Direct para esta empresa ' + (stored ? 'tiene solo ' + stored + ' código' + (stored === 1 ? '' : 's') : 'no tiene códigos que se puedan leer') + '. Revisa en Direct → DGII → editar empresa → “Códigos de tarjeta DGII” que estén todos, en orden, separados por comas o uno por línea.');
       if(code && put(code)) box.innerHTML += '<div style="margin-top:6px;opacity:.85">Ya lo escribí en la casilla; pulsa el botón de DGII para continuar.</div>';
     } else {
       box.innerHTML = title + '¿Qué número de código pide la DGII? <div style="display:flex;gap:6px;margin-top:8px"><input id="serp-card-pos" inputmode="numeric" style="flex:1;padding:6px 8px;border-radius:8px;border:0;color:#000" placeholder="Ej: 15"><button id="serp-card-go" type="button" style="padding:6px 12px;border-radius:8px;border:0;background:#10b981;color:#fff;font-weight:700">Llenar</button></div><div id="serp-card-msg" style="margin-top:6px"></div>';
@@ -673,6 +675,7 @@ export default {
   }
 
   function run(){
+    var cardCode = '', cardEl = null;
     var cfg = PORTALS['${hostname}'];
     var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
     var cardPosition = isDgii ? requestedCardPosition() : 0;
@@ -699,18 +702,21 @@ export default {
     if(cfg && cfg.tarjeta){
       // dgiiCodes is a positional card: item 1 is the code for position 1, etc.
       // A single tarjeta value remains supported for portals that do not use a code card.
-      var cardCode = p.tarjeta || '';
+      cardCode = p.tarjeta || '';
       if(p.dgiiCodes){
         cardCode = cardCodeForPosition(p.dgiiCodes, cardPosition);
       }
       if(cardCode) {
-        var cardEl = cardInput(cfg) || (cardPosition ? looseCardInput(cfg) : null);
+        cardEl = cardInput(cfg) || (cardPosition ? looseCardInput(cfg) : null);
         if(cardEl) { cardEl.value=''; fill(cardEl, cardCode); }
       }
     }
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]') || document.querySelector('button:not([type="button"])');
     setTimeout(function(){
+      // DGII's own scripts may clear or re-render the Tarjeta box after load:
+      // write the code again right before continuing.
+      if(cardCode && cardEl && cardEl.value !== cardCode) fill(cardEl, cardCode);
       if(btn) {
         // The following DGII page stays on the relay. Its temporary tab-local
         // payload is used only if it asks for a code-card position.
@@ -722,7 +728,7 @@ export default {
         pEl.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}));
         pEl.dispatchEvent(new KeyboardEvent('keypress',{key:'Enter',keyCode:13,bubbles:true}));
       }
-    }, 180);
+    }, cardCode && cardEl ? 450 : 180);
   }
 
   // DGII may render its card prompt after the password field. Do not submit
@@ -745,7 +751,13 @@ export default {
       if (!position && !hasSubmittedDgiiFirstPage()) { run(); return; }
       // Send one card attempt only. If DGII rejects it, leave the page still
       // instead of repeatedly submitting the same value.
+      // On the card step let DGII's own page scripts finish (they reset the
+      // Tarjeta box while loading) before writing the code.
+      if (position && document.readyState !== 'complete') { setTimeout(function(){ waitAndRun(remaining); }, 150); return; }
       if (cardField && code && !hasSubmittedDgiiCard(position)) { run(); return; }
+      // The card screen is unambiguous (a position and its box). If the stored
+      // card has no code for it, tell the user now instead of waiting silently.
+      if (position && cardField && !code && !hasSubmittedDgiiCard(position)) { showCardHelp(position); return; }
     }
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
     // DGII must never be submitted without the requested position on the card.
