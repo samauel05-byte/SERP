@@ -746,7 +746,12 @@ export default {
     };
   }catch(e){}
 })();<\/script>`;
-        html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + navInterceptor);
+        // DGII's login page runs window.sessionStorage.clear() on load. Through
+        // the relay that storage is the autofill's: the company payload kept
+        // for the next screen (the code-card step) was erased, so the card was
+        // never filled. Keep the relay's own "serp-" keys when the page clears.
+        const storageGuard = `<script>(function(){try{var s=window.sessionStorage,c=s.clear.bind(s);s.clear=function(){var keep={};for(var i=0;i<s.length;i++){var k=s.key(i);if(k&&k.indexOf('serp-')===0)keep[k]=s.getItem(k);}c();for(var k in keep)s.setItem(k,keep[k]);};}catch(e){}})();<\/script>`;
+        html = html.replace(/<head(\s[^>]*)?>/i, (m) => m + storageGuard + navInterceptor);
 
         const responseHeaders = new Headers({
           'Content-Type': 'text/html; charset=utf-8',
