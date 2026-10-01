@@ -1696,12 +1696,13 @@ async function enterCompany(credId) {
   } else {
     actions.innerHTML=`<button class="cred-btn cred-btn-dismiss" style="flex:none;width:100%" onclick="closeCredHelper()">Cerrar</button><small style="color:var(--muted);font-size:11px;text-align:center;flex:1">Configura la URL del portal en ⚙️</small>`;
   }
-  // Auto-copy RNC/username to clipboard
-  try { await navigator.clipboard.writeText(_chUser); } catch {}
-
-  // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs)
+  // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs).
+  // This must happen before any other await: once the new tab has focus, Chrome
+  // can leave a clipboard write pending and the tab would wait forever.
   if (newTab && loginUrl && !inst?.directOpen) {
-    autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab);
+    try { autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab); }
+    catch { newTab.close(); toast('No se pudo abrir el portal. Intenta de nuevo.','err'); return; }
+    navigator.clipboard?.writeText(_chUser).catch(() => {});
     // Update actions so if user manually opens the panel they get Reintentar + Abrir directo
     actions.innerHTML=`
       <button class="cred-btn cred-btn-launch" onclick="chLaunch()">Reintentar →</button>
@@ -1711,6 +1712,9 @@ async function enterCompany(credId) {
     // Do NOT show the credential helper automatically — auto-login fires silently
     return;
   }
+
+  // Auto-copy RNC/username to clipboard
+  navigator.clipboard?.writeText(_chUser).catch(() => {});
 
   // Only show credential panel when the user needs to copy manually (directOpen portals)
   document.getElementById('cred-helper').hidden=false;
