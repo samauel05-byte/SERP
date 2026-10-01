@@ -251,6 +251,14 @@ export default {
             'Referer': targetUrl,
             'Origin': target.origin,
           };
+          // Send the page the user is on as Referer, as a browser does (e.g.
+          // Cardnet's login page carries ?ReturnUrl=... and its form posts to
+          // the bare address). The browser's own Referer is the relay page.
+          try {
+            const pageRef = new URL(request.headers.get('Referer') || '');
+            const pageUrl = pageRef.origin === reqUrl.origin && pageRef.pathname === '/proxy' ? pageRef.searchParams.get('url') : '';
+            if (pageUrl && new URL(pageUrl).hostname === target.hostname) forwardHeaders.Referer = pageUrl;
+          } catch {}
           const portalCookie = request.headers.get('Cookie');
           if (portalCookie) {
             if (flowCookiePrefix) {
@@ -769,7 +777,14 @@ export default {
   function waitAndRun(remaining) {
     var pEl = document.querySelector('input[type="password"]');
     var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
-    if (pEl && !isDgii) { run(); return; }
+    // Other portals: send the login once per launch. If the portal answers
+    // with its login form again (wrong password, an error), leave it as the
+    // portal shows it; re-sending in a loop can lock the account.
+    if (pEl && !isDgii) {
+      var onceKey = 'serp-login-submitted-' + (p.flow || hash);
+      try { if (sessionStorage.getItem(onceKey) === '1') return; sessionStorage.setItem(onceKey, '1'); } catch(e) {}
+      run(); return;
+    }
     if (pEl && isDgii) {
       var cfg = PORTALS['${hostname}'];
       var position = requestedCardPosition();

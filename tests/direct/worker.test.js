@@ -122,3 +122,17 @@ test('las consultas en segundo plano de un portal (Cámara: Buscar cédula) usan
   assert.deepStrictEqual(await res.json(), { error: false });
   assert.match(res.headers.getSetCookie()[0], /^serp_flow123456_AspxAutoDetectCookieSupport=1;/);
 });
+
+test('al enviar un formulario, el portal recibe como Referer la página real (Cardnet ReturnUrl)', async () => {
+  const page = 'https://www.cardnet.com.do/capp2/Account/Login?ReturnUrl=%2Fcapp2%2FReport';
+  await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://www.cardnet.com.do/capp2/Account/Login') + '&flow=flow123456', {
+    method: 'POST', body: 'Email=a&Password=b', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Referer: 'https://relay.test/proxy?url=' + encodeURIComponent(page) + '&flow=flow123456' },
+  }));
+  assert.strictEqual(seen.headers.Referer, page);
+});
+
+test('en los demás portales el robot envía el inicio de sesión una sola vez', async () => {
+  const html = await (await proxied('https://www.cardnet.com.do/capp2/Account/Login')).text();
+  assert.match(html, /var onceKey = 'serp-login-submitted-' \+ \(p\.flow \|\| hash\);/);
+  assert.match(html, /if \(sessionStorage\.getItem\(onceKey\) === '1'\) return;/);
+});
