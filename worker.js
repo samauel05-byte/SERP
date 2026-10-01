@@ -159,6 +159,11 @@ export default {
       const m = reqUrl.pathname.match(/^\/r\/([^/]+)(\/.*)$/);
       if (!m || !ALLOWED_HOSTS.some(h => m[1] === h || m[1].endsWith('.' + h))) return new Response('Recurso no permitido', { status: 403 });
       const assetUrl = 'https://' + m[1] + m[2] + reqUrl.search;
+      // A reload of an app screen (its address is under /r/) must open the
+      // app again through the proxy, not its bare file.
+      if (request.headers.get('Sec-Fetch-Dest') === 'document') {
+        return Response.redirect(WORKER_ORIGIN + '/proxy?url=' + encodeURIComponent(assetUrl), 302);
+      }
       const assetCache = caches.default;
       const assetKey = new Request('https://cache.proxy/asset/' + encodeURIComponent(assetUrl));
       const hit = await assetCache.match(assetKey);
@@ -182,6 +187,15 @@ export default {
         assetBody = (await assetRes.text())
           .replace(/(url\(\s*["']?|@import\s+["'])\/(?!\/)/gi, (all, pre) => pre + '/r/' + host + '/')
           .replace(/(url\(\s*["']?|@import\s+["'])https?:\/\/([^/"')\s]+)\//gi, (all, pre, h) => ALLOWED_HOSTS.some(a => h === a || h.endsWith('.' + a)) ? pre + '/r/' + h + '/' : all);
+      }
+      if (/\/appconfig[^/]*\.json$/i.test(m[2])) {
+        // OVI (ABP) builds its own links, styles and the page it opens after
+        // login from appBaseUrl. Point it at the relay so the app stays inside
+        // it with its session, instead of jumping to the bare portal.
+        const host = m[1];
+        assetBody = (await assetRes.text()).replace(/("appBaseUrl"\s*:\s*")https:\/\/([^"/]+)\/?"/, (all, pre, h) =>
+          ALLOWED_HOSTS.some(a => h === a || h.endsWith('.' + a)) ? pre + WORKER_ORIGIN + '/r/' + h + '"' : all);
+        assetHeaders.set('Cache-Control', 'no-store');
       }
       const out = new Response(assetBody, { status: assetRes.status, headers: assetHeaders });
       if (assetRes.ok) await assetCache.put(assetKey, out.clone());
@@ -408,18 +422,30 @@ export default {
             return new Response(`Error al obtener el portal: ${e.message}`, { status: 502 });
           }
 
-          // Inject base href so relative URLs in HTML load from OVI
+          // Relative URLs (the app's module scripts, chunks, styles, fonts)
+          // load through the relay's asset route. Loaded straight from the
+          // portal, the browser blocks module scripts cross-site and the app
+          // never renders its login form.
           const spaOrigin = target.origin;
+          const spaBase = WORKER_ORIGIN + '/r/' + hostname + '/';
           if (/<head(\s[^>]*)?>/i.test(spaHtml)) {
-            spaHtml = spaHtml.replace(/<head(\s[^>]*)?>/i, (m, a) => `<head${a||''}><base href="${spaOrigin}/">`);
+            spaHtml = spaHtml.replace(/<head(\s[^>]*)?>/i, (m, a) => `<head${a||''}><base href="${spaBase}">`);
           } else {
-            spaHtml = `<base href="${spaOrigin}/">` + spaHtml;
+            spaHtml = `<base href="${spaBase}">` + spaHtml;
           }
+          spaHtml = spaHtml.replace(/<base\s+href=["']\/["']\s*\/?>/gi, '');
 
           // Inject fetch/XHR interceptor at top of <head> so it runs before React loads
           const interceptor = `<script>(function(){
   var R='${WORKER_ORIGIN}';
   var O='${spaOrigin}';
+  // The app's router reads the page path. Show it the portal's own path
+  // under the asset base, so it opens the same screen (e.g. account/login).
+  try{
+    var B='/r/${hostname}';
+    var T=new URL(new URLSearchParams(location.search).get('url')||O+'/');
+    if(location.pathname.indexOf(B)!==0) history.replaceState(history.state,'',B+T.pathname+T.search+location.hash);
+  }catch(e){}
   window.__serpRelayErrors=[];
   window.__serpRelayRequests=[];
   var _serpConsoleError=console.error.bind(console);
@@ -450,11 +476,18 @@ export default {
     x.open=function(m,u){
       var p=proxyUrl(String(u));
       x.addEventListener('loadend',function(){window.__serpRelayRequests.push({url:String(u),status:x.status});},{once:true});
-      return _o(m,p||u,arguments[2],arguments[3],arguments[4]);
+      // Pass only the arguments the app passed: an explicit undefined
+      // "async" argument turns the request synchronous.
+      var a=Array.prototype.slice.call(arguments); a[1]=p||u;
+      return _o.apply(null,a);
     };
     return x;
   }
   XHRProxy.prototype=_X.prototype;
+  // Keep XMLHttpRequest.DONE and the other constants: apps compare
+  // readyState with them and never finish loading without them.
+  try{Object.setPrototypeOf(XHRProxy,_X);}catch(e){}
+  ['UNSENT','OPENED','HEADERS_RECEIVED','LOADING','DONE'].forEach(function(k,i){try{if(XHRProxy[k]!==i)Object.defineProperty(XHRProxy,k,{value:i});}catch(e){}});
   window.XMLHttpRequest=XHRProxy;
 })();<\/script>`;
           spaHtml = spaHtml.replace(/<head(\s[^>]*)?>/i, (m) => m + interceptor);
