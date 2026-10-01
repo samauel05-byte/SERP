@@ -151,3 +151,10 @@ test('Trabajo (OVI): el aviso "Portal no disponible" no tapa la app después de 
   const html = await (await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login')))).text();
   assert.match(html, /!document\.querySelector\('input,button,a\[href\]'\)&&shown\.length<40/);
 });
+
+test('los formularios GET y los cambios de pantalla sin recarga siguen por el relay (Azul: Localidad)', async () => {
+  const html = await (await proxied('https://portal.azul.com.do/Statements')).text();
+  assert.match(html, /function formPortalUrl\(form,submitter\)/);
+  assert.match(html, /window\.addEventListener\('submit',function\(e\)\{\s*var form=e\.target;\s*if\(e\.defaultPrevented/);
+  assert.match(html, /\['pushState','replaceState'\]\.forEach/);
+});

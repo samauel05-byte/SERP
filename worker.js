@@ -989,6 +989,67 @@ export default {
       return _origRequestSubmit.apply(this,arguments);
     };
   }catch(e){}
+  // GET forms (filters, selectors such as Azul's "Localidad") put their fields
+  // in the address and the browser drops the relay's own ?url=&flow= from the
+  // action, so the request reached the relay as "Missing url parameter".
+  // Build the portal address with the fields and open it through the relay.
+  function formPortalUrl(form,submitter){
+    var m=((submitter&&submitter.getAttribute('formmethod'))||form.getAttribute('method')||'get').toLowerCase();
+    if(m!=='get') return null;
+    var a=(submitter&&submitter.getAttribute('formaction'))||form.getAttribute('action')||'';
+    if(/^(javascript:|#)/i.test(a)) return null;
+    try{
+      var r=a?new URL(a,BASE):new URL(BASE);
+      if(r.origin===location.origin&&r.pathname==='/proxy') r=new URL(r.searchParams.get('url')||BASE);
+      if(!isAllowed(r.hostname)) return null;
+      var q=new URLSearchParams(),els=form.elements,i,el,t;
+      for(i=0;i<els.length;i++){
+        el=els[i]; t=(el.type||'').toLowerCase();
+        if(!el.name||el.disabled||/^(submit|button|image|reset|file)$/.test(t)) continue;
+        if((t==='checkbox'||t==='radio')&&!el.checked) continue;
+        if(el.tagName==='SELECT'&&el.multiple){for(var j=0;j<el.options.length;j++) if(el.options[j].selected) q.append(el.name,el.options[j].value); continue;}
+        q.append(el.name,el.value);
+      }
+      if(submitter&&submitter.name) q.append(submitter.name,submitter.value||'');
+      r.search=q.toString(); r.hash='';
+      return proxyHref(r.href);
+    }catch(ex){return null;}
+  }
+  function openFormUrl(form,p){
+    var t=form.getAttribute('target');
+    if(t&&!/^_self$/i.test(t)) window.open(p,t); else _assign(p);
+  }
+  // Runs after the page's own submit handlers: only a submission the page
+  // let through is turned into the relay address.
+  window.addEventListener('submit',function(e){
+    var form=e.target;
+    if(e.defaultPrevented||!form||form.tagName!=='FORM') return;
+    var p=formPortalUrl(form,e.submitter);
+    if(p){e.preventDefault();openFormUrl(form,p);}
+  },false);
+  try{
+    var _relaySubmit=HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit=function(){
+      var p=formPortalUrl(this,null);
+      if(p) return openFormUrl(this,p);
+      return _relaySubmit.call(this);
+    };
+  }catch(e){}
+  // Pages that change screen without reloading (Azul) record the new screen
+  // with history.pushState('/Statements/...'). Against the portal's <base> that
+  // address is another site and the browser refuses it, stopping the page.
+  // Record the relay address of that screen instead.
+  try{
+    ['pushState','replaceState'].forEach(function(k){
+      var orig=history[k];
+      history[k]=function(st,ti,u){
+        if(u!=null){
+          try{var r=new URL(String(u),BASE); if(r.origin!==location.origin&&isAllowed(r.hostname)){var p=proxyHref(r.href); if(p) return orig.call(history,st,ti,p);}}catch(ex){}
+        }
+        return orig.apply(history,arguments);
+      };
+    });
+  }catch(e){}
 })();<\/script>`;
         // DGII's login page runs window.sessionStorage.clear() on load. Through
         // the relay that storage is the autofill's: the company payload kept
