@@ -1,5 +1,6 @@
 {
   "outputDirectory": "public",
+  "regions": ["pdx1"],
   "rewrites": [
     { "source": "/api/poll", "destination": "/api/credentials?poll=1" },
     { "source": "/api/nala/:path*", "destination": "/api/nala?route=:path*" }

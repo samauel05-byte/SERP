@@ -1,7 +1,27 @@
 const supabase = require('../../lib/supabase');
-const { authenticate } = require('../../lib/auth');
+const db = require('../../lib/db');
+const { authenticate, loadProfile } = require('../../lib/auth');
 const { allow } = require('../../lib/rate-limit');
 const { randomUUID } = require('crypto');
+
+const VAULT_COLUMNS = ', user_key_salt, vault_key_iv, vault_key_ct';
+
+function profileResponse(profile, defaultPortals) {
+  return {
+    ok: true,
+    role: profile.role,
+    access_direct: profile.access_direct !== false,
+    access_cami: profile.access_cami || false,
+    access_nala: profile.access_nala || false,
+    access_ir2: profile.access_ir2 === true,
+    access_estimacion: profile.access_estimacion === true,
+    access_clientes: profile.access_clientes !== false,
+    portals: profile.portals_direct || defaultPortals,
+    userSalt: profile.user_key_salt,
+    vaultKeyIv: profile.vault_key_iv,
+    vaultKeyCt: profile.vault_key_ct,
+  };
+}
 
 module.exports = async (req, res) => {
   // POST: sign in server-side, return JWT + vault data in one call
@@ -22,47 +42,38 @@ module.exports = async (req, res) => {
 
       if (!authRes.ok) {
         const errBody = await authRes.json().catch(() => ({}));
-        return res.status(401).json({ error: errBody.error_description || errBody.msg || 'Credenciales incorrectas' });
+        const detail = errBody.error_description || errBody.msg || '';
+        return res.status(401).json({ error: /invalid login credentials/i.test(detail) || !detail ? 'Usuario o contraseña incorrectos' : detail });
       }
 
-      const { access_token } = await authRes.json();
+      // The password grant already returns the signed-in user, so no second
+      // round trip to the auth server is needed.
+      const grant = await authRes.json();
+      const access_token = grant.access_token;
+      let user = grant.user;
+      if (!user?.id) {
+        const { data, error: userErr } = await supabase.auth.getUser(access_token);
+        if (userErr || !data?.user) return res.status(401).json({ error: 'Token inválido' });
+        user = data.user;
+      }
 
-      const { data: { user }, error: userErr } = await supabase.auth.getUser(access_token);
-      if (userErr || !user) return res.status(401).json({ error: 'Token inválido' });
-
-      const { data: profile } = await supabase
-        .from('direct_profiles')
-        .select('role, access_direct, access_cami, access_nala, portals_direct, user_key_salt, vault_key_iv, vault_key_ct')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
-      const { data: moduleProfile, error: moduleError } = await supabase.from('direct_profiles')
-        .select('access_ir2, access_estimacion, access_clientes').eq('id', user.id).maybeSingle();
-      const modules = moduleError ? { access_ir2: profile.access_cami === true, access_estimacion: profile.access_cami === true, access_clientes: true } : moduleProfile;
-
-      let session_id = null;
+      // Profile, the single active browser session and the vault config are
+      // independent, so they run together. The config travels with the login
+      // response, sparing the browser a separate /api/config request.
       const nextSessionId = randomUUID();
-      const { error: sessionError } = await supabase.from('direct_active_sessions').upsert({
-        user_id: user.id, session_id: nextSessionId, issued_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-      if (!sessionError) session_id = nextSessionId;
+      const now = new Date().toISOString();
+      const [{ profile }, { error: sessionError }, config] = await Promise.all([
+        loadProfile(user.id, VAULT_COLUMNS),
+        supabase.from('direct_active_sessions').upsert({ user_id: user.id, session_id: nextSessionId, issued_at: now, updated_at: now }, { onConflict: 'user_id' }),
+        db.getConfig().catch(() => null),
+      ]);
+      if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
 
       return res.json({
-        ok: true,
+        ...profileResponse(profile, []),
         access_token,
-        role: profile.role,
-        access_direct: profile.access_direct !== false,
-        access_cami: profile.access_cami || false,
-        access_nala: profile.access_nala || false,
-        access_ir2: modules.access_ir2 === true,
-        access_estimacion: modules.access_estimacion === true,
-        access_clientes: modules.access_clientes !== false,
-        portals: profile.portals_direct || [],
-        userSalt: profile.user_key_salt,
-        vaultKeyIv: profile.vault_key_iv,
-        vaultKeyCt: profile.vault_key_ct,
-        session_id,
+        session_id: sessionError ? null : nextSessionId,
+        config,
       });
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -74,31 +85,9 @@ module.exports = async (req, res) => {
     const session = await authenticate(req);
     if (!session) return res.status(401).json({ error: 'No autorizado' });
     try {
-      const { data: profile } = await supabase
-        .from('direct_profiles')
-        .select('role, access_direct, access_cami, access_nala, portals_direct, user_key_salt, vault_key_iv, vault_key_ct')
-        .eq('id', session.userId)
-        .maybeSingle();
-
+      const { profile } = await loadProfile(session.userId, VAULT_COLUMNS);
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
-      const { data: moduleProfile, error: moduleError } = await supabase.from('direct_profiles')
-        .select('access_ir2, access_estimacion, access_clientes').eq('id', session.userId).maybeSingle();
-      const modules = moduleError ? { access_ir2: profile.access_cami === true, access_estimacion: profile.access_cami === true, access_clientes: true } : moduleProfile;
-
-      return res.json({
-        ok: true,
-        role: profile.role,
-        access_direct: profile.access_direct !== false,
-        access_cami: profile.access_cami || false,
-        access_nala: profile.access_nala || false,
-        access_ir2: modules.access_ir2 === true,
-        access_estimacion: modules.access_estimacion === true,
-        access_clientes: modules.access_clientes !== false,
-        portals: profile.portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
-        userSalt: profile.user_key_salt,
-        vaultKeyIv: profile.vault_key_iv,
-        vaultKeyCt: profile.vault_key_ct,
-      });
+      return res.json(profileResponse(profile, ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul']));
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
