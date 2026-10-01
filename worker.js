@@ -504,8 +504,11 @@ export default {
           const spaAutofill = `<script>
 (function(){
   // Show error overlay if the portal hasn't rendered a password input within 30s
+  // Only when the app never rendered: after logging in there is no password
+  // field anymore, and the dashboard must not be covered by this notice.
   setTimeout(function(){
-    if(!document.querySelector('input[type="password"]')){
+    var shown=((document.body&&document.body.innerText)||'').replace(/\\s+/g,'');
+    if(!document.querySelector('input[type="password"]')&&!document.querySelector('input,button,a[href]')&&shown.length<40){
       var d=document.createElement('div');
       d.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.92);display:flex;align-items:center;justify-content:center;z-index:99999;font-family:system-ui,sans-serif';
       d.innerHTML='<div style="background:#1e293b;color:#e2e8f0;border-radius:12px;padding:32px 28px;max-width:360px;text-align:center"><div style="font-size:32px;margin-bottom:12px">⚠️</div><h3 style="margin:0 0 8px;font-size:17px">Portal no disponible</h3><p style="margin:0 0 18px;font-size:13px;color:#94a3b8">El portal del Ministerio de Trabajo tardó demasiado en cargar. Puede estar en mantenimiento o con problemas de conexión.</p><button onclick="window.close()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px">Cerrar</button></div>';
