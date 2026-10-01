@@ -1,7 +1,9 @@
 {
   "outputDirectory": "public",
+  "regions": ["pdx1"],
   "rewrites": [
     { "source": "/api/poll", "destination": "/api/credentials?poll=1" },
+    { "source": "/api/logo/:key", "destination": "/api/config?logo=:key" },
     { "source": "/api/nala/:path*", "destination": "/api/nala?route=:path*" }
   ],
   "headers": [
@@ -13,6 +15,12 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
         { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/api/logo/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=21600, s-maxage=86400, stale-while-revalidate=604800" }
       ]
     }
   ],
