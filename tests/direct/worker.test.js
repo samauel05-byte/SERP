@@ -147,6 +147,20 @@ test('las consultas de la página llevan X-Requested-With y la página real como
   assert.ok(!('Origin' in seen.headers), 'un GET del mismo sitio no lleva Origin');
 });
 
+test('Trabajo (OVI): cada empresa tiene su propia sesión (cookies por flujo), no reusa la primera', async () => {
+  // La página SPA inyecta el flujo en las peticiones a /api-proxy, para que
+  // una segunda empresa no herede la sesión de la primera.
+  const html = await (await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login') + '&flow=flow123456'))).text();
+  assert.match(html, /var F='flow123456';/);
+  assert.match(html, /var FQ=F\?'&flow='\+encodeURIComponent\(F\):'';/);
+  assert.match(html, /\/api-proxy\?url='\+encodeURIComponent\(O\+s\)\+FQ/, 'las peticiones de la SPA llevan el flujo');
+  // La cookie de sesión de OVI se guarda con el prefijo del flujo.
+  const res = await worker.fetch(new Request('https://relay.test/api-proxy?url=' + encodeURIComponent('https://api.mt.gob.do/auth/login') + '&flow=flow123456', {
+    method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' },
+  }));
+  assert.ok(res.headers.getSetCookie().some(c => /^serp_flow123456_/.test(c)), 'la sesión de OVI queda separada por empresa');
+});
+
 test('Trabajo (OVI): el aviso "Portal no disponible" no tapa la app después de entrar', async () => {
   const html = await (await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login')))).text();
   assert.match(html, /!document\.querySelector\('input,button,a\[href\]'\)&&shown\.length<40/);
