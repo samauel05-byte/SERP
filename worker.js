@@ -447,6 +447,11 @@ export default {
           const interceptor = `<script>(function(){
   var R='${WORKER_ORIGIN}';
   var O='${spaOrigin}';
+  // Flow id scopes this tab's portal cookies (serp_<flow>_name) so a second
+  // company's session never inherits the first company's. Every background
+  // request carries it, so /api-proxy forwards and stores only this tab's cookies.
+  var F='${portalFlow}';
+  var FQ=F?'&flow='+encodeURIComponent(F):'';
   // The app's router reads the page path. Show it the portal's own path
   // under the asset base, so it opens the same screen (e.g. account/login).
   try{
@@ -463,11 +468,11 @@ export default {
   function proxyUrl(u){
     if(!u) return null;
     var s=String(u);
-    if(s.charAt(0)==='/') return R+'/api-proxy?url='+encodeURIComponent(O+s);
-    if(s.indexOf(O)===0) return R+'/api-proxy?url='+encodeURIComponent(s);
+    if(s.charAt(0)==='/') return R+'/api-proxy?url='+encodeURIComponent(O+s)+FQ;
+    if(s.indexOf(O)===0) return R+'/api-proxy?url='+encodeURIComponent(s)+FQ;
     // OVI serves its application at ovi.mt.gob.do but authenticates through
     // the separate public API domain. Keep that request same-origin too.
-    if(s.indexOf('https://api.mt.gob.do')===0) return R+'/api-proxy?url='+encodeURIComponent(s);
+    if(s.indexOf('https://api.mt.gob.do')===0) return R+'/api-proxy?url='+encodeURIComponent(s)+FQ;
     return null;
   }
   var _f=window.fetch;
@@ -570,10 +575,14 @@ export default {
           }
           for (const cookie of spaCookies) {
             let c = cookie.replace(/;\s*[Dd]omain=[^;]*/g, '').replace(/;\s*[Pp]ath=[^;]*/g, '') + '; Path=/';
+            // Scope this company's session to its flow so a second company's
+            // tab cannot reuse it (same isolation the DGII /proxy path uses).
+            if (flowCookiePrefix) c = c.replace(/^([^=;]+)/, flowCookiePrefix + '$1');
             c = c.replace(/;\s*[Ss]ame[Ss]ite=None/gi, '; SameSite=Lax');
             if (!/SameSite=/i.test(c)) c += '; SameSite=Lax';
             spaRespHeaders.append('Set-Cookie', c);
           }
+          if (lastFlowCookie) spaRespHeaders.append('Set-Cookie', lastFlowCookie);
           return new Response(spaHtml, { headers: spaRespHeaders });
         }
 
