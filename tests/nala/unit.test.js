@@ -175,7 +175,7 @@ test('606: filas en el formato exacto de la Herramienta DGII (pegar en B12)', ()
 // ── Plantilla DGII del usuario (.xlsm con macro) y TXT de ejemplo ─────────
 const tplLib = require('../../lib/nala/dgii-template');
 
-const { fakeTool606 } = require('./support/dgii-tool');
+const { fakeTool, fakeTool606 } = require('./support/dgii-tool');
 
 test('plantilla .xlsm del usuario: se detecta, se llena y conserva el macro', async () => {
   const { buffer, vba } = await fakeTool606();
@@ -222,4 +222,58 @@ test('TXT de ejemplo: aprende montos sin decimales y ITBIS vacío, y el TXT sale
   assert.equal(formats.cellTextForTest(col, '0.00', null), '0.00', 'sin ejemplos se mantiene 0.00');
   const txt = '606|131944401|202509|1\r\n' + ['101010101', '1', '02', 'B0100000001', '', '20250905', '', '', '1000', '1000', '', '', '', '', '', '', '', '', '', '', '', '', '01'].join('|');
   assert.deepEqual(formats.validateTxt('606', txt, learned).problems, []);
+});
+
+// ── Formato 607: misma experiencia que el 606 ───────────────────────────
+test('607: filas en el formato exacto de la Herramienta DGII (pegar en B12)', () => {
+  const values = ['00113918861', '1', 'B0100000005', '', '1', '20190715', '', '1000', '180', '0', '0', '0', '0', '0', '0', '0', '1000', '0', '0', '0', '0', '0', '0'];
+  const snap = { format: '607', header: { rnc: '131944401', period: '201907', count: 1 }, lines: [{ values }] };
+  const tool = formats.toolRows(snap);
+  assert.equal(tool.format, '607');
+  assert.equal(tool.start_cell, 'B12');
+  assert.equal(tool.columns.length, 23, 'la 607 tiene 23 columnas (B..X)');
+  const r = tool.rows[0];
+  assert.equal(r.length, 23);
+  assert.equal(r[0], '00113918861', 'el RNC/cédula conserva los ceros (columna B es texto)');
+  assert.equal(r[4], '01 - Ingresos por Operaciones (No Financieros)', 'tipo de ingreso: dígito → texto de la lista oficial');
+  assert.equal(r[5], '20190715', 'fecha de comprobante en una sola columna AAAAMMDD (no se parte)');
+  assert.equal(r[6], '', 'sin fecha de retención');
+  assert.equal(tool.tsv.split('\r\n')[0].split('\t').length, 23);
+  assert.equal(formats.toolRows606(snap), null, 'toolRows606 solo responde al 606');
+});
+
+test('607: la herramienta .xlsm del usuario se detecta, se llena y conserva el macro', async () => {
+  const { buffer, vba } = await fakeTool('607');
+  const layout = await tplLib.analyzeExcel(buffer, 'Herramienta607.xlsm');
+  assert.equal(layout.fillable, true, layout.message);
+  assert.equal(layout.format, '607');
+  assert.deepEqual([layout.sheet, layout.start_col, layout.end_col, layout.start_row], ['Herramienta Formato 607', 'B', 'X', 12]);
+  assert.deepEqual(layout.header_cells, { rnc: 'C4', period: 'C5', count: 'C6' });
+  const values = ['00113918861', '1', 'B0100000005', '', '1', '20190715', '', '1000', '180', '0', '0', '0', '0', '0', '0', '0', '1000', '0', '0', '0', '0', '0', '0'];
+  const tool = formats.toolRows({ format: '607', header: { rnc: '131944401', period: '201907' }, lines: [{ values }, { values: [...values.slice(0, 2), 'B0100000006', ...values.slice(3)] }] });
+  const filled = await tplLib.fillExcel(buffer, layout, tool);
+  const JSZip = require('jszip');
+  const zip = await JSZip.loadAsync(filled);
+  assert.deepEqual(Buffer.from(await zip.file('xl/vbaProject.bin').async('nodebuffer')), vba, 'el macro queda intacto');
+  const XLSX = require('xlsx');
+  const ws = XLSX.read(filled, { type: 'buffer' }).Sheets['Herramienta Formato 607'];
+  assert.equal(ws.C4.v, '131944401'); assert.equal(ws.C5.v, 201907); assert.equal(ws.C6.v, 2);
+  assert.equal(ws.B12.v, '00113918861'); assert.equal(ws.B12.t, 's', 'el RNC/cédula es texto (conserva los ceros)');
+  assert.equal(ws.F12.v, '01 - Ingresos por Operaciones (No Financieros)', 'tipo de ingreso como texto de la lista');
+  assert.equal(ws.G12.v, '20190715', 'fecha de comprobante en una sola columna, como texto de 8 dígitos');
+  assert.equal(ws.I12.v, 1000, 'monto facturado numérico'); assert.equal(ws.J12.v, 180);
+  assert.equal(ws.D12.v, 'B0100000005', 'NCF en la columna D (Número Comprobante Fiscal)');
+  assert.equal(ws.D13.v, 'B0100000006'); assert.equal(ws.A12.v, 1, 'la columna de líneas no se toca');
+});
+
+test('607: TXT de ejemplo se analiza con el esquema del 607', () => {
+  const schema607 = formats.SCHEMAS['607'];
+  assert.equal(schema607.length, 23);
+  const cells = ['00113918861', '1', 'B0100000005', '', '1', '20190715', '', '1000.00', '180.00', '0.00', '', '', '', '', '', '', '1000.00', '', '', '', '', '', ''];
+  const sample = `607|131944401|201907|1\r\n${cells.join('|')}`;
+  const a = tplLib.analyzeTxt(sample, '607');
+  assert.equal(a.format, '607');
+  assert.deepEqual(a.problems, []);
+  assert.equal(a.lines, 1);
+  assert.equal(a.rnc, '131944401');
 });

@@ -119,9 +119,9 @@ test('plantillas DGII: subir la herramienta con macro y un TXT de ejemplo, y des
   const txt = path.join(dir, 'DGII_F_606_101010632_202607.TXT'); fs.writeFileSync(txt, `606|101010632|202607|1\r\n${row}`);
   await page.goto(`${stack.base}/nala/index.html#/config`);
   await page.waitForSelector('#dgii-tpl');
-  await page.setInputFiles('#tpl-excel', xlsm);
+  await page.setInputFiles('#dgii-tpl input[data-up="excel"][data-format="606"]', xlsm);
   await page.waitForSelector('#dgii-tpl >> text=Lista para llenar');
-  await page.setInputFiles('#tpl-txt', txt);
+  await page.setInputFiles('#dgii-tpl input[data-up="txt"][data-format="606"]', txt);
   await page.waitForSelector('#dgii-tpl >> text=Aprendido de 1 ejemplo');
   assert.match(await page.textContent('#dgii-tpl'), /como los escribe la herramienta/);
   await shot('ui-07-plantillas');
