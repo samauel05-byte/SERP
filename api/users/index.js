@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
-        .select('id, role, access_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes, portals_direct, created_at')
+        .select('id, role, access_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes, portals_direct, companies_direct, created_at')
         .eq('tenant_id', session.tenantId)
         .order('created_at');
 
@@ -49,6 +49,7 @@ module.exports = async (req, res) => {
         access_estimacion: p.access_estimacion,
         access_clientes: p.access_clientes !== false,
         portals_direct: p.portals_direct,
+        companies_direct: Array.isArray(p.companies_direct) ? p.companies_direct : null,
         created_at: p.created_at,
       }));
 
@@ -56,7 +57,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -79,6 +80,7 @@ module.exports = async (req, res) => {
         // Client records are isolated by the tenant, not by a module checkbox.
         access_clientes: true,
         portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
+        companies_direct: Array.isArray(companies_direct) ? companies_direct.map(String).slice(0, 5000) : null,
         user_key_salt: userSalt || null,
         vault_key_iv: vaultKeyIv || null,
         vault_key_ct: vaultKeyCt || null,

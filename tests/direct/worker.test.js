@@ -158,3 +158,10 @@ test('los formularios GET y los cambios de pantalla sin recarga siguen por el re
   assert.match(html, /window\.addEventListener\('submit',function\(e\)\{\s*var form=e\.target;\s*if\(e\.defaultPrevented/);
   assert.match(html, /\['pushState','replaceState'\]\.forEach/);
 });
+
+test('el relay avisa a Direct el resultado del inicio de sesión (postMessage)', async () => {
+  const html = await (await proxied('https://www.dgii.gov.do/ofv/login.aspx')).text();
+  assert.match(html, /serp-login-result/);
+  assert.match(html, /window\.opener\.postMessage/);
+  assert.match(html, /p\.origin/);
+});
