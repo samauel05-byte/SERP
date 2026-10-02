@@ -20,15 +20,17 @@
   // fill its header, press "Inicio", click B12 and paste.
   function toolCard(tool) {
     if (!tool || !tool.rows.length) return '';
+    const fmt = tool.format || '606';
+    const lastCol = String.fromCharCode('B'.charCodeAt(0) + tool.columns.length - 1); // 606 → Z, 607 → X
     const copyBtn = (id, label) => `<button class="btn sm" data-copy="${id}">${label}</button>`;
-    return `<div class="card" data-tool><h2>Copiar y pegar en la Herramienta DGII 606<span class="spacer"></span><button class="btn primary" data-copy="rows">Copiar ${tool.rows.length} fila(s)</button></h2>
+    return `<div class="card" data-tool><h2>Copiar y pegar en la Herramienta DGII ${fmt}<span class="spacer"></span><button class="btn primary" data-copy="rows">Copiar ${tool.rows.length} fila(s)</button></h2>
       <ol style="margin:0 0 10px 18px;line-height:1.7">
-        <li>Abra la herramienta oficial de la DGII (Formato de Envío 606) y habilite los macros.</li>
+        <li>Abra la herramienta oficial de la DGII (Formato de Envío ${fmt}) y habilite los macros.</li>
         <li>En el encabezado escriba: RNC o Cédula <b class="mono">${esc(tool.header.rnc)}</b> ${copyBtn('rnc', 'Copiar')} · Período <b class="mono">${esc(tool.header.period)}</b> ${copyBtn('period', 'Copiar')} · Cantidad Registros <b class="mono">${tool.header.count}</b> ${copyBtn('count', 'Copiar')}</li>
         <li>Pulse <b>Inicio</b> para que habilite las ${tool.header.count} filas.</li>
         <li>Pulse <b>Copiar ${tool.rows.length} fila(s)</b>, haga clic en la celda <b>${esc(tool.start_cell)}</b> y pegue (Ctrl+V o Cmd+V).</li>
         <li>Pulse <b>Validar</b> y luego <b>Generar Archivo</b> para obtener el TXT que se sube a la Oficina Virtual.</li></ol>
-      <details><summary class="muted">Ver las filas tal como se pegan (columnas B a Z)</summary><div class="table-wrap" style="max-height:40vh;margin-top:8px"><table>
+      <details><summary class="muted">Ver las filas tal como se pegan (columnas B a ${lastCol})</summary><div class="table-wrap" style="max-height:40vh;margin-top:8px"><table>
         <tr>${tool.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${tool.rows.slice(0, 300).map(r => `<tr>${r.map(v => `<td class="mono">${esc(v)}</td>`).join('')}</tr>`).join('')}</table></div></details></div>`;
   }
   function bindToolCard(scope, tool) {
@@ -149,7 +151,7 @@
         ${exp.submission_reference ? `<p style="margin-top:8px">Referencia OFV: <b class="mono">${esc(exp.submission_reference)}</b></p>` : ''}${exp.result_notes ? `<p>Resultado: ${esc(exp.result_notes)}</p>` : ''}
         ${exp.status === 'superseded' ? `<div class="issue warning" style="margin-top:8px"><span class="ico">!</span>Reemplazada: ${esc(exp.superseded_reason || '')}</div>` : ''}
         ${exp.accepted_warnings?.length ? `<p class="muted" style="margin-top:8px">Advertencias aceptadas: ${exp.accepted_warnings.map(esc).join(', ')} · motivo: ${esc(exp.acceptance_reason || '')}</p>` : ''}
-        <div class="row" style="margin-top:12px"><button class="btn primary" id="d-txt">Descargar TXT</button><button class="btn" id="d-xlsx">Excel (plantilla oficial)</button><button class="btn" id="d-custom">Excel personalizado</button>${exp.format === '606' ? '<button class="btn" id="d-tool">Mi herramienta DGII (con macro)</button>' : ''}
+        <div class="row" style="margin-top:12px"><button class="btn primary" id="d-txt">Descargar TXT</button><button class="btn" id="d-xlsx">Excel (plantilla oficial)</button><button class="btn" id="d-custom">Excel personalizado</button><button class="btn" id="d-tool">Mi herramienta DGII (con macro)</button>
           ${canSubmit && exp.status === 'generated' ? '<button class="btn" id="s-sub">Registrar envío a DGII</button>' : ''}
           ${canSubmit && exp.status === 'submitted' ? '<button class="btn ok" id="s-acc">Registrar aceptación</button><button class="btn danger" id="s-rej">Registrar rechazo</button>' : ''}
           ${canSubmit && ['generated', 'rejected'].includes(exp.status) ? '<button class="btn" id="s-sup">Marcar como reemplazada</button>' : ''}</div>

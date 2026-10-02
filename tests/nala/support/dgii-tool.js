@@ -1,14 +1,23 @@
-// Copia mínima de la Herramienta DGII 606 (mismo diseño: encabezado A4–A6,
-// títulos en la fila 11, detalle desde B12) guardada como .xlsm con un macro.
-async function fakeTool606() {
+// Copia mínima de las Herramientas DGII 606/607 (mismo diseño: encabezado
+// A4–A6, títulos en la fila 11, detalle desde B12) guardada como .xlsm con un
+// macro, para probar la detección y el llenado sin tocar la .xls oficial.
+const formats = require('../../../lib/nala/formats');
+
+// Títulos de la fila 11 tal como aparecen en cada herramienta oficial. La 606
+// combina los encabezados de fecha, por eso usa su fila de prueba dedicada; la
+// 607 usa exactamente las columnas de la herramienta.
+const TITLES = { '606': formats.TOOL_606_COLUMNS_FOR_TEST, '607': formats.TOOL_607_COLUMNS };
+const LAST_COL = { '606': 'Z', '607': 'X' };
+
+async function fakeTool(format = '606') {
   const ExcelJS = require('exceljs');
   const JSZip = require('jszip');
   const wb = new ExcelJS.Workbook();
   wb.addWorksheet('UtilitarioP').getCell('A1').value = 202509;
-  const ws = wb.addWorksheet('Herramienta Formato 606');
+  const ws = wb.addWorksheet(`Herramienta Formato ${format}`);
   ws.getCell('A4').value = 'RNC o Cédula'; ws.getCell('A5').value = 'Periodo'; ws.getCell('A6').value = 'Cantidad Registros'; ws.getCell('C6').value = 0;
-  ws.getCell('A11').value = 'Líneas';
-  require('../../../lib/nala/formats').TOOL_606_COLUMNS_FOR_TEST.forEach((label, i) => { ws.getRow(11).getCell(2 + i).value = label; });
+  ws.getCell('A11').value = 'No';
+  TITLES[format].forEach((label, i) => { if (label) ws.getRow(11).getCell(2 + i).value = label; });
   for (let r = 12; r <= 20; r++) { ws.getCell(`A${r}`).value = r - 11; ws.getCell(`B${r}`).numFmt = '@'; ws.getCell(`K${r}`).numFmt = '#,##0.00'; }
   const zip = await JSZip.loadAsync(await wb.xlsx.writeBuffer());
   const vba = Buffer.from('VBA-DGII-' + 'x'.repeat(500));
@@ -19,7 +28,9 @@ async function fakeTool606() {
   zip.file('[Content_Types].xml', ct);
   const rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
   zip.file('xl/_rels/workbook.xml.rels', rels.replace('</Relationships>', '<Relationship Id="rIdVba" Type="http://schemas.microsoft.com/office/2006/relationships/vbaProject" Target="vbaProject.bin"/></Relationships>'));
-  return { buffer: await zip.generateAsync({ type: 'nodebuffer' }), vba };
+  return { buffer: await zip.generateAsync({ type: 'nodebuffer' }), vba, lastCol: LAST_COL[format] };
 }
 
-module.exports = { fakeTool606 };
+const fakeTool606 = () => fakeTool('606');
+
+module.exports = { fakeTool, fakeTool606 };
