@@ -90,6 +90,12 @@ test('exportación 606 desde la interfaz con TXT descargable', async () => {
   await page.goto(`${stack.base}/nala/index.html#/exportar?nueva=1&format=606`);
   await page.click('#e-preview');
   await page.waitForSelector('text=Estructura del TXT');
+  // Filas listas para pegar en B12 de la Herramienta DGII 606 (fecha AAAAMM + DD, texto de las listas).
+  await page.waitForSelector('text=Copiar y pegar en la Herramienta DGII 606');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: stack.base });
+  await page.click('[data-tool] [data-copy="rows"]');
+  const pasted = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(pasted, /^131999999\t1\t02-GASTOS POR TRABAJOS, SUMINISTROS Y SERVICIOS \tB0100000701\t\t202608\t05\t\t\t10000\.00\t\t10000\.00\t1800\.00/);
   for (const c of await page.$$('.acc')) await c.check();
   if (await page.$('#acc-reason')) await page.fill('#acc-reason', 'Pendientes se reportan luego');
   await shot('ui-05-vista-previa');

@@ -16,6 +16,30 @@
       ${snapshot.lines.length > limit ? `<p class="muted">Mostrando ${limit} de ${snapshot.lines.length} líneas; el TXT y el Excel incluyen todas.</p>` : ''}`;
   }
 
+  // Rows in the exact layout of the DGII "Herramienta de Envío Formato 606":
+  // fill its header, press "Inicio", click B12 and paste.
+  function toolCard(tool) {
+    if (!tool || !tool.rows.length) return '';
+    const copyBtn = (id, label) => `<button class="btn sm" data-copy="${id}">${label}</button>`;
+    return `<div class="card" data-tool><h2>Copiar y pegar en la Herramienta DGII 606<span class="spacer"></span><button class="btn primary" data-copy="rows">Copiar ${tool.rows.length} fila(s)</button></h2>
+      <ol style="margin:0 0 10px 18px;line-height:1.7">
+        <li>Abra la herramienta oficial de la DGII (Formato de Envío 606) y habilite los macros.</li>
+        <li>En el encabezado escriba: RNC o Cédula <b class="mono">${esc(tool.header.rnc)}</b> ${copyBtn('rnc', 'Copiar')} · Período <b class="mono">${esc(tool.header.period)}</b> ${copyBtn('period', 'Copiar')} · Cantidad Registros <b class="mono">${tool.header.count}</b> ${copyBtn('count', 'Copiar')}</li>
+        <li>Pulse <b>Inicio</b> para que habilite las ${tool.header.count} filas.</li>
+        <li>Pulse <b>Copiar ${tool.rows.length} fila(s)</b>, haga clic en la celda <b>${esc(tool.start_cell)}</b> y pegue (Ctrl+V o Cmd+V).</li>
+        <li>Pulse <b>Validar</b> y luego <b>Generar Archivo</b> para obtener el TXT que se sube a la Oficina Virtual.</li></ol>
+      <details><summary class="muted">Ver las filas tal como se pegan (columnas B a Z)</summary><div class="table-wrap" style="max-height:40vh;margin-top:8px"><table>
+        <tr>${tool.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${tool.rows.slice(0, 300).map(r => `<tr>${r.map(v => `<td class="mono">${esc(v)}</td>`).join('')}</tr>`).join('')}</table></div></details></div>`;
+  }
+  function bindToolCard(scope, tool) {
+    if (!tool) return;
+    const values = { rows: tool.tsv, rnc: tool.header.rnc, period: tool.header.period, count: String(tool.header.count) };
+    scope.querySelectorAll('[data-tool] [data-copy]').forEach(btn => btn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(values[btn.dataset.copy]); NALA.toast(btn.dataset.copy === 'rows' ? 'Filas copiadas: haga clic en B12 de la herramienta y pegue.' : 'Copiado', 'ok'); }
+      catch { NALA.toast('No se pudo copiar. Permita el acceso al portapapeles.', 'err'); }
+    }));
+  }
+
   async function newExport(root, params) {
     const s = NALA.state;
     const clientId = params.client || s.client;
@@ -62,9 +86,11 @@
       ${preview.txt_check ? `<div class="card"><h2>Estructura del TXT ${preview.txt_check.valid ? '<span class="badge ok">Válida</span>' : '<span class="badge crit">Con problemas</span>'}</h2>
         <pre class="mono" style="white-space:pre-wrap;background:var(--surface-2);padding:8px;border-radius:8px">${esc(preview.txt_preview || '')}${snap.lines.length > 5 ? '\n…' : ''}</pre>${preview.txt_check.problems.map(p => `<div class="issue critical">${esc(p)}</div>`).join('')}
         <p class="muted">Delimitador "|", fechas AAAAMMDD, montos con punto y 2 decimales, códigos según la herramienta oficial, líneas CRLF, codificación ASCII.</p></div>` : ''}
+      ${snap.errors.length ? '' : toolCard(preview.dgii_tool)}
       <div class="card"><h2>Líneas (mismo orden que el TXT y el Excel)</h2>${snap.lines.length ? linesTable(snap) : '<div class="empty">Sin líneas.</div>'}</div>
       <div class="row"><button class="btn primary" id="gen" ${snap.errors.length || !NALA.can('export') ? 'disabled' : ''}>Generar TXT y Excel</button>
         ${!NALA.can('export') ? '<span class="muted">Su rol no permite generar exportaciones.</span>' : ''}</div></div>`;
+    bindToolCard(out, preview.dgii_tool);
     out.querySelector('#gen')?.addEventListener('click', async () => {
       const accepted = [...out.querySelectorAll('.acc:checked')].map(x => x.value);
       if (accepted.length !== snap.warnings.length) return NALA.toast('Acepte cada advertencia antes de exportar.', 'err');
@@ -113,7 +139,7 @@
   });
 
   async function detail(root, id) {
-    const { export: exp } = await NALA.api('GET', `exports/${id}`);
+    const { export: exp, dgii_tool: tool } = await NALA.api('GET', `exports/${id}`);
     const steps = [['generated', 'Archivo generado', exp.created_at], ['submitted', 'Enviado a la DGII (Oficina Virtual)', exp.submitted_at], [exp.status === 'rejected' ? 'rejected' : 'accepted', exp.status === 'rejected' ? 'Rechazado por la DGII' : 'Aceptado por la DGII', exp.result_at]];
     const canSubmit = NALA.can('submit');
     root.innerHTML = `<div class="stack" data-export-format="${exp.format}">
@@ -129,7 +155,9 @@
           ${canSubmit && ['generated', 'rejected'].includes(exp.status) ? '<button class="btn" id="s-sup">Marcar como reemplazada</button>' : ''}</div>
         <p class="muted" style="margin-top:8px">NALA genera el archivo; el envío se hace en la Oficina Virtual de la DGII y su resultado se consulta en "Consulta Envíos". Registre aquí cada paso.</p></div>
       ${exp.snapshot.consumer_summary ? `<div class="card"><h2>Resumen de Facturas de Consumo</h2>${int(exp.snapshot.consumer_summary.count)} NCF · RD$ ${money(exp.snapshot.consumer_summary.monto_facturado)} · ITBIS RD$ ${money(exp.snapshot.consumer_summary.itbis)}</div>` : ''}
+      ${toolCard(tool)}
       <div class="card"><h2>Líneas exportadas</h2>${linesTable(exp.snapshot)}</div></div>`;
+    bindToolCard(root, tool);
     root.querySelectorAll('[data-href]').forEach(el => el.addEventListener('click', () => NALA.go(el.dataset.href)));
     const guard = fn => async () => { try { await fn(); } catch (e) { NALA.fail(e); } };
     root.querySelector('#d-txt').addEventListener('click', guard(() => download(exp, 'txt')));
