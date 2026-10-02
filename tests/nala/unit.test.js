@@ -155,3 +155,19 @@ test('Excel: identifiers as text, amounts as numbers, same order as TXT', async 
   assert.equal(ws2.getCell('A1').value, 'Proveedor');
   assert.equal(ws2.getCell('C2').value, 180);
 });
+
+test('606: filas en el formato exacto de la Herramienta DGII (pegar en B12)', () => {
+  const snap = { format: '606', header: { rnc: '131944401', period: '202509', count: 1 }, lines: [{ values: ['00112345678', '2', '09', 'B0100000001', '', '20250905', '', '', '1000.00', '1000.00', '180.00', '', '', '', '180.00', '', '', '', '', '', '', '', '01'] }] };
+  const tool = formats.toolRows606(snap);
+  assert.equal(tool.start_cell, 'B12');
+  assert.equal(tool.columns.length, 25);
+  const r = tool.rows[0];
+  assert.equal(r.length, 25);
+  assert.equal(r[0], '00112345678', 'la cédula conserva los ceros (columna B es texto)');
+  assert.equal(r[2], '09 -COMPRAS Y GASTOS QUE FORMARAN PARTE DEL COSTO DE VENTA ', 'texto exacto de la lista oficial');
+  assert.deepEqual(r.slice(5, 9), ['202509', '05', '', ''], 'fecha en AAAAMM + DD; sin fecha de pago');
+  assert.equal(r[24], '01 - EFECTIVO');
+  assert.equal(r[18], '', 'sin tipo de retención');
+  assert.equal(tool.tsv.split('\t').length, 25);
+  assert.equal(formats.toolRows606({ ...snap, format: '607' }), null);
+});
