@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     if (targetError) throw targetError;
     if (!target) return res.status(404).json({ error: 'Usuario no encontrado en tu empresa' });
     if (req.method === 'PUT') {
-      const { password, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
 
       if (password) {
         const { error } = await supabase.auth.admin.updateUserById(id, { password });
@@ -25,6 +25,8 @@ module.exports = async (req, res) => {
       if (role !== undefined) update.role = role;
       if (access_direct !== undefined) update.access_direct = access_direct;
       if (portals_direct !== undefined) update.portals_direct = portals_direct;
+      // null = every company; an array limits the user to those credential ids.
+      if (companies_direct !== undefined) update.companies_direct = Array.isArray(companies_direct) ? companies_direct.map(String).slice(0, 5000) : null;
       if (access_cami !== undefined) update.access_cami = access_cami;
       if (access_nala !== undefined) update.access_nala = access_nala;
       if (access_ir2 !== undefined) update.access_ir2 = access_ir2;

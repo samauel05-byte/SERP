@@ -764,6 +764,7 @@ export default {
         if(isDgii && !cardPosition) markDgiiFirstPageSubmitted();
         if(isDgii && cardPosition) markDgiiCardSubmitted(cardPosition);
         if(isDgii && cardPosition){ try { sessionStorage.setItem('serp-dgii-last-card', JSON.stringify({ position: cardPosition, code: (cardInput(cfg) || {}).value || '' })); } catch(e) {} }
+        try { sessionStorage.setItem('serp-login-submit-page', String(performance.timeOrigin)); } catch(e) {}
         btn.click();
       } else if(pEl) {
         // Fallback: press Enter on the password field
@@ -811,8 +812,33 @@ export default {
     // DGII must never be submitted without the requested position on the card.
     else if (pEl && !isDgii) run();
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); });
-  else waitAndRun(100);
+  // After the login was sent, tell Direct (the tab that opened this one)
+  // whether the portal accepted the password, so it can flag companies whose
+  // stored password no longer works. Reported once per launch; nothing secret
+  // is sent, only the launch id and the result.
+  function reportLoginResult(){
+    var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
+    var reportedKey = 'serp-login-reported-' + (p.flow || hash);
+    try {
+      if (sessionStorage.getItem(reportedKey)) return;
+      var submitted = isDgii ? hasSubmittedDgiiFirstPage() : sessionStorage.getItem('serp-login-submitted-' + (p.flow || hash)) === '1';
+      if (!submitted || !p.flow || !p.origin || !window.opener) return;
+      // Judge only the page that came back after sending, never the login page itself.
+      if (sessionStorage.getItem('serp-login-submit-page') === String(performance.timeOrigin)) return;
+    } catch(e) { return; }
+    var text = ((document.body && document.body.innerText) || '');
+    var pw = Array.from(document.querySelectorAll('input[type="password"]')).filter(function(i){ return i.offsetParent !== null; })[0];
+    var result = null;
+    if (isDgii && (requestedCardPosition() > 0 || dgiiCardRejected(text))) result = 'ok';
+    else if (!pw) result = 'ok';
+    else if (/(incorrect|inv[aá]lid|invalid|no es v[aá]lid|no coincide|digita nuevamente|vuelva a intentar|denegad|bloquead|expirad|vencid|login attempt|clave err[oó]nea)/i.test(text)) result = 'failed';
+    if (!result) return;
+    try { sessionStorage.setItem(reportedKey, result); } catch(e) {}
+    try { window.opener.postMessage({ type: 'serp-login-result', flow: p.flow, result: result }, p.origin); } catch(e) {}
+  }
+  function scheduleReport(){ setTimeout(reportLoginResult, 1500); setTimeout(reportLoginResult, 5000); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); scheduleReport(); });
+  else { waitAndRun(100); scheduleReport(); }
 })();
 <\/script>`;
 
