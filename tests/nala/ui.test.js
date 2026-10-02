@@ -139,6 +139,24 @@ test('plantillas DGII: subir la herramienta con macro y un TXT de ejemplo, y des
   assert.equal(ws.B12.v, '131999999'); assert.equal(ws.E12.v, 'B0100000701'); assert.equal(ws.G12.v, '202608'); assert.equal(ws.H12.v, 5);
 });
 
+test('empresas clientes: filtros por columna y orden', async () => {
+  await page.goto(`${stack.base}/nala/index.html#/clientes`);
+  await page.waitForSelector('tr.filters');
+  const count = () => page.$$eval('#ctable tr:not(.filters)', rows => rows.filter(r => r.querySelector('td [data-use]')).length);
+  const total = await count();
+  assert.ok(total >= 2, `hay ${total} empresas de prueba`);
+  await page.fill('input[data-cf="name"]', 'uno');
+  await page.waitForFunction(() => /1 de/.test(document.querySelector('tr.filters')?.textContent || ''));
+  assert.equal(await count(), 1);
+  assert.match(await page.textContent('#ctable'), /Cliente Uno/);
+  await shot('ui-08-empresas-filtro');
+  await page.click('#cf-clear');
+  assert.equal(await count(), total);
+  await page.click('th[data-sort="name"]');
+  const names = await page.$$eval('#ctable td b', b => b.map(x => x.textContent));
+  assert.deepEqual(names, [...names].sort((a, b) => b.localeCompare(a, 'es')), 'orden descendente al tocar el título');
+});
+
 test('los demás módulos de NALA cargan sin errores de página', async () => {
   for (const view of ['panel', 'empresa', 'clientes', 'rnc', 'equipo', 'config', 'asistente']) {
     await page.goto(`${stack.base}/nala/index.html#/${view}`);

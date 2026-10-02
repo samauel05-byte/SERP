@@ -72,21 +72,64 @@
       root.innerHTML = `<div class="stack"><div class="row"><label class="f" style="flex:1;min-width:220px"><span>Buscar</span><input id="cq" placeholder="Nombre, RNC o cédula"></label>
         <label class="f"><span>Estado</span><select id="cs"><option value="">Todas</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></label>
         ${canManage ? '<button class="btn primary" id="cnew">+ Registrar empresa</button>' : ''}</div><div id="ctable"></div></div>`;
-      const load = async () => {
-        const qs = new URLSearchParams({ q: root.querySelector('#cq').value, status: root.querySelector('#cs').value });
-        const { clients } = await NALA.api('GET', `clients?${qs}`);
+      // Filters on each column of the table (like Excel) plus sorting by
+      // clicking a title; applied on the list already loaded.
+      const colFilter = { name: '', id: '', status: '', config: '', source: '' };
+      let sort = { key: 'name', dir: 1 };
+      let clients = [];
+      const configOf = c => ({ has606: !!c.settings?.default_tipo_bienes_servicios, has607: !!c.settings?.default_tipo_ingreso });
+      const draw = () => {
         const cat = NALA.state.me.catalogs;
-        root.querySelector('#ctable').innerHTML = clients.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th>RNC / Cédula</th><th>Estado</th><th>Configuración contable</th><th>Origen</th><th></th></tr>
-          ${clients.map(c => `<tr><td><b>${esc(c.legal_name)}</b>${c.email ? `<div class="muted">${esc(c.email)}</div>` : ''}</td><td class="mono">${esc(c.rnc || c.cedula || '—')}</td>
+        const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const sources = [...new Set(clients.map(c => c.source).filter(Boolean))].sort();
+        const rows = clients.filter(c => {
+          const cfg = configOf(c);
+          if (colFilter.name && !norm(`${c.legal_name} ${c.email || ''}`).includes(norm(colFilter.name))) return false;
+          if (colFilter.id && !String(c.rnc || c.cedula || '').includes(colFilter.id.replace(/\D/g, ''))) return false;
+          if (colFilter.status && (c.status === 'inactive' ? 'inactive' : 'active') !== colFilter.status) return false;
+          if (colFilter.config === 'complete' && !(cfg.has606 && cfg.has607)) return false;
+          if (colFilter.config === 'missing' && cfg.has606 && cfg.has607) return false;
+          if (colFilter.config === 'no606' && cfg.has606) return false;
+          if (colFilter.config === 'no607' && cfg.has607) return false;
+          if (colFilter.source && c.source !== colFilter.source) return false;
+          return true;
+        });
+        const val = { name: c => norm(c.legal_name), id: c => String(c.rnc || c.cedula || ''), status: c => c.status || 'active', config: c => Number(configOf(c).has606) + Number(configOf(c).has607), source: c => c.source || '' };
+        rows.sort((a, b) => { const x = val[sort.key](a); const y = val[sort.key](b); return (x > y ? 1 : x < y ? -1 : 0) * sort.dir; });
+        const th = (key, label) => `<th class="sortable" data-sort="${key}" style="cursor:pointer;user-select:none">${label} <span class="muted">${sort.key === key ? (sort.dir > 0 ? '▲' : '▼') : '↕'}</span></th>`;
+        const sel = (key, options) => `<select data-cf="${key}" style="width:100%">${options.map(([v, l]) => `<option value="${esc(v)}" ${colFilter[key] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+        root.querySelector('#ctable').innerHTML = `<div class="table-wrap"><table>
+          <tr>${th('name', 'Empresa')}${th('id', 'RNC / Cédula')}${th('status', 'Estado')}${th('config', 'Configuración contable')}${th('source', 'Origen')}<th></th></tr>
+          <tr class="filters">
+            <th><input data-cf="name" placeholder="Filtrar empresa…" value="${esc(colFilter.name)}" style="width:100%"></th>
+            <th><input data-cf="id" placeholder="RNC o cédula…" inputmode="numeric" value="${esc(colFilter.id)}" style="width:100%"></th>
+            <th>${sel('status', [['', 'Todas'], ['active', 'Activas'], ['inactive', 'Inactivas']])}</th>
+            <th>${sel('config', [['', 'Todas'], ['complete', '606 y 607 configurados'], ['missing', 'Falta configurar'], ['no606', 'Sin 606'], ['no607', 'Sin 607']])}</th>
+            <th>${sel('source', [['', 'Todos'], ...sources.map(x => [x, x])])}</th>
+            <th class="num muted">${rows.length} de ${clients.length}${Object.values(colFilter).some(Boolean) ? ' <button class="btn sm" id="cf-clear">Quitar filtros</button>' : ''}</th></tr>
+          ${rows.length ? rows.map(c => `<tr><td><b>${esc(c.legal_name)}</b>${c.email ? `<div class="muted">${esc(c.email)}</div>` : ''}</td><td class="mono">${esc(c.rnc || c.cedula || '—')}</td>
             <td>${c.status === 'inactive' ? '<span class="badge">Inactiva</span>' : '<span class="badge ok">Activa</span>'}</td>
             <td class="muted">${c.settings?.default_tipo_bienes_servicios ? `606: ${esc(cat.tipoBienesServicios[c.settings.default_tipo_bienes_servicios])}` : '606: —'}<br>${c.settings?.default_tipo_ingreso ? `607: ${esc(cat.tipoIngreso[c.settings.default_tipo_ingreso])}` : '607: —'}</td>
-            <td>${esc(c.source)}</td><td class="num"><button class="btn sm" data-use="${c.id}">Activar</button> ${canManage ? `<button class="btn sm" data-edit="${c.id}">Editar</button>` : ''}</td></tr>`).join('')}</table></div>`
-          : '<div class="card empty">No hay empresas que coincidan.</div>';
+            <td>${esc(c.source)}</td><td class="num"><button class="btn sm" data-use="${c.id}">Activar</button> ${canManage ? `<button class="btn sm" data-edit="${c.id}">Editar</button>` : ''}</td></tr>`).join('')
+          : '<tr><td colspan="6" class="empty">No hay empresas que coincidan con los filtros.</td></tr>'}</table></div>`;
+        root.querySelectorAll('[data-sort]').forEach(h => h.addEventListener('click', () => { sort = { key: h.dataset.sort, dir: sort.key === h.dataset.sort ? -sort.dir : 1 }; draw(); }));
+        root.querySelectorAll('select[data-cf]').forEach(el => el.addEventListener('change', () => { colFilter[el.dataset.cf] = el.value; draw(); }));
+        root.querySelectorAll('input[data-cf]').forEach(el => el.addEventListener('input', () => {
+          colFilter[el.dataset.cf] = el.value; const pos = el.selectionStart; draw();
+          const again = root.querySelector(`input[data-cf="${el.dataset.cf}"]`); again.focus(); again.setSelectionRange(pos, pos);
+        }));
+        root.querySelector('#cf-clear')?.addEventListener('click', () => { Object.keys(colFilter).forEach(k => { colFilter[k] = ''; }); draw(); });
         root.querySelectorAll('[data-use]').forEach(b => b.addEventListener('click', () => { NALA.setScope({ client: b.dataset.use }); NALA.go('#/empresa'); }));
         root.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', async () => {
           const saved = await clientModal(clients.find(c => c.id === b.dataset.edit));
           if (saved) { await NALA.loadClients(); load(); }
         }));
+      };
+      const load = async () => {
+        const qs = new URLSearchParams({ q: root.querySelector('#cq').value, status: root.querySelector('#cs').value });
+        clients = (await NALA.api('GET', `clients?${qs}`)).clients;
+        if (!clients.length) { root.querySelector('#ctable').innerHTML = '<div class="card empty">No hay empresas que coincidan.</div>'; return; }
+        draw();
       };
       let timer;
       root.querySelector('#cq').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
