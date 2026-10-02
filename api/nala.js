@@ -10,6 +10,7 @@ const core = require('../lib/nala/api/core');
 const batches = require('../lib/nala/api/batches');
 const invoices = require('../lib/nala/api/invoices');
 const exportsApi = require('../lib/nala/api/exports');
+const templates = require('../lib/nala/api/templates');
 
 async function legacy(name, req, res) {
   const mod = name === 'analyze' ? await import('./nala/_analyze.js') : await import('./nala/_chat.js');
@@ -53,6 +54,10 @@ const ROUTES = [
   ['POST', /^exports\/([^/]+)\/status$/, (ctx, q, b, m) => exportsApi.setStatus(ctx, m[1], b)],
   ['GET', /^team$/, ctx => core.team(ctx)],
   ['PUT', /^team\/([^/]+)$/, (ctx, q, b, m) => core.updateMember(ctx, m[1], b)],
+  ['GET', /^templates$/, ctx => templates.list(ctx)],
+  ['POST', /^templates\/upload-url$/, (ctx, q, b) => templates.uploadUrl(ctx, b)],
+  ['POST', /^templates$/, (ctx, q, b) => templates.register(ctx, b)],
+  ['DELETE', /^templates\/(606)\/(excel|txt)(?:\/(\d+))?$/, (ctx, q, b, m) => templates.remove(ctx, m[1], m[2], m[3])],
   ['GET', /^settings$/, ctx => core.getSettings(ctx)],
   ['PUT', /^settings$/, (ctx, q, b) => core.putSettings(ctx, b)],
   ['GET', /^retention$/, ctx => core.retention(ctx)],

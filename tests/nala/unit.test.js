@@ -171,3 +171,55 @@ test('606: filas en el formato exacto de la Herramienta DGII (pegar en B12)', ()
   assert.equal(tool.tsv.split('\t').length, 25);
   assert.equal(formats.toolRows606({ ...snap, format: '607' }), null);
 });
+
+// ── Plantilla DGII del usuario (.xlsm con macro) y TXT de ejemplo ─────────
+const tplLib = require('../../lib/nala/dgii-template');
+
+const { fakeTool606 } = require('./support/dgii-tool');
+
+test('plantilla .xlsm del usuario: se detecta, se llena y conserva el macro', async () => {
+  const { buffer, vba } = await fakeTool606();
+  const layout = await tplLib.analyzeExcel(buffer, 'Herramienta606.xlsm');
+  assert.equal(layout.fillable, true, layout.message);
+  assert.equal(layout.has_macros, true);
+  assert.deepEqual([layout.sheet, layout.start_col, layout.start_row], ['Herramienta Formato 606', 'B', 12]);
+  assert.deepEqual(layout.header_cells, { rnc: 'C4', period: 'C5', count: 'C6' });
+  const values = ['00112345678', '2', '09', 'B0100000001', '', '20250905', '', '', '1000.00', '1000.00', '180.00', '', '', '', '180.00', '', '', '', '', '', '', '', '01'];
+  const tool = formats.toolRows606({ format: '606', header: { rnc: '131944401', period: '202509' }, lines: [{ values }, { values: [...values.slice(0, 3), 'B0100000002', ...values.slice(4)] }] });
+  const filled = await tplLib.fillExcel(buffer, layout, tool);
+  const JSZip = require('jszip');
+  const zip = await JSZip.loadAsync(filled);
+  assert.deepEqual(Buffer.from(await zip.file('xl/vbaProject.bin').async('nodebuffer')), vba, 'el macro queda intacto');
+  const XLSX = require('xlsx');
+  const ws = XLSX.read(filled, { type: 'buffer' }).Sheets['Herramienta Formato 606'];
+  assert.equal(ws.C4.v, '131944401'); assert.equal(ws.C5.v, 202509); assert.equal(ws.C6.v, 2);
+  assert.equal(ws.B12.v, '00112345678'); assert.equal(ws.B12.t, 's', 'la cédula es texto (conserva los ceros)');
+  assert.equal(ws.D12.v.trim(), '09 -COMPRAS Y GASTOS QUE FORMARAN PARTE DEL COSTO DE VENTA');
+  assert.equal(ws.G12.v, '202509'); assert.equal(ws.H12.v, 5);
+  assert.equal(ws.L12.v, 1000); assert.equal(ws.N12.v, 180); assert.equal(ws.Z12.v, '01 - EFECTIVO');
+  assert.equal(ws.E13.v, 'B0100000002'); assert.equal(ws.A12.v, 1, 'la columna de líneas no se toca');
+  assert.equal(ws.K12, undefined, 'monto vacío queda vacío');
+});
+
+test('plantilla .xls original: se guarda pero pide guardarla como .xlsm', async () => {
+  const r = await tplLib.analyzeExcel(Buffer.from('d0cf11e0a1b11ae1' + '00'.repeat(32), 'hex'), 'Formato606.xls');
+  assert.equal(r.kind, 'xls'); assert.equal(r.fillable, false); assert.match(r.message, /\.xlsm/);
+});
+
+test('TXT de ejemplo: aprende montos sin decimales y ITBIS vacío, y el TXT sale igual', () => {
+  const row = (ncf, serv, total, itbis, adel, pago) => ['101010101', '1', '02', ncf, '', '20250905', '', serv, '', total, itbis, '', '', '', adel, '', '', '', '', '', '', '', pago].join('|');
+  const sample = `606|131944401|202509|2\r\n${row('B0100000001', '1000', '1000', '', '', '01')}\r\n${row('B0100000002', '500.5', '500.5', '90', '90', '02')}`;
+  const a = tplLib.analyzeTxt(sample);
+  assert.deepEqual(a.problems, []);
+  assert.equal(a.lines, 2);
+  assert.deepEqual(a.style, { amount_format: 'excel', blank_zero: ['itbis', 'itbis_adelantar'] });
+  const learned = tplLib.learnedStyle([{ lines: 2, problems: [], style: a.style }]);
+  assert.equal(learned.amount_format, 'excel');
+  const col = formats.SCHEMAS['606'].find(c => c.key === 'itbis');
+  assert.equal(formats.cellTextForTest(col, '0.00', learned), '', 'ITBIS cero vacío como en el ejemplo');
+  assert.equal(formats.cellTextForTest(col, '1000.00', learned), '1000');
+  assert.equal(formats.cellTextForTest(col, '500.50', learned), '500.5');
+  assert.equal(formats.cellTextForTest(col, '0.00', null), '0.00', 'sin ejemplos se mantiene 0.00');
+  const txt = '606|131944401|202509|1\r\n' + ['101010101', '1', '02', 'B0100000001', '', '20250905', '', '', '1000', '1000', '', '', '', '', '', '', '', '', '', '', '', '', '01'].join('|');
+  assert.deepEqual(formats.validateTxt('606', txt, learned).problems, []);
+});

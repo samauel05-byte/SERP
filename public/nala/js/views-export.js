@@ -110,7 +110,7 @@
     const r = await NALA.api('GET', `exports/${exp.id}/download?${qs}`);
     if (r.base64) {
       const bin = Uint8Array.from(atob(r.base64), c => c.charCodeAt(0));
-      NALA.downloadBlob(new Blob([bin], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), r.file_name);
+      NALA.downloadBlob(new Blob([bin], { type: r.mime || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), r.file_name);
     } else {
       const blob = await (await fetch(r.url)).blob();
       NALA.downloadBlob(blob, r.file_name);
@@ -149,7 +149,7 @@
         ${exp.submission_reference ? `<p style="margin-top:8px">Referencia OFV: <b class="mono">${esc(exp.submission_reference)}</b></p>` : ''}${exp.result_notes ? `<p>Resultado: ${esc(exp.result_notes)}</p>` : ''}
         ${exp.status === 'superseded' ? `<div class="issue warning" style="margin-top:8px"><span class="ico">!</span>Reemplazada: ${esc(exp.superseded_reason || '')}</div>` : ''}
         ${exp.accepted_warnings?.length ? `<p class="muted" style="margin-top:8px">Advertencias aceptadas: ${exp.accepted_warnings.map(esc).join(', ')} · motivo: ${esc(exp.acceptance_reason || '')}</p>` : ''}
-        <div class="row" style="margin-top:12px"><button class="btn primary" id="d-txt">Descargar TXT</button><button class="btn" id="d-xlsx">Excel (plantilla oficial)</button><button class="btn" id="d-custom">Excel personalizado</button>
+        <div class="row" style="margin-top:12px"><button class="btn primary" id="d-txt">Descargar TXT</button><button class="btn" id="d-xlsx">Excel (plantilla oficial)</button><button class="btn" id="d-custom">Excel personalizado</button>${exp.format === '606' ? '<button class="btn" id="d-tool">Mi herramienta DGII (con macro)</button>' : ''}
           ${canSubmit && exp.status === 'generated' ? '<button class="btn" id="s-sub">Registrar envío a DGII</button>' : ''}
           ${canSubmit && exp.status === 'submitted' ? '<button class="btn ok" id="s-acc">Registrar aceptación</button><button class="btn danger" id="s-rej">Registrar rechazo</button>' : ''}
           ${canSubmit && ['generated', 'rejected'].includes(exp.status) ? '<button class="btn" id="s-sup">Marcar como reemplazada</button>' : ''}</div>
@@ -163,6 +163,7 @@
     root.querySelector('#d-txt').addEventListener('click', guard(() => download(exp, 'txt')));
     root.querySelector('#d-xlsx').addEventListener('click', guard(() => download(exp, 'xlsx')));
     root.querySelector('#d-custom').addEventListener('click', guard(() => customExcel(exp)));
+    root.querySelector('#d-tool')?.addEventListener('click', guard(() => download(exp, 'template')));
     const setStatus = async (status, body) => { await NALA.api('POST', `exports/${exp.id}/status`, { status, ...body }); NALA.toast('Estado actualizado', 'ok'); NALA.route(); };
     root.querySelector('#s-sub')?.addEventListener('click', guard(async () => {
       const r = await NALA.modal({ title: 'Registrar envío a la DGII', okText: 'Registrar',
