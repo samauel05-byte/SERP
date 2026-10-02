@@ -40,6 +40,55 @@
   };
   document.addEventListener('change', e => { if (e.target.id === 'm-all') document.getElementById('m-clients').style.display = e.target.value === '1' ? 'none' : ''; });
 
+  // ── Plantillas DGII del usuario (606) ────────────────────────────────────
+  function putFile(url, file) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(`Carga rechazada (${xhr.status})`)));
+      xhr.onerror = () => reject(new Error('Error de red al subir el archivo'));
+      xhr.send(file);
+    });
+  }
+  async function uploadTemplate(kind, file) {
+    const { path, upload_url } = await NALA.api('POST', 'templates/upload-url', { format: '606', kind, name: file.name, size: file.size });
+    await putFile(upload_url, file);
+    return NALA.api('POST', 'templates', { format: '606', kind, path, name: file.name });
+  }
+  function templatesCard(tpl, canEdit) {
+    const t = tpl['606'] || {};
+    const ex = t.excel; const st = t.txt_style;
+    const badge = (ok, txt) => `<span class="badge ${ok ? 'ok' : 'warn'}">${esc(txt)}</span>`;
+    return `<div class="card" id="dgii-tpl"><h2>Plantillas DGII · Formato 606</h2>
+      <p class="muted" style="margin-bottom:10px">Súbale a NALA cómo usted envía a la DGII. Se acepta cualquier tipo de archivo (.xlsm, .xls, .xlsx, .txt…); NALA le dice cuál puede usar.</p>
+      <div class="stack" style="gap:12px">
+        <div><b>1. Herramienta de la DGII vacía, con macros (.xlsm)</b>
+          <div class="muted">NALA la guarda y, en cada exportación del 606, se la devuelve llena (encabezado y filas desde B12) con sus macros, lista para pulsar Validar y Generar Archivo.</div>
+          ${ex ? `<div class="issue ${ex.fillable ? 'info' : 'warning'}" style="margin-top:6px"><span class="ico">${ex.fillable ? '✓' : '!'}</span><div><b>${esc(ex.name)}</b> ${badge(ex.fillable, ex.fillable ? 'Lista para llenar' : 'No se puede llenar')}<br>${esc(ex.message || '')}<br><span class="muted">Subida ${NALA.dateTime(ex.uploaded_at)}</span></div>${canEdit ? '<button class="btn sm danger" data-del="excel">Quitar</button>' : ''}</div>` : '<div class="muted" style="margin-top:6px">Todavía no ha subido la herramienta.</div>'}
+          ${canEdit ? `<label class="btn" style="margin-top:6px">${ex ? 'Reemplazar' : 'Subir'} herramienta<input type="file" id="tpl-excel" accept="*/*" hidden></label>` : ''}</div>
+        <div><b>2. TXT que usted ya envió a la DGII (ejemplos)</b>
+          <div class="muted">NALA aprende de ellos cómo escribir el suyo: montos con o sin decimales y qué campos deja vacíos.</div>
+          ${st ? `<div class="issue info" style="margin-top:6px"><span class="ico">✓</span><div>Aprendido de ${st.from_examples} ejemplo(s): montos ${st.amount_format === 'excel' ? 'como los escribe la herramienta (1000, 500.5)' : 'con 2 decimales (1000.00)'}${st.blank_zero?.length ? '; ITBIS en cero se deja vacío' : '; ITBIS en cero se escribe 0.00'}.</div></div>` : ''}
+          ${(t.examples || []).map((e, i) => `<div class="row" style="margin-top:6px;gap:8px"><span class="mono">${esc(e.name)}</span><span class="muted">${e.lines || 0} línea(s) · ${esc(e.rnc || '')} · ${esc(e.period || '')}</span>${e.problems?.length ? `<span class="badge warn" title="${esc(e.problems.join(' · '))}">${e.problems.length} problema(s): no se usa para aprender</span>` : '<span class="badge ok">Usado</span>'}${canEdit ? `<button class="btn sm" data-del="txt" data-i="${i}">Quitar</button>` : ''}</div>`).join('')}
+          ${canEdit ? '<label class="btn" style="margin-top:6px">Subir TXT de ejemplo<input type="file" id="tpl-txt" accept="*/*" multiple hidden></label>' : ''}</div>
+      </div></div>`;
+  }
+  function bindTemplates(root) {
+    const done = msg => { NALA.toast(msg, 'ok'); NALA.route(); };
+    root.querySelector('#tpl-excel')?.addEventListener('change', async e => {
+      const file = e.target.files[0]; if (!file) return;
+      try { NALA.toast('Subiendo y revisando la herramienta…'); const r = await uploadTemplate('excel', file); const ex = r.templates['606'].excel; NALA.toast(ex.fillable ? 'Herramienta guardada: lista para llenar.' : ex.message, ex.fillable ? 'ok' : 'err'); NALA.route(); } catch (err) { NALA.fail(err); }
+    });
+    root.querySelector('#tpl-txt')?.addEventListener('change', async e => {
+      const files = [...e.target.files]; if (!files.length) return;
+      try { for (const f of files) await uploadTemplate('txt', f); done(`${files.length} TXT de ejemplo guardado(s)`); } catch (err) { NALA.fail(err); }
+    });
+    root.querySelectorAll('#dgii-tpl [data-del]').forEach(b => b.addEventListener('click', async () => {
+      try { await NALA.api('DELETE', `templates/606/${b.dataset.del}${b.dataset.i !== undefined ? '/' + b.dataset.i : ''}`); done('Quitado'); } catch (err) { NALA.fail(err); }
+    }));
+  }
+
   NALA.views.config = {
     title: 'Configuración',
     async render(root) {
@@ -65,10 +114,12 @@
         <div class="card"><h2>Retención documental</h2><div class="row"><label class="f"><span>Conservar originales (años)</span><input type="number" id="ret" min="10" max="30" value="${settings.retention.years}" ${dis}></label>
           <span class="muted">Código Tributario, art. 50: mínimo 10 años. ${int(retention.documents.length)} documento(s) anteriores a ${NALA.dateTime(retention.cutoff)} pueden depurarse (se conserva su huella SHA-256 y el historial).</span>
           ${NALA.can('retention_purge') && retention.documents.length ? '<button class="btn danger" id="purge">Depurar originales vencidos</button>' : ''}</div></div>
+        ${templatesCard(settings.dgii_templates || {}, canEdit)}
         <div class="card"><h2>Plantillas de Excel personalizado</h2><p class="muted" style="margin-bottom:8px">Columnas separadas por coma (ej. <span class="mono">x_counterpart,rnc_cedula,ncf,fecha_comprobante,itbis</span>). La plantilla oficial no se modifica.</p>
           <div id="tpls">${settings.excel_templates.map(t => `<div class="row tpl" style="margin-bottom:6px"><input class="t-name" value="${esc(t.name)}" placeholder="Nombre" ${dis}><select class="t-format" ${dis}><option ${t.format === '606' ? 'selected' : ''}>606</option><option ${t.format === '607' ? 'selected' : ''}>607</option></select><input class="t-cols" style="flex:1" value="${esc(t.columns.join(','))}" ${dis}></div>`).join('')}</div>
           ${canEdit ? '<button class="btn sm" id="addtpl">+ Plantilla</button>' : ''}</div>
         ${canEdit ? '<div><button class="btn primary" id="savecfg">Guardar configuración</button></div>' : '<p class="muted">Sólo administradores pueden cambiar la configuración.</p>'}</div>`;
+      bindTemplates(root);
       root.querySelector('#addtpl')?.addEventListener('click', () => {
         root.querySelector('#tpls').insertAdjacentHTML('beforeend', '<div class="row tpl" style="margin-bottom:6px"><input class="t-name" placeholder="Nombre"><select class="t-format"><option>606</option><option>607</option></select><input class="t-cols" style="flex:1" placeholder="columnas"></div>');
       });

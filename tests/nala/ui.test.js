@@ -110,6 +110,35 @@ test('exportación 606 desde la interfaz con TXT descargable', async () => {
   await shot('ui-06-exportacion');
 });
 
+test('plantillas DGII: subir la herramienta con macro y un TXT de ejemplo, y descargarla llena', async () => {
+  const { fakeTool606 } = require('./support/dgii-tool');
+  const { buffer, vba } = await fakeTool606();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nala-tpl-'));
+  const xlsm = path.join(dir, 'Herramienta606.xlsm'); fs.writeFileSync(xlsm, buffer);
+  const row = ['131999999', '1', '02', 'B0100000701', '', '20260805', '', '10000', '', '10000', '1800', '', '', '', '1800', '', '', '', '', '', '', '', '02'].join('|');
+  const txt = path.join(dir, 'DGII_F_606_101010632_202607.TXT'); fs.writeFileSync(txt, `606|101010632|202607|1\r\n${row}`);
+  await page.goto(`${stack.base}/nala/index.html#/config`);
+  await page.waitForSelector('#dgii-tpl');
+  await page.setInputFiles('#tpl-excel', xlsm);
+  await page.waitForSelector('#dgii-tpl >> text=Lista para llenar');
+  await page.setInputFiles('#tpl-txt', txt);
+  await page.waitForSelector('#dgii-tpl >> text=Aprendido de 1 ejemplo');
+  assert.match(await page.textContent('#dgii-tpl'), /como los escribe la herramienta/);
+  await shot('ui-07-plantillas');
+  await page.goto(`${stack.base}/nala/index.html#/exportar`);
+  await page.click('tr[data-id]');
+  await page.waitForSelector('#d-tool');
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#d-tool')]);
+  assert.match(download.suggestedFilename(), /^Herramienta_606_101010632_202608\.xlsm$/);
+  const JSZip = require('jszip');
+  const zip = await JSZip.loadAsync(fs.readFileSync(await download.path()));
+  assert.deepEqual(Buffer.from(await zip.file('xl/vbaProject.bin').async('nodebuffer')), vba, 'el macro queda intacto');
+  const XLSX = require('xlsx');
+  const ws = XLSX.read(fs.readFileSync(await download.path()), { type: 'buffer' }).Sheets['Herramienta Formato 606'];
+  assert.equal(ws.C4.v, '101010632'); assert.equal(ws.C6.v, 1);
+  assert.equal(ws.B12.v, '131999999'); assert.equal(ws.E12.v, 'B0100000701'); assert.equal(ws.G12.v, '202608'); assert.equal(ws.H12.v, 5);
+});
+
 test('los demás módulos de NALA cargan sin errores de página', async () => {
   for (const view of ['panel', 'empresa', 'clientes', 'rnc', 'equipo', 'config', 'asistente']) {
     await page.goto(`${stack.base}/nala/index.html#/${view}`);
