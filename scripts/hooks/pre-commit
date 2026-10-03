@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Aviso (no bloquea): si confirmas cambios de código sin actualizar la
+# documentación del repo (README.md / ABOUT.md), te lo recuerda.
+# Instálalo con: bash scripts/install-hooks.sh
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+code=$(printf '%s\n' "$staged" | grep -E '^(public/|lib/|api/|worker\.js|supabase/)' || true)
+docs=$(printf '%s\n' "$staged" | grep -E '^(README\.md|ABOUT\.md)$' || true)
+
+if [ -n "$code" ] && [ -z "$docs" ]; then
+  y=$'\033[33m'; b=$'\033[1m'; r=$'\033[0m'
+  echo "" >&2
+  echo "${y}${b}⚠  Recordatorio de documentación${r}" >&2
+  echo "${y}Vas a confirmar cambios de código sin tocar README.md ni ABOUT.md.${r}" >&2
+  echo "${y}Si esto cambia funcionalidad, actualízalos (regla en CLAUDE.md).${r}" >&2
+  echo "${y}El commit continúa igual; esto es solo un aviso.${r}" >&2
+  echo "" >&2
+fi
+exit 0

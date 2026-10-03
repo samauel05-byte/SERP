@@ -21,6 +21,18 @@ Reglas:
 - El relay debe hacer que los portales funcionen sin extensiones de navegador.
 - Rama de trabajo de esta línea: `claude/upbeat-gauss-qugoox` (reiniciar desde `main` tras cada merge).
 
+## Hook de aviso de documentación
+
+El repo incluye un hook `pre-commit` versionado que **avisa** (sin bloquear)
+cuando confirmas cambios de código (`public/`, `lib/`, `api/`, `worker.js`,
+`supabase/`) sin incluir `README.md` ni `ABOUT.md`. Para activarlo en tu clon:
+
+```bash
+bash scripts/install-hooks.sh     # hace: git config core.hooksPath scripts/hooks
+```
+
+Para desactivarlo: `git config --unset core.hooksPath`.
+
 ## Pruebas
 
 ```bash
