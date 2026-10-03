@@ -2,6 +2,8 @@
 
 Sistema para equipos contables que centraliza clientes, credenciales cifradas y herramientas de trabajo para los portales dominicanos.
 
+> **Nota de mantenimiento:** este README y [`ABOUT.md`](ABOUT.md) se mantienen al día con cada cambio del repositorio. Si modificas funcionalidad, actualízalos en el mismo cambio.
+
 ## Modelo multiempresa
 
 Hay dos niveles claramente separados:
@@ -9,24 +11,53 @@ Hay dos niveles claramente separados:
 1. **Empresa operadora (tenant):** por ejemplo, `Save` o `Contadores del Este`. Cada usuario inicia sesión dentro de una sola empresa operadora.
 2. **Clientes:** son las empresas que atiende esa operadora. Sus credenciales, RNC, archivos y resultados pertenecen exclusivamente a su empresa operadora.
 
-Los módulos Direct, CAMI, NALA, IR-1 e Estimación Fiscal son funciones comunes del producto: se habilitan para cada empresa operadora contratante, pero sus consultas siempre usan el tenant del usuario autenticado. Por eso Contadores del Este nunca puede ver datos de Save, aun cuando ambos utilicen exactamente los mismos módulos.
+Los módulos Direct, CAMI, NALA, IR-2 y Estimación Fiscal son funciones comunes del producto: se habilitan para cada empresa operadora contratante, pero sus consultas siempre usan el tenant del usuario autenticado. Por eso Contadores del Este nunca puede ver datos de Save, aun cuando ambos utilicen exactamente los mismos módulos.
 
 ## URL de producción
 
-**[https://direct-save.vercel.app](https://direct-save.vercel.app)**
+**[https://app.casalabs.com.do](https://app.casalabs.com.do)**
 
 ---
 
 ## Portales soportados
 
-| Portal | Clave |
-|--------|-------|
-| DGII — Dirección General de Impuestos Internos | `dgii` |
-| TSS — Tesorería de la Seguridad Social | `tss` |
-| Ministerio de Trabajo | `trabajo` |
-| SIRLA — IDOPPRIL | `sirla` |
-| Azul | `azul` |
-| Carnet — Portal de Cédula | `carnet` |
+Direct abre cada portal en una pestaña nueva. Según el portal, el acceso es de tres tipos:
+
+- **Auto-login por relay:** el relay (Cloudflare Worker) sirve el portal y rellena y envía el formulario automáticamente.
+- **Semi-automático:** el portal usa un proveedor de identidad externo que impide el auto-login; Direct abre el portal y guía el pegado de las credenciales paso a paso.
+- **Abrir directo / solo abrir:** abre el portal (o formulario público) sin rellenar.
+
+| Portal | Clave | Acceso |
+|--------|-------|--------|
+| DGII — Dirección General de Impuestos Internos | `dgii` | Auto-login por relay (incluye tarjeta de códigos) |
+| TSS — Tesorería de la Seguridad Social | `tss` | Auto-login por relay (SUIR WebForms) |
+| Ministerio de Trabajo (OVI) | `trabajo` | Auto-login por relay (SPA) |
+| SISALRIL | `sirla` | Semi-automático (Keycloak, ver abajo) |
+| Cardnet | `carnet` | Auto-login por relay |
+| Azul | `azul` | Auto-login por relay |
+| IDOPPRIL | `idoppril` | Auto-login por relay |
+| ONAPI | `onapi` | Auto-login por relay |
+| Formalízate | `formalizate` | Auto-login por relay |
+| Cámara de Comercio (Firma digital) | `camara` | Formulario público por relay |
+| Digisign — Facturación electrónica | `digisign` | Abrir directo |
+| Correo GD (Webmail) | `gdmail` | Abrir directo |
+| Nexo — Gestor de pendientes | `nexo` | Solo abre |
+| Citrus — Pagos y servicios | `citrus` | Auto-login por relay |
+
+**SISALRIL** inicia sesión con Keycloak en un dominio aparte (`idp.sisalril.gob.do`) que rechaza cualquier origen que no sea el suyo, por lo que el auto-login por relay no es posible. Direct ofrece un panel semi-automático de 2 pasos: copia el correo al abrir y la contraseña con un toque, para pegarlos en el portal real.
+
+---
+
+## El relay (Cloudflare Worker)
+
+Los portales se abren a través de `portal-rd-relay.samauel05.workers.dev`, que:
+
+- Sirve la página del portal y le inyecta el script de auto-login (credenciales solo en el hash de la URL, nunca al servidor del relay).
+- Reescribe recursos y navegación para que el portal siga funcionando dentro del relay «como un sistema normal», sin extensiones de navegador.
+- **Aísla la sesión de cada empresa por `flow`**: al abrir una segunda empresa del mismo portal, su sesión no hereda la de la primera (cookies con prefijo `serp_<flow>_`). Aplica tanto a los portales clásicos (DGII, etc.) como a los SPA (Ministerio de Trabajo, SISALRIL).
+- Avisa a Direct el resultado del inicio de sesión por `postMessage`.
+
+El relay se despliega automáticamente desde `main`.
 
 ---
 
@@ -53,9 +84,10 @@ Contraseña del usuario (solo en memoria del navegador)
 - Todo el cifrado/descifrado ocurre en el navegador (Web Crypto API)
 - El secreto de bóveda existe **solo en memoria de sesión**
 - Cada usuario tiene su propio salt y su copia cifrada del secreto de bóveda
+- Los nombres de empresa van cifrados: solo se descifran en el navegador
 - **Aislamiento multiempresa**: clientes y credenciales se consultan con el tenant del perfil autenticado
 - **Sesión única por usuario**: un nuevo inicio desde otro equipo bloquea automáticamente la sesión anterior
-- **RLS sin acceso directo desde navegador**: las operaciones pasan por rutas autenticadas del servidor
+- **RLS sin acceso directo desde navegador**: las operaciones pasan por rutas autenticadas del servidor (rol de servicio)
 
 ---
 
@@ -63,9 +95,11 @@ Contraseña del usuario (solo en memoria del navegador)
 
 | Módulo | Descripción |
 |--------|-------------|
-| **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login |
-| **Cami** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 |
-| **NALA** | Flujo fiscal 606/607: carga masiva, extracción OCR/IA, validación, auditoría, aprobación y exportación DGII; chat IA e IR-17 (ver `docs/nala/README.md`) |
+| **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos, favoritos, recientes, calendario de vencimientos, historial de entradas y permisos por empresa |
+| **CAMI** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 e IT-1 |
+| **NALA** | Flujo fiscal 606 y 607: carga masiva, extracción OCR/IA, validación, auditoría, aprobación y exportación DGII; chat IA e IR-17 (ver `docs/nala/README.md`) |
+| **IR-2** | Declaración de renta |
+| **Estimación Fiscal** | Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA |
 | **Clientes** | Gestión de los clientes de la empresa operadora mediante Excel |
 
 ---
@@ -79,22 +113,39 @@ Contraseña del usuario (solo en memoria del navegador)
 
 El admin puede:
 - Crear y desactivar usuarios
-- Asignar acceso a módulos (Direct / CAMI / NALA / IR-1 / Estimación Fiscal)
+- Asignar acceso a módulos (Direct / CAMI / NALA / IR-2 / Estimación Fiscal)
 - Asignar portales individuales a cada usuario
+- **Asignar empresas (clientes) concretas a cada usuario**: un empleado ve solo las empresas que se le asignan (vacío = todas)
 - Restablecer la contraseña de cualquier usuario
 
 ---
 
-## Características
+## Características de Direct
 
 - **Auto-login**: un clic envía automáticamente las credenciales al portal en una nueva pestaña
+- **Favoritos y recientes**: acceso rápido a las empresas marcadas y a las últimas usadas
+- **Aviso de contraseña vencida**: si un portal rechaza la clave, la empresa se marca para actualizarla
+- **Revisión de tarjetas de códigos DGII**: revisa/corrige la tarjeta y avisa si faltan códigos o hay repetidos
+- **Calendario de vencimientos**: recordatorios de IT-1, 606/607 y TSS
+- **Historial de entradas**: registro de quién entró a qué portal y cuándo (solo admin)
+- **Permisos por empresa**: cada usuario ve únicamente las empresas asignadas
 - **Cifrado AES-256-GCM** en el navegador — las credenciales viajan y se almacenan siempre cifradas
-- **Multiempresa** con datos aislados por tenant, sin convertirla en un permiso visible para usuarios
-- **Carga de clientes por Excel** con validación de estructura, formatos y duplicados; la importación crea o actualiza solo clientes de la empresa operadora actual
+- **Carga de clientes por Excel** con validación de estructura, formatos y duplicados
 - **Sesión exclusiva**: al abrir el mismo usuario en otro equipo se bloquea la sesión anterior
 - **Sincronización en tiempo real** — cualquier cambio se refleja al instante
-- **Enter funciona** en todos los formularios y modales
 - **Tema claro / oscuro** según preferencia del sistema o manual
+
+---
+
+## NALA — 606 y 607
+
+NALA genera el TXT de la DGII y, además, deja las declaraciones listas en la **Herramienta de Envío oficial** de la DGII, con el mismo flujo para el **606** y el **607**:
+
+- **Copiar y pegar**: entrega las filas en el formato exacto de la herramienta (606: 25 columnas B..Z; 607: 23 columnas B..X) para pegarlas en B12.
+- **Excel con macro**: el usuario sube su herramienta oficial (.xlsm) en Configuración → Plantillas DGII y NALA se la devuelve llena (encabezado y filas), conservando el macro intacto.
+- **Aprendizaje del TXT de ejemplo**: NALA aprende de TXT ya enviados cómo escribir montos y qué campos deja vacíos, por formato.
+
+Detalle en `docs/nala/README.md` y `docs/nala/dgii-606-607.md`.
 
 ---
 
@@ -102,31 +153,17 @@ El admin puede:
 
 ```
 SERP/
-├── api/
-│   ├── auth/
-│   │   ├── login.js       — Autenticación, sesión única y material de bóveda
-│   │   └── setup.js       — Creación del primer administrador
-│   ├── config.js          — Config global de la app (vaultSalt, verifier, URLs de portales)
-│   ├── credentials.js     — Lectura de credenciales cifradas
-│   ├── credentials/
-│   │   └── [id].js        — Escritura / borrado de una credencial
-│   ├── clients/           — Consulta e importación de clientes por tenant
-│   └── users/
-│       ├── index.js        — CRUD de usuarios (admin only)
-│       └── [id].js         — Actualización de usuario / reset de clave
-├── lib/
-│   ├── auth.js            — Middleware de autenticación JWT
-│   ├── tenant.js          — Resolución segura del tenant del perfil
-│   ├── db.js              — Abstracción sobre Supabase
-│   └── supabase.js        — Cliente Supabase con rol de servicio
+├── api/                   — Funciones serverless (auth, credentials, clients, users, nala)
+├── lib/                   — Núcleo: auth, tenant, db/supabase y librerías NALA (formats, dgii-template, …)
 ├── public/
-│   └── index.html         — App completa (HTML + CSS + JS)
+│   ├── index.html         — App Direct (HTML + CSS + JS)
+│   ├── js/                — direct-extras (inicio, favoritos, calendario, historial, tarjetas, permisos)
+│   └── nala/              — App NALA (módulos + asistente)
+├── worker.js              — Relay Cloudflare Worker de los portales
+├── supabase/migrations/   — Migraciones SQL (tenants, sesión única, NALA, eventos Direct, …)
+├── tests/                 — Pruebas Node (test:direct, test:nala)
 └── vercel.json            — Ruteo de API y archivos estáticos
 ```
-
-## Migraciones requeridas
-
-Antes de usar Clientes o Sesión única, aplica las migraciones de `supabase/migrations/` en orden. La primera crea el tenant inicial `Save` y asocia los datos actuales; la segunda activa la sesión única por usuario.
 
 ---
 
@@ -136,28 +173,31 @@ Antes de usar Clientes o Sesión única, aplica las migraciones de `supabase/mig
 - **Cifrado**: Web Crypto API (AES-256-GCM, PBKDF2)
 - **Backend**: Vercel Serverless Functions (Node.js)
 - **Base de datos**: Supabase (PostgreSQL + Auth)
-- **Despliegue**: Vercel (dominio `direct-save.vercel.app`)
+- **Relay de portales**: Cloudflare Worker (`portal-rd-relay`)
+- **Despliegue**: Vercel (dominio `app.casalabs.com.do`), auto-deploy desde `main`
 
 ---
 
-## Cuenta de administrador por defecto
+## Pruebas
 
-| Campo | Valor |
-|-------|-------|
-| Usuario | `root` |
-| Contraseña | *(configurada en el primer despliegue)* |
+```bash
+npm run test:direct   # app Direct + relay (worker.js)
+npm run test:nala     # flujo fiscal NALA (unit + UI)
+```
+
+---
+
+## Migraciones requeridas
+
+Aplica las migraciones de `supabase/migrations/` en orden. Entre otras: crean el tenant inicial `Save` y asocian los datos actuales, activan la sesión única por usuario, crean las tablas de NALA y los eventos de Direct (historial de entradas y permisos por empresa).
 
 ---
 
 ## Alta de una empresa nueva y carga por Excel
 
-Cuando se vende el sistema a una firma nueva, por ejemplo `Contadores del Este`, se crea primero su **tenant** y su administrador. Ese administrador no hereda usuarios, clientes ni credenciales de Save.
+Cuando se vende el sistema a una firma nueva (p. ej. `Contadores del Este`), se crea primero su **tenant** y su administrador. Ese administrador no hereda usuarios, clientes ni credenciales de Save. Luego se sube el Excel de esa firma, que valida encabezados, formatos y duplicados y crea/actualiza solo sus clientes. Una carga debe ejecutarse siempre dentro del tenant correcto.
 
-Luego se sube el Excel de esa firma. El proceso valida encabezados, formatos y duplicados; crea los perfiles de sus clientes nuevos y reporta los ya existentes, dejándolos disponibles en el panel de esa firma. Una carga debe ejecutarse siempre dentro del tenant correcto: nunca desde Save para evitar mezclar carteras.
-
-## Cómo subir información desde Excel
-
-El script `upload-companies.mjs` lee el Excel de credenciales y las sube directamente a la bóveda cifrada:
+El script `upload-companies.mjs` lee el Excel de credenciales y las sube a la bóveda cifrada:
 
 ```bash
 node upload-companies.mjs
