@@ -767,7 +767,7 @@ const LOGOS = {
 
 // Logos servidos como imagen local (marca oficial) en vez de SVG dibujado,
 // para que siempre carguen nítidos sin depender del raspado del sitio.
-const LOGO_IMG = { carnet: '/img/logo-cardnet.png' };
+const LOGO_IMG = { carnet: '/img/logo-cardnet.png', onapi: '/img/logo-onapi.png', idoppril: '/img/logo-idoppril.png' };
 
 const INST = {
   // uf/pf = fallback field names; aspFields = real ASP.NET WebForms control IDs; url = default login URL
@@ -1372,11 +1372,10 @@ function getCompanies(instKey) {
    Read live from each institution's website through /api/logo/:key (cached a
    day), so a redesign there appears here automatically. The bundled logo is
    shown first and stays if the site cannot be reached. */
-// Azul y Cardnet quedan fijos (Azul: SVG limpio; Cardnet: imagen local), sin
-// raspar el sitio, porque el ícono oficial de Azul es un mosaico recargado y
-// el de Cardnet ya lo servimos local. ONAPI e IDOPPRIL también quedan fuera:
-// el logo oficial de ONAPI es blanco (invisible sobre la tarjeta) y el de
-// IDOPPRIL no se obtiene (502); ambos muestran su chip de iniciales (ON / IDP).
+// Quedan fuera del raspado los que servimos como imagen local (ver LOGO_IMG):
+// Cardnet (su marca), ONAPI (su favicon/ícono oficial) e IDOPPRIL (su ícono
+// oficial) — el wordmark raspado de ONAPI es blanco e invisible y el de
+// IDOPPRIL devuelve 502. Azul usa su SVG limpio en vez del mosaico oficial.
 const OFFICIAL_LOGOS=new Set(['dgii','tss','trabajo','sirla','formalizate','camara','digisign','gdmail']);
 const officialLogoLoads=new Map();
 function loadOfficialLogo(key){
