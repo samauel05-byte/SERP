@@ -34,7 +34,7 @@
 
 ## Estado y novedades recientes
 
-- **Direct — logos de Azul y Cardnet**: Azul usa un logo limpio sólido y Cardnet su marca oficial (la «N» rosada) servida localmente, para que siempre se vean nítidos sin depender del sitio externo.
+- **Direct — logos de portales**: Azul usa un logo limpio sólido y Cardnet su marca oficial (la «N» rosada) servida localmente; ONAPI e IDOPPRIL muestran su chip de iniciales (su logo oficial era blanco/invisible o no se obtenía). Así todos se ven nítidos sin depender del sitio externo.
 
 - **NALA — 607 igual que el 606**: copiar/pegar en la Herramienta de Envío y llenado del Excel con macro, también para el 607.
 - **Direct — mejoras de accesos**: favoritos y recientes, aviso de contraseña vencida, revisión de tarjetas de códigos DGII, calendario de vencimientos, historial de entradas (admin) y permisos por empresa.
