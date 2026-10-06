@@ -1374,8 +1374,10 @@ function getCompanies(instKey) {
    shown first and stays if the site cannot be reached. */
 // Azul y Cardnet quedan fijos (Azul: SVG limpio; Cardnet: imagen local), sin
 // raspar el sitio, porque el ícono oficial de Azul es un mosaico recargado y
-// el de Cardnet ya lo servimos local.
-const OFFICIAL_LOGOS=new Set(['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','digisign','gdmail']);
+// el de Cardnet ya lo servimos local. ONAPI e IDOPPRIL también quedan fuera:
+// el logo oficial de ONAPI es blanco (invisible sobre la tarjeta) y el de
+// IDOPPRIL no se obtiene (502); ambos muestran su chip de iniciales (ON / IDP).
+const OFFICIAL_LOGOS=new Set(['dgii','tss','trabajo','sirla','formalizate','camara','digisign','gdmail']);
 const officialLogoLoads=new Map();
 function loadOfficialLogo(key){
   if(!officialLogoLoads.has(key)) officialLogoLoads.set(key,new Promise((resolve,reject)=>{
