@@ -340,6 +340,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <button class="icon-btn" id="btn-history" title="Historial de entradas" onclick="DX.openHistory()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
       </button>
+      <button class="icon-btn" id="btn-usage" title="Uso del sistema" onclick="DX.openUsage()" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
       <button class="icon-btn" id="btn-users" title="Usuarios" onclick="showUsers()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
@@ -514,6 +517,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <main class="main"><button class="back-btn" onclick="showPortals()">← Volver a portales</button>
     <div class="page-head"><div><h1>Historial de entradas</h1><p>Quién entró a cada portal y cuándo.</p></div></div>
     <div id="dx-history-body" style="margin-top:14px"></div></main></div>
+
+<div id="view-dx-usage" class="layer" hidden>
+  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div>
+    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="lockVault()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+  <main class="main"><button class="back-btn" onclick="showPortals()">← Volver a portales</button>
+    <div class="page-head"><div><h1>Uso del sistema</h1><p>Actividad en vivo de los accesos a portales.</p></div><button class="back-btn" onclick="DX.openUsage()" style="margin:0">↻ Actualizar</button></div>
+    <div id="dx-usage-body" style="margin-top:14px"></div></main></div>
 
 <div id="view-users" class="layer" hidden>
   <header class="hdr">
@@ -1080,7 +1090,7 @@ function lockVault(message='') {
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos','view-dx-cards','view-dx-history'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 function showPortals() {
@@ -1093,6 +1103,7 @@ function showPortals() {
   if (btn) btn.hidden = !isAdmin;
   const bc=document.getElementById('btn-cards'); if (bc) bc.hidden = !isAdmin;
   const bh=document.getElementById('btn-history'); if (bh) bh.hidden = !isAdmin;
+  const bu=document.getElementById('btn-usage'); if (bu) bu.hidden = !isAdmin;
   DX.renderHome?.();
 }
 

@@ -33,3 +33,29 @@
 .company-card .dx-star.on{color:#fbbf24}
 .company-card.dx-needs-pw{border-color:rgba(239,68,68,.55)}
 .company-card .dx-pw-flag{position:absolute;left:0;right:0;bottom:0;background:rgba(239,68,68,.9);color:#fff;font-size:9.5px;font-weight:700;text-align:center;padding:2px 0;letter-spacing:.3px}
+
+/* ── Panel de uso (admin) ───────────────────────────────────────────── */
+.dx-u-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px}
+.dx-u-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px}
+.dx-u-kpi .k-lab{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3)}
+.dx-u-kpi .k-val{font-size:27px;font-weight:800;letter-spacing:-.5px;margin-top:4px;line-height:1;font-variant-numeric:tabular-nums}
+.dx-u-kpi .k-meta{font-size:11.5px;color:var(--text2);margin-top:4px}
+.dx-u-kpi.ok .k-val{color:var(--green)} .dx-u-kpi.accent .k-val{color:var(--accent)}
+.dx-u-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:720px){.dx-u-grid{grid-template-columns:1fr}}
+.dx-u-grid .span{grid-column:1 / -1}
+.dx-u-days{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:4px}
+.dx-u-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.dx-u-day .bar{width:100%;max-width:38px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:5px 5px 0 0;overflow:hidden;background:var(--bg2)}
+.dx-u-day .s1{background:var(--accent)} .dx-u-day .s2{background:color-mix(in srgb,var(--accent) 32%,transparent)}
+.dx-u-day .dn{font-size:11px;font-weight:700} .dx-u-day .dl{font-size:9.5px;color:var(--text3);white-space:nowrap}
+.dx-u-rows{display:flex;flex-direction:column;gap:9px}
+.dx-u-r{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px}
+.dx-u-r .nm{font-size:12.5px;font-weight:600}
+.dx-u-r .tr{height:8px;border-radius:5px;background:var(--bg2);overflow:hidden;min-width:0}
+.dx-u-r .fl{height:100%;border-radius:5px;background:var(--accent)}
+.dx-u-r .am{font-size:12px;color:var(--text2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dx-u-hours{display:flex;align-items:flex-end;gap:4px;height:70px}
+.dx-u-hr{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.dx-u-hr .hb{width:100%;max-width:20px;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.dx-u-hr .hl{font-size:9px;color:var(--text3);font-family:'IBM Plex Mono',monospace}

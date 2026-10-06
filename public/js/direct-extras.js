@@ -239,6 +239,59 @@
       box.querySelectorAll('[data-cname]').forEach(l => { l.style.display = l.dataset.cname.includes(q) ? '' : 'none'; });
     });
   };
+  // Panel de uso (admin): lee /api/credentials?stats=1 y lo dibuja en vivo.
+  const evLbl = { open: 'entró', login_ok: 'sesión OK', login_failed: 'clave rechazada' };
+  const evCls = { open: '', login_ok: 'dx-chip-ok', login_failed: 'dx-chip-bad' };
+  const fmtDay = d => { const [y, m, dd] = d.split('-'); return dd + '/' + m; };
+  const fmtWhen = iso => new Date(iso).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' });
+  DX.openUsage = async function () {
+    show('view-dx-usage');
+    const root = document.getElementById('dx-usage-body');
+    root.innerHTML = '<p class="dx-muted">Cargando uso…</p>';
+    let d;
+    try { d = await A.get('/api/credentials?stats=1'); }
+    catch (e) { root.innerHTML = `<div class="client-empty"><h2>No se pudo cargar</h2><p>${esc(e.message)}</p></div>`; return; }
+    const r = d.resumen || {};
+    const kpi = (lab, val, meta, cls) => `<div class="dx-u-kpi ${cls || ''}"><div class="k-lab">${lab}</div><div class="k-val">${val}</div><div class="k-meta">${meta}</div></div>`;
+    const kpis = `<div class="dx-u-kpis">
+      ${kpi('Acciones · 24 h', r.eventos_24h ?? 0, `${r.eventos_7d ?? 0} en 7 días`, 'accent')}
+      ${kpi('Usuarios activos', r.usuarios_activos ?? 0, `de ${r.usuarios_registrados ?? 0} registrados`)}
+      ${kpi('Empresas', r.empresas ?? 0, 'en la bóveda')}
+      ${kpi('Inicios de sesión', r.logins_ok ?? 0, `${r.entradas ?? 0} entradas`, 'ok')}
+      ${kpi('Clave rechazada', r.logins_fallidos ?? 0, r.logins_fallidos ? 'revisar contraseñas' : 'ninguna', r.logins_fallidos ? '' : 'ok')}</div>`;
+
+    const dias = (d.por_dia || []).filter(x => x.open + x.login > 0).length ? d.por_dia : (d.por_dia || []).slice(-7);
+    const maxD = Math.max(1, ...dias.map(x => x.open + x.login));
+    const daysHtml = dias.map(x => { const t = x.open + x.login, h = Math.round(t / maxD * 104), oh = t ? Math.round(x.open / t * h) : 0;
+      return `<div class="dx-u-day"><div class="dn">${t || '·'}</div><div class="bar" style="height:${Math.max(h, 2)}px"><div class="s2" style="height:${h - oh}px"></div><div class="s1" style="height:${oh}px"></div></div><div class="dl">${fmtDay(x.d)}</div></div>`; }).join('');
+
+    const us = d.por_usuario || [];
+    const usersHtml = us.length ? `<div class="table-wrap"><table class="dx-table"><tr><th>Usuario</th><th>Acc.</th><th>Logins</th><th>Empr.</th><th>Último</th></tr>
+      ${us.map(u => `<tr><td><b>${esc(u.usuario)}</b></td><td>${u.ev}</td><td>${u.log}</td><td>${u.emp}</td><td class="dx-mono dx-sm">${esc(fmtWhen(u.last))}</td></tr>`).join('')}</table></div>` : '<p class="dx-muted">Sin usuarios activos.</p>';
+
+    const ps = d.por_portal || []; const maxP = Math.max(1, ...ps.map(x => x.n));
+    const portHtml = ps.length ? `<div class="dx-u-rows">${ps.map(x => `<div class="dx-u-r"><span class="nm">${esc(instName(x.portal))}</span><span class="tr"><span class="fl" style="width:${x.n / maxP * 100}%"></span></span><span class="am">${x.n} · ${x.users} usr</span></div>`).join('')}</div>` : '<p class="dx-muted">Sin entradas.</p>';
+
+    const hrs = d.por_hora || []; const maxH = Math.max(1, ...hrs); const from = 7, to = 20;
+    let hoursHtml = '<div class="dx-u-hours">';
+    for (let h = from; h <= to; h++) { const n = hrs[h] || 0; hoursHtml += `<div class="dx-u-hr"><div class="hb" title="${n} a las ${h}:00" style="height:${n ? Math.max(n / maxH * 54, 3) : 0}px"></div><div class="hl">${h}</div></div>`; }
+    hoursHtml += '</div>';
+
+    const rec = d.por_portal ? (d.recientes || []) : [];
+    const recHtml = rec.length ? `<div class="table-wrap"><table class="dx-table"><tr><th>Fecha</th><th>Usuario</th><th>Portal</th><th>Acción</th></tr>
+      ${rec.map(e => `<tr><td class="dx-mono dx-sm">${esc(fmtWhen(e.at))}</td><td>${esc(e.usuario)}</td><td>${esc(instName(e.portal))}</td><td><span class="dx-chip ${evCls[e.event] || ''}">${esc(evLbl[e.event] || e.event)}</span></td></tr>`).join('')}</table></div>` : '';
+
+    root.innerHTML = `${kpis}
+      <p class="dx-muted dx-sm" style="margin:-8px 0 16px">El historial registra desde que se activó esta función; la actividad anterior no quedó guardada. Los nombres de empresa van cifrados.</p>
+      <div class="dx-u-grid">
+        <div class="dx-card span"><div class="dx-h">Actividad por día</div><div class="dx-u-days">${daysHtml}</div></div>
+        <div class="dx-card"><div class="dx-h">Por usuario</div>${usersHtml}</div>
+        <div class="dx-card"><div class="dx-h">Por portal</div>${portHtml}</div>
+        <div class="dx-card span"><div class="dx-h">Por hora del día <span class="dx-muted dx-sm">(hora RD)</span></div>${hoursHtml}</div>
+        ${recHtml ? `<div class="dx-card span"><div class="dx-h">Entradas recientes</div>${recHtml}</div>` : ''}
+      </div>`;
+  };
+
   DX.readUserCompanies = function () {
     const all = document.getElementById('u-all-companies');
     if (!all || all.checked) return null;
