@@ -56,6 +56,50 @@ async function loginStatus(session) {
   return { status: 200, body: { ok: true, status, recent: recent.slice(0, 12) } };
 }
 
+// Panel de uso (solo admin): agrega la actividad de entradas a portales del
+// tenant. Los nombres de empresa van cifrados, por eso no se exponen aquí.
+async function usageStats(session) {
+  if (session.role !== 'admin') return { status: 403, body: { error: 'Solo administradores' } };
+  const RD = -4 * 60; // Rep. Dominicana: UTC-4 fijo (sin horario de verano).
+  const local = iso => { const d = new Date(new Date(iso).getTime() + RD * 60000); return { day: d.toISOString().slice(0, 10), hour: d.getUTCHours() }; };
+  const [evRes, profRes, credRes] = await Promise.all([
+    supabase.from('direct_access_events').select('user_id, username, institution, event, credential_id, created_at')
+      .eq('tenant_id', session.tenantId).order('created_at', { ascending: false }).limit(10000),
+    supabase.from('direct_profiles').select('id', { count: 'exact', head: true }).eq('tenant_id', session.tenantId),
+    supabase.from('direct_credentials').select('id', { count: 'exact', head: true }).eq('tenant_id', session.tenantId),
+  ]);
+  if (evRes.error) throw evRes.error;
+  const events = evRes.data || [];
+  const now = Date.now(); const h24 = now - 864e5, d7 = now - 7 * 864e5;
+  const resumen = {
+    eventos_total: events.length,
+    eventos_24h: events.filter(e => +new Date(e.created_at) >= h24).length,
+    eventos_7d: events.filter(e => +new Date(e.created_at) >= d7).length,
+    usuarios_activos: new Set(events.map(e => e.user_id)).size,
+    usuarios_registrados: profRes.count || 0,
+    empresas: credRes.count || 0,
+    logins_ok: events.filter(e => e.event === 'login_ok').length,
+    logins_fallidos: events.filter(e => e.event === 'login_failed').length,
+    entradas: events.filter(e => e.event === 'open').length,
+    ultimo: events[0]?.created_at || null,
+    primero: events[events.length - 1]?.created_at || null,
+  };
+  const dayMap = {};
+  for (const e of events) { const { day } = local(e.created_at); const m = (dayMap[day] = dayMap[day] || { open: 0, login: 0 }); if (e.event === 'open') m.open++; else if (e.event === 'login_ok') m.login++; }
+  const por_dia = [];
+  for (let i = 13; i >= 0; i--) { const d = new Date(now + RD * 60000 - i * 864e5).toISOString().slice(0, 10); por_dia.push({ d, open: dayMap[d]?.open || 0, login: dayMap[d]?.login || 0 }); }
+  const uMap = {};
+  for (const e of events) { const u = e.username || '(sin nombre)'; const m = (uMap[u] = uMap[u] || { usuario: u, ev: 0, log: 0, emp: new Set(), last: e.created_at }); m.ev++; if (e.event === 'login_ok') m.log++; m.emp.add(e.credential_id); if (+new Date(e.created_at) > +new Date(m.last)) m.last = e.created_at; }
+  const por_usuario = Object.values(uMap).map(m => ({ usuario: m.usuario, ev: m.ev, log: m.log, emp: m.emp.size, last: m.last })).sort((a, b) => b.ev - a.ev);
+  const pMap = {};
+  for (const e of events) { const m = (pMap[e.institution] = pMap[e.institution] || { portal: e.institution, n: 0, users: new Set() }); m.n++; m.users.add(e.user_id); }
+  const por_portal = Object.values(pMap).map(m => ({ portal: m.portal, n: m.n, users: m.users.size })).sort((a, b) => b.n - a.n);
+  const por_hora = Array.from({ length: 24 }, () => 0);
+  for (const e of events) por_hora[local(e.created_at).hour]++;
+  const recientes = events.slice(0, 20).map(e => ({ at: e.created_at, usuario: e.username || '(sin nombre)', portal: e.institution, event: e.event }));
+  return { status: 200, body: { ok: true, resumen, por_dia, por_usuario, por_portal, por_hora, recientes } };
+}
+
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
@@ -65,10 +109,13 @@ module.exports = async (req, res) => {
   const portals = session.role === 'admin' ? null : session.portals_direct;
   const companies = session.role === 'admin' ? null : session.companies_direct;
   try {
-    if (req.query.events === '1' || req.query.event === '1' || req.query.status === '1') {
+    if (req.query.events === '1' || req.query.event === '1' || req.query.status === '1' || req.query.stats === '1') {
       if (!session.tenantId) return res.status(409).json({ error: 'Falta la migración de empresas' });
-      const out = req.method === 'POST' ? await recordEvent(session, req.body || {})
-        : req.query.status === '1' ? await loginStatus(session) : await listEvents(session, req.query);
+      let out;
+      if (req.method === 'POST') out = await recordEvent(session, req.body || {});
+      else if (req.query.stats === '1') out = await usageStats(session);
+      else if (req.query.status === '1') out = await loginStatus(session);
+      else out = await listEvents(session, req.query);
       return res.status(out.status).json(out.body);
     }
     if (req.method === 'GET') {
