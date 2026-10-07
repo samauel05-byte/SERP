@@ -343,6 +343,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <button class="icon-btn" id="btn-usage" title="Uso del sistema" onclick="DX.openUsage()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </button>
+      <button class="icon-btn" id="btn-sis" title="SISALRIL por relay (prueba de autollenado)" onclick="toggleSisTest()" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5z"/></svg>
+      </button>
       <button class="icon-btn" id="btn-users" title="Usuarios" onclick="showUsers()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
@@ -1104,7 +1107,20 @@ function showPortals() {
   const bc=document.getElementById('btn-cards'); if (bc) bc.hidden = !isAdmin;
   const bh=document.getElementById('btn-history'); if (bh) bh.hidden = !isAdmin;
   const bu=document.getElementById('btn-usage'); if (bu) bu.hidden = !isAdmin;
+  const bs=document.getElementById('btn-sis'); if (bs) { bs.hidden = !isAdmin; reflectSisTest(); }
   DX.renderHome?.();
+}
+function reflectSisTest(){
+  const bs=document.getElementById('btn-sis'); if(!bs) return;
+  const on=serpSisTest();
+  bs.style.color = on ? '#22c55e' : '';
+  bs.title = (on ? '✅ SISALRIL por relay ACTIVO (prueba)' : 'SISALRIL por relay (prueba de autollenado)') + '. Clic para ' + (on ? 'desactivar' : 'activar') + '.';
+}
+function toggleSisTest(){
+  const on=!serpSisTest();
+  try { localStorage.setItem('serp-sisalril-relay', on ? '1' : '0'); } catch(e) {}
+  reflectSisTest();
+  toast(on ? 'SISALRIL por relay ACTIVADO (prueba). Abre SISALRIL para probar.' : 'SISALRIL vuelve al panel semi-automático.', 'ok');
 }
 
 async function refreshClients() {
@@ -1356,6 +1372,9 @@ window.addEventListener('message', e => {
 // sesión de cada empresa (localStorage, IndexedDB, document.cookie y canales
 // entre pestañas), de modo que abrir varias empresas a la vez no mezcle sesiones.
 function serpFlowId(){ return String(Date.now())+'-'+Math.random().toString(36).slice(2); }
+// Interruptor de PRUEBA (solo admin): abrir SISALRIL por el relay (autollenado en
+// construcción) en vez del panel semi-automático de copiar. Apagado por defecto.
+function serpSisTest(){ try { return localStorage.getItem('serp-sisalril-relay')==='1'; } catch(e){ return false; } }
 
 // Portals without login (e.g. Cámara's request form) open straight through
 // the relay, in their own session, so every button and lookup works.
@@ -1726,10 +1745,13 @@ async function enterCompany(credId) {
   const instKey=cred.institution;
   const inst=INST[instKey];
   const loginUrl=appConfig[instKey+'_loginUrl']||inst?.url||'';
+  // directOpen efectivo: SISALRIL abre por el relay (no directo) solo cuando el
+  // admin enciende el interruptor de prueba, para validar el autollenado nuevo.
+  const dOpen = inst?.directOpen && !(instKey==='sirla' && serpSisTest());
 
   // Open tab NOW — before any await — so mobile browsers don't block the popup
   // directOpen portals are SPAs that break under the proxy — open them directly
-  const newTab = loginUrl ? window.open(inst?.directOpen ? loginUrl : '/autologin.html', '_blank') : null;
+  const newTab = loginUrl ? window.open(dOpen ? loginUrl : '/autologin.html', '_blank') : null;
 
   let plain;
   try { plain=await C.dec(masterKey,cred.iv,cred.ct); }
@@ -1834,7 +1856,7 @@ async function enterCompany(credId) {
   // Navigate the pre-opened tab with credentials in the hash (skip for directOpen SPAs).
   // This must happen before any other await: once the new tab has focus, Chrome
   // can leave a clipboard write pending and the tab would wait forever.
-  if (newTab && loginUrl && !inst?.directOpen) {
+  if (newTab && loginUrl && !dOpen) {
     try { autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab); }
     catch { newTab.close(); toast('No se pudo abrir el portal. Intenta de nuevo.','err'); return; }
     navigator.clipboard?.writeText(_chUser).catch(() => {});
