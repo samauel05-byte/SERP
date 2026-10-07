@@ -452,12 +452,11 @@ export default {
   // request carries it, so /api-proxy forwards and stores only this tab's cookies.
   var F='${portalFlow}';
   var FQ=F?'&flow='+encodeURIComponent(F):'';
-  // Modo aislamiento de PRUEBA (bandera): cuando el flujo empieza por "iso-",
-  // separamos por empresa el almacenamiento compartido del origen del relay
-  // (localStorage + IndexedDB), que es lo que puede hacer que una segunda
-  // empresa herede la sesión de la primera. Apagado por defecto (flujo normal),
-  // así el uso diario no cambia mientras se valida con el interruptor de la app.
-  var ISO=${portalFlow.startsWith('iso-') ? 'true' : 'false'};
+  // Aislamiento por empresa en los portales SPA (OVI/SISALRIL): separamos el
+  // estado compartido del origen del relay (localStorage, IndexedDB,
+  // document.cookie con el token ABP, y los canales entre pestañas) para que
+  // abrir una segunda empresa no herede la sesión de la primera. Activo siempre.
+  var ISO=true;
   if(F&&ISO){try{
     var _ls=window.localStorage, _pfx='__serpf_'+F+'__';
     var _sym=function(p){return typeof p==='symbol';};
