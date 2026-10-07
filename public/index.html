@@ -343,6 +343,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <button class="icon-btn" id="btn-usage" title="Uso del sistema" onclick="DX.openUsage()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </button>
+      <button class="icon-btn" id="btn-iso" title="Modo aislamiento (prueba): abrir varias empresas a la vez" onclick="toggleIsoTest()" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M10 6.5h4M6.5 10v4"/></svg>
+      </button>
       <button class="icon-btn" id="btn-users" title="Usuarios" onclick="showUsers()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
@@ -1104,7 +1107,22 @@ function showPortals() {
   const bc=document.getElementById('btn-cards'); if (bc) bc.hidden = !isAdmin;
   const bh=document.getElementById('btn-history'); if (bh) bh.hidden = !isAdmin;
   const bu=document.getElementById('btn-usage'); if (bu) bu.hidden = !isAdmin;
+  const bi=document.getElementById('btn-iso'); if (bi) { bi.hidden = !isAdmin; reflectIsoTest(); }
   DX.renderHome?.();
+}
+
+// Interruptor de aislamiento (prueba). Resalta el botón cuando está activo.
+function reflectIsoTest(){
+  const bi=document.getElementById('btn-iso'); if(!bi) return;
+  const on=serpIsoTest();
+  bi.style.color = on ? 'var(--accent3, #22c55e)' : '';
+  bi.title = (on ? '✅ Modo aislamiento ACTIVO' : 'Modo aislamiento (prueba)') + ': abrir varias empresas a la vez. Clic para ' + (on ? 'desactivar' : 'activar') + '.';
+}
+function toggleIsoTest(){
+  const on=!serpIsoTest();
+  try { localStorage.setItem('serp-iso-test', on ? '1' : '0'); } catch(e) {}
+  reflectIsoTest();
+  toast(on ? 'Modo aislamiento ACTIVADO. Abre las empresas de nuevo para probar.' : 'Modo aislamiento desactivado.', 'ok');
 }
 
 async function refreshClients() {
@@ -1352,12 +1370,19 @@ window.addEventListener('message', e => {
 });
 
 
+// Interruptor de PRUEBA (solo admin): si está activo, el flujo lleva el prefijo
+// "iso-" para que el relay aísle el almacenamiento por empresa (localStorage +
+// IndexedDB) y se puedan abrir varias empresas a la vez sin que se repita la
+// primera. Apagado por defecto: el comportamiento normal no cambia.
+function serpIsoTest(){ try { return localStorage.getItem('serp-iso-test')==='1'; } catch(e){ return false; } }
+function serpFlowId(){ return (serpIsoTest()?'iso-':'') + String(Date.now())+'-'+Math.random().toString(36).slice(2); }
+
 // Portals without login (e.g. Cámara's request form) open straight through
 // the relay, in their own session, so every button and lookup works.
 function openRelayPortal(instKey) {
   const url=appConfig[instKey+'_loginUrl']||INST[instKey]?.url;
   if(!url){ toast('Configura la URL del portal en ⚙️','warn'); return; }
-  const flow=String(Date.now())+'-'+Math.random().toString(36).slice(2);
+  const flow=serpFlowId();
   window.open('https://portal-rd-relay.samauel05.workers.dev/proxy?url='+encodeURIComponent(url)+'&flow='+encodeURIComponent(flow),'_blank');
 }
 
@@ -1902,7 +1927,7 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
   const CF_RELAY = 'https://portal-rd-relay.samauel05.workers.dev';
   // A unique flow id keeps the relay's one-time DGII submission state scoped
   // to this exact launch, never to an older browser tab or prior login.
-  const proxyPayload = { user: payload.user, pass: payload.pass, flow: String(Date.now()) + '-' + Math.random().toString(36).slice(2), origin: location.origin };
+  const proxyPayload = { user: payload.user, pass: payload.pass, flow: serpFlowId(), origin: location.origin };
   window.DX?.onFlow(proxyPayload.flow, window.__serpEnteringCred);
   if (payload.cedula) proxyPayload.cedula = payload.cedula;
   if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;

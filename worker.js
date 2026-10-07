@@ -452,6 +452,48 @@ export default {
   // request carries it, so /api-proxy forwards and stores only this tab's cookies.
   var F='${portalFlow}';
   var FQ=F?'&flow='+encodeURIComponent(F):'';
+  // Modo aislamiento de PRUEBA (bandera): cuando el flujo empieza por "iso-",
+  // separamos por empresa el almacenamiento compartido del origen del relay
+  // (localStorage + IndexedDB), que es lo que puede hacer que una segunda
+  // empresa herede la sesión de la primera. Apagado por defecto (flujo normal),
+  // así el uso diario no cambia mientras se valida con el interruptor de la app.
+  var ISO=${portalFlow.startsWith('iso-') ? 'true' : 'false'};
+  if(F&&ISO){try{
+    var _ls=window.localStorage, _pfx='__serpf_'+F+'__';
+    var _sym=function(p){return typeof p==='symbol';};
+    var _h={
+      get:function(t,p){
+        if(_sym(p)){var sv=t[p];return typeof sv==='function'?sv.bind(t):sv;}
+        if(p==='getItem')return function(k){return t.getItem(_pfx+k);};
+        if(p==='setItem')return function(k,v){return t.setItem(_pfx+k,String(v));};
+        if(p==='removeItem')return function(k){return t.removeItem(_pfx+k);};
+        if(p==='clear')return function(){var a=[],i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)a.push(k);}a.forEach(function(k){t.removeItem(k);});};
+        if(p==='key')return function(n){var a=[],i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)a.push(k.slice(_pfx.length));}return n>=0&&n<a.length?a[n]:null;};
+        if(p==='length'){var c=0,i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)c++;}return c;}
+        if(typeof t[p]==='function')return t[p].bind(t);
+        var v=t.getItem(_pfx+p);return v===null?undefined:v;
+      },
+      set:function(t,p,v){if(_sym(p)){t[p]=v;return true;}t.setItem(_pfx+String(p),String(v));return true;},
+      deleteProperty:function(t,p){if(_sym(p)){delete t[p];return true;}t.removeItem(_pfx+String(p));return true;},
+      has:function(t,p){if(_sym(p))return p in t;return t.getItem(_pfx+p)!==null;},
+      ownKeys:function(t){var a=[],i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)a.push(k.slice(_pfx.length));}return a;},
+      getOwnPropertyDescriptor:function(t,p){if(_sym(p))return Object.getOwnPropertyDescriptor(t,p);var v=t.getItem(_pfx+p);return v===null?undefined:{value:v,writable:true,enumerable:true,configurable:true};}
+    };
+    var _lsproxy=new Proxy(_ls,_h);
+    Object.defineProperty(window,'localStorage',{configurable:true,get:function(){return _lsproxy;}});
+  }catch(e){}}
+  if(F&&ISO){try{
+    var _idb=window.indexedDB, _ipfx='__serpf_'+F+'__';
+    if(_idb){
+      var _iproxy=new Proxy(_idb,{get:function(t,p){
+        if(p==='open')return function(name,ver){return ver===undefined?t.open(_ipfx+name):t.open(_ipfx+name,ver);};
+        if(p==='deleteDatabase')return function(name){return t.deleteDatabase(_ipfx+name);};
+        if(p==='databases'&&t.databases)return function(){return t.databases().then(function(l){return l.filter(function(d){return d.name&&d.name.indexOf(_ipfx)===0;}).map(function(d){return {name:d.name.slice(_ipfx.length),version:d.version};});});};
+        var v=t[p];return typeof v==='function'?v.bind(t):v;
+      }});
+      Object.defineProperty(window,'indexedDB',{configurable:true,get:function(){return _iproxy;}});
+    }
+  }catch(e){}}
   // The app's router reads the page path. Show it the portal's own path
   // under the asset base, so it opens the same screen (e.g. account/login).
   try{
