@@ -222,13 +222,22 @@ export default {
       // A popup or page the portal opens without our flow parameter must stay
       // in the same session: fall back to the last flow used for this portal
       // in this browser (remembered in a relay cookie).
+      // SPA portals (OVI, SISALRIL) llevan su flow en cada petición que el
+      // interceptor reescribe, y en cada enlace y redirección, así que no
+      // necesitan el fallback de "último flujo". Ese fallback es UNA cookie
+      // compartida por todas las pestañas del mismo portal: con dos empresas
+      // abiertas, una petición sin flow tomaría la sesión de la otra empresa.
+      // Por eso solo se usa en portales no-SPA (p. ej. pop-ups de la DGII que
+      // se abren sin flow). Así se blinda el serp_lastflow_ contra fugas entre
+      // empresas en el Ministerio de Trabajo y SISALRIL.
+      const isSpaHost = SPA_PROXY_HOSTS.has(target.hostname);
       const lastFlowName = 'serp_lastflow_' + portalKey(target.hostname);
-      if (!portalFlow) {
+      if (!portalFlow && !isSpaHost) {
         const remembered = (request.headers.get('Cookie') || '').split(';').map(v => v.trim()).find(v => v.startsWith(lastFlowName + '='));
         const value = remembered ? remembered.slice(lastFlowName.length + 1) : '';
         if (/^[A-Za-z0-9_-]{6,120}$/.test(value)) { portalFlow = value; flowCookiePrefix = 'serp_' + portalFlow + '_'; }
       }
-      const lastFlowCookie = portalFlow ? lastFlowName + '=' + portalFlow + '; Path=/; HttpOnly; Secure; SameSite=Lax' : '';
+      const lastFlowCookie = (portalFlow && !isSpaHost) ? lastFlowName + '=' + portalFlow + '; Path=/; HttpOnly; Secure; SameSite=Lax' : '';
 
       // Cache the raw login page HTML (without autofill script) for 2 minutes
       // so repeat opens of slow government portals are nearly instant.
@@ -265,7 +274,11 @@ export default {
               const scopedCookies = portalCookie.split(';').map(v => v.trim()).filter(v => v.startsWith(flowCookiePrefix)).map(v => v.slice(flowCookiePrefix.length));
               if (scopedCookies.length) forwardHeaders.Cookie = scopedCookies.join('; ');
             } else {
-              forwardHeaders.Cookie = portalCookie;
+              // Sin flow: nunca reenviar las cookies de otra pestaña scoped por
+              // empresa (serp_<flow>_name). Solo pasan las cookies propias del
+              // portal que no son nuestras.
+              const nonScoped = portalCookie.split(';').map(v => v.trim()).filter(v => v && !v.startsWith('serp_'));
+              if (nonScoped.length) forwardHeaders.Cookie = nonScoped.join('; ');
             }
           }
           if (request.method === 'POST' && request.headers.get('Content-Type')) forwardHeaders['Content-Type'] = request.headers.get('Content-Type');
@@ -1174,8 +1187,11 @@ export default {
       // flow (serp_<flow>_name). Their background requests send the flow too.
       const apiFlow = /^[A-Za-z0-9_-]{6,120}$/.test(reqUrl.searchParams.get('flow') || '') ? reqUrl.searchParams.get('flow') : '';
       const apiPrefix = apiFlow ? 'serp_' + apiFlow + '_' : '';
+      // Scope las cookies al flujo de esta pestaña. Sin flow no se envía
+      // ninguna cookie de relay: una llamada de API sin flow jamás debe heredar
+      // la sesión de otra empresa (serp_<flow>_name pertenece a una pestaña).
+      for (const k of Object.keys(fwdHeaders)) if (k.toLowerCase() === 'cookie') delete fwdHeaders[k];
       if (apiPrefix) {
-        for (const k of Object.keys(fwdHeaders)) if (k.toLowerCase() === 'cookie') delete fwdHeaders[k];
         const scoped = (request.headers.get('Cookie') || '').split(';').map(v => v.trim()).filter(v => v.startsWith(apiPrefix)).map(v => v.slice(apiPrefix.length));
         if (scoped.length) fwdHeaders['Cookie'] = scoped.join('; ');
       }

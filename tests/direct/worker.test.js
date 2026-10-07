@@ -164,6 +164,37 @@ test('Trabajo (OVI): cada empresa tiene su propia sesión (cookies por flujo), n
   assert.match(html, /__serpf_'\+F\+'__/, 'prefijo de localStorage por flujo');
 });
 
+test('Blindaje serp_lastflow_: un portal SPA (OVI) sin flow no hereda el último flujo recordado', async () => {
+  // Con dos empresas abiertas, una petición sin flow NO debe tomar la sesión
+  // de otra empresa a través de la cookie compartida serp_lastflow_.
+  await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login'), {
+    headers: { Cookie: 'serp_lastflow_mt_gob_do=flowAAAAAA; serp_flowAAAAAA_token=SESION-A' },
+  }));
+  const fwd = seen.headers.Cookie || seen.headers.cookie || '';
+  assert.doesNotMatch(fwd, /SESION-A/, 'no hereda la sesión de otra empresa en un portal SPA');
+});
+
+test('Blindaje serp_lastflow_: un portal SPA no escribe la cookie compartida de último flujo', async () => {
+  const res = await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login') + '&flow=flow123456'));
+  assert.ok(!res.headers.getSetCookie().some(c => c.startsWith('serp_lastflow_')), 'OVI no guarda serp_lastflow_ (evita la fuga entre pestañas)');
+});
+
+test('Blindaje /api-proxy: sin flow no reenvía ninguna cookie de relay al portal', async () => {
+  await worker.fetch(new Request('https://relay.test/api-proxy?url=' + encodeURIComponent('https://api.mt.gob.do/auth/me'), {
+    headers: { Cookie: 'serp_flowAAAAAA_token=SESION-A; serp_flowBBBBBB_token=SESION-B' },
+  }));
+  assert.ok(!(seen.headers.Cookie || seen.headers.cookie), 'una llamada de API sin flow no lleva cookies');
+});
+
+test('Blindaje /api-proxy: con flow solo viaja la cookie de esa empresa', async () => {
+  await worker.fetch(new Request('https://relay.test/api-proxy?url=' + encodeURIComponent('https://api.mt.gob.do/auth/me') + '&flow=flowBBBBBB', {
+    headers: { Cookie: 'serp_flowAAAAAA_token=SESION-A; serp_flowBBBBBB_token=SESION-B' },
+  }));
+  const fwd = seen.headers.Cookie || seen.headers.cookie || '';
+  assert.match(fwd, /token=SESION-B/, 'envía la sesión de la empresa del flujo');
+  assert.doesNotMatch(fwd, /SESION-A/, 'no envía la sesión de otra empresa');
+});
+
 test('Trabajo (OVI): el aviso "Portal no disponible" no tapa la app después de entrar', async () => {
   const html = await (await worker.fetch(new Request('https://relay.test/proxy?url=' + encodeURIComponent('https://ovi.mt.gob.do/account/login')))).text();
   assert.match(html, /!document\.querySelector\('input,button,a\[href\]'\)&&shown\.length<40/);
