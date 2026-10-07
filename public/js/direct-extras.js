@@ -106,6 +106,9 @@
 
     box.querySelectorAll('[data-enter]').forEach(b => b.addEventListener('click', () => enterCompany(b.dataset.enter)));
     box.querySelectorAll('[data-fix]').forEach(b => b.addEventListener('click', () => openCompanyModal(b.dataset.fix)));
+    // Cargar el logo oficial (favicon limpio) en los cuadritos de favoritos y
+    // recientes; sin esto se quedaban con el SVG de respaldo dibujado a mano.
+    if (typeof hydrateLogos === 'function') hydrateLogos(box);
   };
 
   // Vencimientos fijos del mes en RD: 606/607 el día 15, IT-1/TSS el día 20.
