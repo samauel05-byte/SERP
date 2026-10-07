@@ -492,6 +492,25 @@ export default {
     var _proxy=new Proxy(_ls,_h);
     Object.defineProperty(window,'localStorage',{configurable:true,get:function(){return _proxy;}});
   }catch(e){}}
+  // IndexedDB is also shared by every tab on the relay origin. Some SPAs keep
+  // their session token (or auth state) in an IndexedDB store, so a second
+  // company would inherit the first company's session the same way. Namespace
+  // each database name per flow so every company's tab has its own databases.
+  if(F){try{
+    var _idb=window.indexedDB;
+    if(_idb){
+      var _ipfx='__serpf_'+F+'__';
+      var _iopen=_idb.open.bind(_idb), _idel=_idb.deleteDatabase.bind(_idb);
+      var _idbs=_idb.databases?_idb.databases.bind(_idb):null;
+      var _iwrap={
+        open:function(name,ver){return ver===undefined?_iopen(_ipfx+name):_iopen(_ipfx+name,ver);},
+        deleteDatabase:function(name){return _idel(_ipfx+name);},
+        databases:_idbs?function(){return _idbs().then(function(l){return l.filter(function(d){return d.name&&d.name.indexOf(_ipfx)===0;}).map(function(d){return {name:d.name.slice(_ipfx.length),version:d.version};});});}:undefined,
+        cmp:function(a,b){return _idb.cmp(a,b);}
+      };
+      Object.defineProperty(window,'indexedDB',{configurable:true,get:function(){return _iwrap;}});
+    }
+  }catch(e){}}
   // The app's router reads the page path. Show it the portal's own path
   // under the asset base, so it opens the same screen (e.g. account/login).
   try{

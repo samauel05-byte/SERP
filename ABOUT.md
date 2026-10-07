@@ -40,7 +40,7 @@
 
 - **NALA — 607 igual que el 606**: copiar/pegar en la Herramienta de Envío y llenado del Excel con macro, también para el 607.
 - **Direct — mejoras de accesos**: favoritos y recientes, aviso de contraseña vencida, revisión de tarjetas de códigos DGII, calendario de vencimientos, historial de entradas (admin) y permisos por empresa.
-- **Relay — sesión por empresa (blindaje)**: al abrir una segunda empresa del mismo portal (p. ej. Ministerio de Trabajo o SISALRIL), su sesión ya no hereda la de la primera. Además de las cookies y el `localStorage` separados por empresa, los portales SPA ya no usan la cookie compartida de «último flujo» (`serp_lastflow_`) ni reenvían cookies de otra pestaña cuando una petición llega sin flujo.
+- **Relay — sesión por empresa (blindaje)**: al abrir una segunda empresa del mismo portal (p. ej. Ministerio de Trabajo o SISALRIL), su sesión ya no hereda la de la primera. Además de las cookies, el `localStorage` y el `IndexedDB` separados por empresa, los portales SPA ya no usan la cookie compartida de «último flujo» (`serp_lastflow_`) ni reenvían cookies de otra pestaña cuando una petición llega sin flujo.
 - **SISALRIL — panel semi-automático**: como su login con Keycloak impide el auto-login por relay, Direct guía el acceso en 2 pasos (copia correo y contraseña con un toque).
 
 Para el detalle técnico de cada módulo y portal, ver [`README.md`](README.md) y `docs/`.

@@ -162,6 +162,9 @@ test('Trabajo (OVI): cada empresa tiene su propia sesión (cookies por flujo), n
   // El localStorage también se separa por empresa (el OVI guarda su sesión ahí).
   assert.match(html, /Object\.defineProperty\(window,'localStorage'/, 'aísla localStorage por flujo');
   assert.match(html, /__serpf_'\+F\+'__/, 'prefijo de localStorage por flujo');
+  // El IndexedDB también se separa por empresa (algunas SPA guardan la sesión ahí).
+  assert.match(html, /Object\.defineProperty\(window,'indexedDB'/, 'aísla IndexedDB por flujo');
+  assert.match(html, /_iopen\(_ipfx\+name/, 'prefija el nombre de la base de datos por flujo');
 });
 
 test('Blindaje serp_lastflow_: un portal SPA (OVI) sin flow no hereda el último flujo recordado', async () => {
