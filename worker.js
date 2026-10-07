@@ -452,6 +452,33 @@ export default {
   // request carries it, so /api-proxy forwards and stores only this tab's cookies.
   var F='${portalFlow}';
   var FQ=F?'&flow='+encodeURIComponent(F):'';
+  // localStorage is shared by every tab on the relay origin, so a SPA that
+  // keeps its session token there (Ministerio de Trabajo, SISALRIL) would let
+  // a second company inherit the first company's session. Namespace it per
+  // flow so each company's tab has its own storage. sessionStorage is already
+  // per-tab, so it needs no partition.
+  if(F){try{
+    var _ls=window.localStorage, _pfx='__serpf_'+F+'__';
+    var _h={
+      get:function(t,p){
+        if(p==='getItem')return function(k){return t.getItem(_pfx+k);};
+        if(p==='setItem')return function(k,v){return t.setItem(_pfx+k,String(v));};
+        if(p==='removeItem')return function(k){return t.removeItem(_pfx+k);};
+        if(p==='clear')return function(){var a=[],i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)a.push(k);}a.forEach(function(k){t.removeItem(k);});};
+        if(p==='key')return function(n){var a=[],i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)a.push(k.slice(_pfx.length));}return n>=0&&n<a.length?a[n]:null;};
+        if(p==='length'){var c=0,i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)c++;}return c;}
+        if(typeof t[p]==='function')return t[p].bind(t);
+        var v=t.getItem(_pfx+p);return v===null?undefined:v;
+      },
+      set:function(t,p,v){t.setItem(_pfx+String(p),String(v));return true;},
+      deleteProperty:function(t,p){t.removeItem(_pfx+String(p));return true;},
+      has:function(t,p){return t.getItem(_pfx+p)!==null;},
+      ownKeys:function(t){var a=[],i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)a.push(k.slice(_pfx.length));}return a;},
+      getOwnPropertyDescriptor:function(t,p){var v=t.getItem(_pfx+p);return v===null?undefined:{value:v,writable:true,enumerable:true,configurable:true};}
+    };
+    var _proxy=new Proxy(_ls,_h);
+    Object.defineProperty(window,'localStorage',{configurable:true,get:function(){return _proxy;}});
+  }catch(e){}}
   // The app's router reads the page path. Show it the portal's own path
   // under the asset base, so it opens the same screen (e.g. account/login).
   try{

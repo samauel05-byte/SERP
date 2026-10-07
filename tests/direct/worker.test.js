@@ -159,6 +159,9 @@ test('Trabajo (OVI): cada empresa tiene su propia sesión (cookies por flujo), n
     method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' },
   }));
   assert.ok(res.headers.getSetCookie().some(c => /^serp_flow123456_/.test(c)), 'la sesión de OVI queda separada por empresa');
+  // El localStorage también se separa por empresa (el OVI guarda su sesión ahí).
+  assert.match(html, /Object\.defineProperty\(window,'localStorage'/, 'aísla localStorage por flujo');
+  assert.match(html, /__serpf_'\+F\+'__/, 'prefijo de localStorage por flujo');
 });
 
 test('Trabajo (OVI): el aviso "Portal no disponible" no tapa la app después de entrar', async () => {
