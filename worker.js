@@ -475,7 +475,7 @@ export default {
       },
       set:function(t,p,v){if(_sym(p)){t[p]=v;return true;}t.setItem(_pfx+String(p),String(v));return true;},
       deleteProperty:function(t,p){if(_sym(p)){delete t[p];return true;}t.removeItem(_pfx+String(p));return true;},
-      has:function(t,p){if(_sym(p))return p in t;return t.getItem(_pfx+p)!==null;},
+      has:function(t,p){if(_sym(p))return p in t;if(p in t)return true;return t.getItem(_pfx+p)!==null;},
       ownKeys:function(t){var a=[],i,k;for(i=0;i<t.length;i++){k=t.key(i);if(k&&k.indexOf(_pfx)===0)a.push(k.slice(_pfx.length));}return a;},
       getOwnPropertyDescriptor:function(t,p){if(_sym(p))return Object.getOwnPropertyDescriptor(t,p);var v=t.getItem(_pfx+p);return v===null?undefined:{value:v,writable:true,enumerable:true,configurable:true};}
     };
@@ -492,6 +492,25 @@ export default {
         var v=t[p];return typeof v==='function'?v.bind(t):v;
       }});
       Object.defineProperty(window,'indexedDB',{configurable:true,get:function(){return _iproxy;}});
+    }
+  }catch(e){}}
+  // document.cookie (cookies escritas por la propia app, lado cliente): el
+  // OVI/SISALRIL (framework ABP) guarda ahí su token de sesión (Abp.AuthToken,
+  // Abp.AuthRefreshToken) SIN pasar por el Set-Cookie del servidor, así que el
+  // relay no lo prefijaba y se compartía entre todas las pestañas del origen —
+  // la causa real de que la segunda empresa heredara la sesión de la primera.
+  // En modo aislamiento prefijamos el nombre de cada cookie por empresa.
+  if(F&&ISO){try{
+    var _cd=Object.getOwnPropertyDescriptor(Document.prototype,'cookie')||(window.HTMLDocument&&Object.getOwnPropertyDescriptor(HTMLDocument.prototype,'cookie'));
+    if(_cd&&_cd.get&&_cd.set){
+      var _cpfx='serpfc_'+F.replace(/[^A-Za-z0-9_]/g,'')+'_';
+      Object.defineProperty(document,'cookie',{configurable:true,
+        get:function(){
+          var raw=_cd.get.call(document)||'';
+          return raw.split(';').map(function(c){return c.trim();}).filter(function(c){return c.indexOf(_cpfx)===0;}).map(function(c){return c.slice(_cpfx.length);}).join('; ');
+        },
+        set:function(v){ _cd.set.call(document,_cpfx+String(v)); }
+      });
     }
   }catch(e){}}
   // Canales/estado que viven en el ORIGEN (no por empresa): un BroadcastChannel,
