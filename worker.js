@@ -578,7 +578,44 @@ export default {
   ['UNSENT','OPENED','HEADERS_RECEIVED','LOADING','DONE'].forEach(function(k,i){try{if(XHRProxy[k]!==i)Object.defineProperty(XHRProxy,k,{value:i});}catch(e){}});
   window.XMLHttpRequest=XHRProxy;
 })();<\/script>`;
-          spaHtml = spaHtml.replace(/<head(\s[^>]*)?>/i, (m) => m + interceptor);
+
+          // Diagnóstico (solo en modo aislamiento): botón flotante que junta la
+          // info clave de ESTA pestaña (flujo, cookies, almacenamiento, peticiones
+          // y el texto visible que identifica a la empresa) y la copia, para
+          // comparar entre empresas y encontrar qué comparte la sesión.
+          const diagScript = portalFlow.startsWith('iso-') ? `<script>(function(){
+  var F=${JSON.stringify(portalFlow)};
+  function gather(cb){
+    var dbs=[];
+    function finish(){
+      var u='(?)';
+      try{var h=location.hash.slice(1)||sessionStorage.getItem('serp-relay-autofill-payload')||'';var p=JSON.parse(decodeURIComponent(atob(h)));u=(p.user||'').slice(0,3)+'***';}catch(e){}
+      var ls=[];try{for(var i=0;i<localStorage.length;i++)ls.push(localStorage.key(i));}catch(e){ls=['(err)'];}
+      var ck=[];try{ck=document.cookie.split(';').map(function(c){return c.trim().split('=')[0];}).filter(Boolean);}catch(e){ck=['(err)'];}
+      var d={flujo:F,usuarioEnHash:u,url:location.href.slice(0,150),tieneCampoPassword:!!document.querySelector('input[type=password]'),localStorage:ls.slice(0,40),cookies:ck.slice(0,40),indexedDB:dbs,peticiones:(window.__serpRelayRequests||[]).slice(-18),errores:(window.__serpRelayErrors||[]).slice(0,6),textoVisible:((document.body&&document.body.innerText)||'').replace(/\\s+/g,' ').slice(0,350)};
+      cb(JSON.stringify(d,null,1));
+    }
+    try{ if(window.indexedDB&&indexedDB.databases){ indexedDB.databases().then(function(l){dbs=(l||[]).map(function(x){return x.name;});finish();},finish);} else finish(); }catch(e){ finish(); }
+  }
+  function mkBtn(){
+    if(document.getElementById('serp-diag-btn'))return;
+    var b=document.createElement('button');b.id='serp-diag-btn';b.textContent='🔍 Diagnóstico';
+    b.style.cssText='position:fixed;z-index:2147483647;bottom:14px;right:14px;background:#0b1b33;color:#fff;border:2px solid #22c55e;border-radius:10px;padding:10px 14px;font:600 13px system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.45)';
+    b.onclick=function(){ gather(function(txt){
+      var ta=document.getElementById('serp-diag-ta');
+      if(!ta){ta=document.createElement('textarea');ta.id='serp-diag-ta';ta.readOnly=true;ta.style.cssText='position:fixed;z-index:2147483647;bottom:58px;right:14px;width:min(92vw,460px);height:48vh;background:#0b1b33;color:#d6e4ff;border:2px solid #22c55e;border-radius:10px;padding:10px;font:12px/1.4 monospace;white-space:pre;overflow:auto';document.body.appendChild(ta);}
+      ta.value=txt; ta.focus(); ta.select();
+      try{ navigator.clipboard.writeText(txt); b.textContent='✅ Copiado — pégalo en el chat'; }catch(e){ b.textContent='Selecciona el texto y cópialo ↑'; }
+      setTimeout(function(){b.textContent='🔍 Diagnóstico';},4500);
+    });};
+    document.body.appendChild(b);
+  }
+  function boot(){ if(document.body) mkBtn(); else setTimeout(boot,300); }
+  if(document.readyState!=='loading') setTimeout(boot,1500); else window.addEventListener('DOMContentLoaded',function(){setTimeout(boot,1500);});
+  setTimeout(boot,4000);
+})();<\/script>` : '';
+
+          spaHtml = spaHtml.replace(/<head(\s[^>]*)?>/i, (m) => m + interceptor + diagScript);
 
           // Inject autofill script — waitAndRun polls until React renders the form
           const spaAutofill = `<script>
