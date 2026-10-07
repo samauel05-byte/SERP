@@ -18,6 +18,11 @@ const ALLOWED_HOSTS = [
   'www.sisaril.gob.do',
   'portal.sisaril.gob.do',
   'virtual.sisalril.gob.do',
+  // SISALRIL — Oficina Virtual (Angular + Keycloak)
+  'idp.sisalril.gob.do',
+  'ovgateway.sisalril.gob.do',
+  'legacyofv.sisalril.gob.do',
+  'pidsimongateway.sisalril.gob.do',
   'cardnet.com.do',
   'www.cardnet.com.do',
   // Azul
@@ -53,7 +58,11 @@ const ALLOWED_HOSTS = [
 ];
 const CORS_ORIGIN = 'https://direct-save.vercel.app';
 const WORKER_ORIGIN = 'https://portal-rd-relay.samauel05.workers.dev';
-const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do', 'virtual.sisalril.gob.do']);
+const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do', 'virtual.sisalril.gob.do', 'idp.sisalril.gob.do']);
+// Portales SPA cuya familia de hosts (API, IDP, gateway) se enruta toda por el
+// relay y que, por su login OAuth/Keycloak, necesitan reescribir el redirect_uri
+// del relay al dominio real para que el proveedor de identidad lo acepte.
+const SISALRIL_HOSTS = ['virtual.sisalril.gob.do', 'idp.sisalril.gob.do', 'ovgateway.sisalril.gob.do', 'legacyofv.sisalril.gob.do', 'pidsimongateway.sisalril.gob.do'];
 
 const SUBMIT_HTML = `<!doctype html>
 <html lang="es">
@@ -203,7 +212,12 @@ export default {
     }
 
     if (reqUrl.pathname === '/proxy') {
-      const targetUrl = reqUrl.searchParams.get('url');
+      let targetUrl = reqUrl.searchParams.get('url');
+      // SISALRIL (Keycloak): el redirect_uri de la autorización apunta al origen
+      // del relay; lo convertimos al dominio real para que el IDP no dé 400.
+      if (targetUrl && SISALRIL_HOSTS.some(h => targetUrl.includes('://' + h + '/'))) {
+        targetUrl = fixRedirectUriInUrl(targetUrl);
+      }
       const rawFlow = reqUrl.searchParams.get('flow') || '';
       // The flow is not a credential; it scopes portal cookies to one client
       // tab so opening a second company cannot inherit the first company's
@@ -444,9 +458,16 @@ export default {
           spaHtml = spaHtml.replace(/<base\s+href=["']\/["']\s*\/?>/gi, '');
 
           // Inject fetch/XHR interceptor at top of <head> so it runs before React loads
+          const isSisalrilHost = SISALRIL_HOSTS.includes(hostname);
+          const extraApiHosts = isSisalrilHost ? SISALRIL_HOSTS : ['api.mt.gob.do'];
           const interceptor = `<script>(function(){
   var R='${WORKER_ORIGIN}';
   var O='${spaOrigin}';
+  // Hosts cuyas llamadas de API cruzadas se enrutan por el relay (API/IDP/gateway).
+  var XAPI=${JSON.stringify(extraApiHosts)};
+  // SISALRIL (Keycloak): enruta también las navegaciones de login por el relay.
+  var SIS=${isSisalrilHost ? 'true' : 'false'};
+  var ALLOW=${JSON.stringify(ALLOWED_HOSTS)};
   // Flow id scopes this tab's portal cookies (serp_<flow>_name) so a second
   // company's session never inherits the first company's. Every background
   // request carries it, so /api-proxy forwards and stores only this tab's cookies.
@@ -563,11 +584,25 @@ export default {
     var s=String(u);
     if(s.charAt(0)==='/') return R+'/api-proxy?url='+encodeURIComponent(O+s)+FQ;
     if(s.indexOf(O)===0) return R+'/api-proxy?url='+encodeURIComponent(s)+FQ;
-    // OVI serves its application at ovi.mt.gob.do but authenticates through
-    // the separate public API domain. Keep that request same-origin too.
-    if(s.indexOf('https://api.mt.gob.do')===0) return R+'/api-proxy?url='+encodeURIComponent(s)+FQ;
+    // La app autentica contra dominios de API/IDP/gateway aparte (OVI: api.mt.gob.do;
+    // SISALRIL: idp/ovgateway/...). Esas llamadas también pasan por el relay.
+    for(var i=0;i<XAPI.length;i++){ var pre='https://'+XAPI[i]; if(s.indexOf(pre)===0){ var c=s.charAt(pre.length); if(c===''||c==='/'||c==='?'||c==='#') return R+'/api-proxy?url='+encodeURIComponent(s)+FQ; } }
     return null;
   }
+  // SISALRIL: su login con Keycloak hace una navegación de nivel superior al IDP
+  // (idp.sisalril.gob.do). Sin interceptarla, el navegador saldría del relay al
+  // dominio real con un redirect_uri del relay que Keycloak rechaza (400). Aquí
+  // enrutamos esas navegaciones a hosts permitidos por /proxy (el relay reescribe
+  // el redirect_uri al dominio real del lado servidor). Solo para SISALRIL.
+  if(SIS){try{
+    var _isAllow=function(h){for(var i=0;i<ALLOW.length;i++){if(h===ALLOW[i]||h.length>ALLOW[i].length&&h.slice(-(ALLOW[i].length+1))==='.'+ALLOW[i])return true;}return false;};
+    var _pnav=function(href){try{var u=new URL(href,location.href);if(u.protocol!=='https:'&&u.protocol!=='http:')return null;if(u.origin===location.origin)return null;if(_isAllow(u.hostname))return R+'/proxy?url='+encodeURIComponent(u.href)+FQ;}catch(e){}return null;};
+    var _la=window.location.assign.bind(window.location), _lr=window.location.replace.bind(window.location);
+    try{Object.defineProperty(window.location,'assign',{configurable:true,value:function(h){var p=_pnav(h);_la(p||h);}});}catch(e){}
+    try{Object.defineProperty(window.location,'replace',{configurable:true,value:function(h){var p=_pnav(h);_lr(p||h);}});}catch(e){}
+    try{var _hd=Object.getOwnPropertyDescriptor(Location.prototype,'href');if(_hd&&_hd.set){Object.defineProperty(window.location,'href',{configurable:true,get:function(){return _hd.get.call(window.location);},set:function(v){var p=_pnav(v);_hd.set.call(window.location,p||v);}});}}catch(e){}
+    try{if(window.navigation&&navigation.addEventListener){navigation.addEventListener('navigate',function(e){try{var p=_pnav(e.destination&&e.destination.url);if(p){if(e.preventDefault)e.preventDefault();_la(p);}}catch(x){}});}}catch(e){}
+  }catch(e){}}
   var _f=window.fetch;
   window.fetch=function(input,init){
     var url=typeof input==='string'?input:(input&&input.url?input.url:String(input));
@@ -601,7 +636,7 @@ export default {
           // info clave de ESTA pestaña (flujo, cookies, almacenamiento, peticiones
           // y el texto visible que identifica a la empresa) y la copia, para
           // comparar entre empresas y encontrar qué comparte la sesión.
-          const diagScript = portalFlow.startsWith('iso-') ? `<script>(function(){
+          const diagScript = (portalFlow.startsWith('iso-') || SISALRIL_HOSTS.includes(hostname)) ? `<script>(function(){
   var F=${JSON.stringify(portalFlow)};
   function gather(cb){
     var dbs=[];
@@ -1300,6 +1335,15 @@ export default {
       let body = null;
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         body = await request.arrayBuffer();
+        // SISALRIL (Keycloak): el POST de token lleva el redirect_uri en el
+        // cuerpo; debe coincidir con el usado en la autorización (el dominio
+        // real), así que lo reescribimos igual que allí.
+        const ctype = (request.headers.get('Content-Type') || '').toLowerCase();
+        if (target.hostname === 'idp.sisalril.gob.do' && ctype.includes('x-www-form-urlencoded') && body) {
+          const fixed = fixRedirectUriInBody(new TextDecoder().decode(body));
+          body = new TextEncoder().encode(fixed);
+          for (const k of Object.keys(fwdHeaders)) if (k.toLowerCase() === 'content-length') delete fwdHeaders[k];
+        }
       }
 
       try {
@@ -1445,6 +1489,53 @@ export default {
 // The browser is on workers.dev, so a portal cookie loses its Domain, is
 // scoped to the launch's flow and is sent back to the portal by the relay.
 // DGII lives on several hostnames (www.dgii.gov.do, dgii.gov.do, ...): one key per portal.
+// Reescribe una URL del relay a su URL real:
+//   WORKER_ORIGIN/r/<host>/<path>  → https://<host>/<path>
+//   WORKER_ORIGIN/proxy?url=<real> → <real>
+// Sirve para convertir el redirect_uri que el adaptador de Keycloak arma sobre
+// el origen del relay en el dominio real que el IDP tiene permitido (si no, 400).
+function realizeRelayUrl(u) {
+  try {
+    const url = new URL(u);
+    if (url.origin !== WORKER_ORIGIN) return u;
+    if (url.pathname === '/proxy') {
+      const inner = url.searchParams.get('url');
+      if (inner) return inner;
+    }
+    if (url.pathname.startsWith('/r/')) {
+      const rest = url.pathname.slice(3);
+      const slash = rest.indexOf('/');
+      const host = slash < 0 ? rest : rest.slice(0, slash);
+      const path = slash < 0 ? '/' : rest.slice(slash);
+      if (ALLOWED_HOSTS.some(h => host === h || host.endsWith('.' + h))) {
+        return 'https://' + host + path + url.search + url.hash;
+      }
+    }
+  } catch (e) {}
+  return u;
+}
+// Convierte el redirect_uri (si apunta al relay) al dominio real, en una URL.
+function fixRedirectUriInUrl(targetUrl) {
+  try {
+    const url = new URL(targetUrl);
+    const ru = url.searchParams.get('redirect_uri');
+    if (ru) {
+      const real = realizeRelayUrl(ru);
+      if (real !== ru) { url.searchParams.set('redirect_uri', real); return url.href; }
+    }
+  } catch (e) {}
+  return targetUrl;
+}
+// Igual, pero en un cuerpo application/x-www-form-urlencoded (el POST de token).
+function fixRedirectUriInBody(bodyText) {
+  try {
+    return bodyText.replace(/(^|&)redirect_uri=([^&]*)/g, (m, p, v) => {
+      const real = realizeRelayUrl(decodeURIComponent(v.replace(/\+/g, '%20')));
+      return p + 'redirect_uri=' + encodeURIComponent(real);
+    });
+  } catch (e) { return bodyText; }
+}
+
 function portalKey(hostname) {
   const parts = String(hostname).toLowerCase().split('.');
   return parts.slice(-3).join('_').replace(/[^a-z0-9_]/g, '');
