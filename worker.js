@@ -494,6 +494,39 @@ export default {
       Object.defineProperty(window,'indexedDB',{configurable:true,get:function(){return _iproxy;}});
     }
   }catch(e){}}
+  // Canales/estado que viven en el ORIGEN (no por empresa): un BroadcastChannel,
+  // un SharedWorker o un Service Worker dejarían que una segunda empresa viera la
+  // sesión de la primera aunque el almacenamiento esté aislado. En modo
+  // aislamiento los separamos por flujo (o desactivamos, en el caso del SW).
+  if(F&&ISO){try{
+    if(window.BroadcastChannel){
+      var _BC=window.BroadcastChannel;
+      var _BCw=function(name){return new _BC('__serpf_'+F+'__'+String(name));};
+      _BCw.prototype=_BC.prototype;
+      window.BroadcastChannel=_BCw;
+    }
+  }catch(e){}}
+  if(F&&ISO){try{
+    if(window.SharedWorker){
+      var _SW=window.SharedWorker;
+      var _SWw=function(url,opts){
+        var o=(typeof opts==='string')?{name:opts}:(opts||{});
+        o=Object.assign({},o,{name:'__serpf_'+F+'__'+(o.name||'')});
+        return new _SW(url,o);
+      };
+      _SWw.prototype=_SW.prototype;
+      window.SharedWorker=_SWw;
+    }
+  }catch(e){}}
+  if(F&&ISO){try{
+    // El Service Worker es de origen y su caché/estado se compartiría entre todas
+    // las empresas. En modo aislamiento lo desactivamos (la app funciona sin él,
+    // solo pierde el modo offline) y quitamos los que ya estuvieran registrados.
+    if(navigator.serviceWorker){
+      try{ if(navigator.serviceWorker.getRegistrations) navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){try{r.unregister();}catch(e){}});}).catch(function(){}); }catch(e){}
+      try{ Object.defineProperty(navigator.serviceWorker,'register',{configurable:true,value:function(){return Promise.reject(new Error('serp-iso: service worker deshabilitado'));}}); }catch(e){}
+    }
+  }catch(e){}}
   // The app's router reads the page path. Show it the portal's own path
   // under the asset base, so it opens the same screen (e.g. account/login).
   try{
