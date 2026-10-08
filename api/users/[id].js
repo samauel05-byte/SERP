@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
 
       if (password) {
         const { error } = await supabase.auth.admin.updateUserById(id, { password });
-        if (error) return res.status(400).json({ error: error.message });
+        if (error) { console.error(error); return res.status(400).json({ error: 'No se pudo actualizar la contraseña' }); }
       }
 
       const update = {};
@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
 
       if (Object.keys(update).length > 0) {
         const { error } = await supabase.from('direct_profiles').update(update).eq('id', id).eq('tenant_id', session.tenantId);
-        if (error) return res.status(500).json({ error: error.message });
+        if (error) { console.error(error); return res.status(500).json({ error: 'Error interno del servidor' }); }
       }
 
       return res.json({ ok: true });
@@ -48,7 +48,7 @@ module.exports = async (req, res) => {
     if (req.method === 'DELETE') {
       if (session.userId === id) return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
       const { error } = await supabase.auth.admin.deleteUser(id);
-      if (error) return res.status(400).json({ error: error.message });
+      if (error) { console.error(error); return res.status(400).json({ error: 'No se pudo eliminar el usuario' }); }
       return res.json({ ok: true });
     }
 

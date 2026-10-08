@@ -63,5 +63,5 @@ module.exports = async (req, res) => {
     if (error?.code === '23505') return res.status(409).json({ error: 'Ese cliente ya existe en esta empresa.' });
     if (error) throw error;
     return res.status(201).json({ ok: true, client: data });
-  } catch (error) { return res.status(500).json({ error: error.message || 'Error al gestionar clientes.' }); }
+  } catch (error) { console.error(error); return res.status(500).json({ error: 'Error al gestionar clientes.' }); }
 };
