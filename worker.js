@@ -232,6 +232,11 @@ export default {
       if (!ALLOWED_HOSTS.some(h => target.hostname === h || target.hostname.endsWith('.' + h))) {
         return new Response('Portal no permitido', { status: 403 });
       }
+      // Solo https: evita que un enlace http:// fuerce al relay a traer el
+      // portal en texto plano (degradación interceptable entre CF y el portal).
+      if (target.protocol !== 'https:') {
+        return new Response('Esquema no permitido', { status: 403 });
+      }
 
       // A popup or page the portal opens without our flow parameter must stay
       // in the same session: fall back to the last flow used for this portal
@@ -1309,6 +1314,10 @@ export default {
 
       if (!ALLOWED_HOSTS.some(h => target.hostname === h || target.hostname.endsWith('.' + h))) {
         return new Response('Portal no permitido', { status: 403 });
+      }
+      // Solo https (igual que /proxy): nunca traer el portal en texto plano.
+      if (target.protocol !== 'https:') {
+        return new Response('Esquema no permitido', { status: 403 });
       }
 
       // Forward browser headers to OVI, replacing host/origin/referer with OVI's values
