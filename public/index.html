@@ -896,6 +896,10 @@ async function apiRequest(path, options={}) {
   }
   return data;
 }
+// Escapa texto antes de insertarlo con innerHTML. Los nombres de empresa y
+// usuarios vienen descifrados de la bóveda (texto libre) y NO deben ejecutarse
+// como HTML/JS (XSS). Usar en toda interpolación de datos de credenciales.
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const A = {
   get:  p     => apiRequest(p, {signal:AbortSignal.timeout(12000), headers:authH()}),
   post: (p,b) => apiRequest(p, {method:'POST',  signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
@@ -1213,7 +1217,7 @@ async function renderUsersList() {
       list.appendChild(item);
     }
     if (!data.users?.length) list.innerHTML='<p style="color:var(--text2);font-size:13px;text-align:center;padding:24px 0">No hay usuarios. Crea el primero.</p>';
-  } catch(e){ list.innerHTML=`<p style="color:var(--danger);font-size:13px;padding:12px">Error: ${e.message}</p>`; }
+  } catch(e){ list.innerHTML=`<p style="color:var(--danger);font-size:13px;padding:12px">No se pudo cargar la lista de usuarios.</p>`; }
 }
 
 function toggleDirectPortals(on) {
@@ -1604,10 +1608,10 @@ async function renderCompaniesView() {
       <button class="btn-edit-co" type="button" title="Editar" aria-label="Editar empresa">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <div class="company-initial">${initial}</div>
+      <div class="company-initial">${esc(initial)}</div>
       <div class="company-info">
-        <div class="company-name">${plain.companyName||'Sin nombre'}</div>
-        <div class="company-user">${plain.username||''}</div>
+        <div class="company-name">${esc(plain.companyName||'Sin nombre')}</div>
+        <div class="company-user">${esc(plain.username||'')}</div>
       </div>
       <span class="p-play" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg></span>`;
     const enter=()=>enterCompany(cred.id);
@@ -1641,7 +1645,7 @@ function showDupeModal() {
   for (const group of _dupeGroups) {
     const name = group[0].plain.companyName || '(sin nombre)';
     html += `<div style="margin-bottom:16px">
-      <p style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin:0 0 6px">${name}</p>`;
+      <p style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin:0 0 6px">${esc(name)}</p>`;
     group.forEach((entry, i) => {
       const isNewest = i === 0;
       const badge = isNewest
@@ -1652,7 +1656,7 @@ function showDupeModal() {
       html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin-bottom:6px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">${badge}<span style="font-size:11px;color:var(--text3)">${dateStr}</span></div>
-          <div style="font-size:13px;color:var(--text);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user}</div>
+          <div style="font-size:13px;color:var(--text);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(user)}</div>
         </div>
         ${isNewest
           ? `<span style="font-size:12px;color:var(--text3);white-space:nowrap">Conservar</span>`

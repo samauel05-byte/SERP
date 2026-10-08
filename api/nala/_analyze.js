@@ -176,6 +176,6 @@ IMPORTANTE:
     const parsed = JSON.parse(raw);
     res.json({ data: parsed, tipo });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e); res.status(500).json({ error: 'Error interno del servidor' });
   }
 }

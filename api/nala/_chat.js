@@ -53,6 +53,6 @@ Si el usuario pregunta algo fuera de contabilidad dominicana, redirígelo al tem
     const reply = data.choices?.[0]?.message?.content || '';
     res.json({ reply });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e); res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
