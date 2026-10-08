@@ -602,6 +602,15 @@ export default {
     try{Object.defineProperty(window.location,'replace',{configurable:true,value:function(h){var p=_pnav(h);_lr(p||h);}});}catch(e){}
     try{var _hd=Object.getOwnPropertyDescriptor(Location.prototype,'href');if(_hd&&_hd.set){Object.defineProperty(window.location,'href',{configurable:true,get:function(){return _hd.get.call(window.location);},set:function(v){var p=_pnav(v);_hd.set.call(window.location,p||v);}});}}catch(e){}
     try{if(window.navigation&&navigation.addEventListener){navigation.addEventListener('navigate',function(e){try{var p=_pnav(e.destination&&e.destination.url);if(p){if(e.preventDefault)e.preventDefault();_la(p);}}catch(x){}});}}catch(e){}
+    // El formulario de login de Keycloak hace POST a un action del IDP real.
+    // Reescribimos el action para que pase por el relay (si no, saldría del
+    // relay y se perdería la sesión/redirect). Cubre action relativo (/r/...),
+    // /proxy y absoluto a un host permitido.
+    var _realize=function(u){try{if(u.origin===location.origin){if(u.pathname.indexOf('/r/')===0){var rest=u.pathname.slice(3);var s=rest.indexOf('/');var h=s<0?rest:rest.slice(0,s);var pth=s<0?'/':rest.slice(s);return 'https://'+h+pth+u.search+u.hash;}if(u.pathname==='/proxy'){var inner=new URLSearchParams(u.search).get('url');return inner||null;}return null;}return u.href;}catch(e){return null;}};
+    var _rwForm=function(form){try{var a=form.getAttribute('action')||location.href;var u=new URL(a,location.href);var real=_realize(u);if(real&&_isAllow(new URL(real).hostname))form.setAttribute('action',R+'/proxy?url='+encodeURIComponent(real)+FQ);}catch(e){}};
+    document.addEventListener('submit',function(e){var f=e.target;if(f&&f.tagName==='FORM')_rwForm(f);},true);
+    try{var _fs=HTMLFormElement.prototype.submit;HTMLFormElement.prototype.submit=function(){_rwForm(this);return _fs.apply(this,arguments);};}catch(e){}
+    try{var _rs=HTMLFormElement.prototype.requestSubmit;if(_rs)HTMLFormElement.prototype.requestSubmit=function(){_rwForm(this);return _rs.apply(this,arguments);};}catch(e){}
   }catch(e){}}
   var _f=window.fetch;
   window.fetch=function(input,init){
