@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Seguridad — aislamiento por firma reforzado**: los datos de IR-2 / Estimación Fiscal y la configuración (incluido el verificador de bóveda y la config de portales) ahora están ligados a la firma (tenant) a nivel de base de datos y de API. Antes IR-2 se consultaba solo por RNC, lo que podía dejar ver datos de otra firma; ahora cada firma solo accede a lo suyo. También se endurecieron las cabeceras (CSP/HSTS), el escape de datos en pantalla y la validación de entradas.
 - **Direct — abrir varias empresas a la vez (portales SPA)**: ahora se pueden abrir varias empresas del mismo portal SPA (Ministerio de Trabajo, SISALRIL) al mismo tiempo sin que la segunda herede la sesión de la primera. El relay aísla por empresa todo el estado que compartían las pestañas del mismo origen: el almacenamiento (localStorage + IndexedDB), las cookies que la propia app escribe con `document.cookie` (el token `Abp.AuthToken` del framework ABP, que era la causa real de que se repitiera la empresa) y los canales entre pestañas (BroadcastChannel y SharedWorker por empresa; Service Worker desactivado). Activo siempre, de forma transparente.
 - **Direct — logos en favoritos y recientes**: las tarjetas de inicio (favoritos y recientes) ahora cargan el logo oficial nítido de cada portal (p. ej. la cúpula del Ministerio de Trabajo) en lugar del ícono de respaldo dibujado a mano.
 - **Direct — panel de uso (admin)**: vista en vivo dentro de la app con los accesos a portales (KPIs, por día, por usuario, por portal y por hora).

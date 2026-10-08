@@ -118,6 +118,9 @@ module.exports = async (req, res) => {
       else out = await listEvents(session, req.query);
       return res.status(out.status).json(out.body);
     }
+    // Rutas CRUD de credenciales: sin tenant no hay aislamiento posible, así
+    // que se falla cerrado en lugar de operar sobre todas las firmas.
+    if (!session.tenantId) return res.status(409).json({ error: 'Falta la migración de empresas' });
     if (req.method === 'GET') {
       if (req.query.poll === '1') {
         const since = parseInt(req.query.since, 10) || 0;

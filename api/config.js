@@ -31,13 +31,13 @@ module.exports = async (req, res) => {
   }
   try {
     if (req.method === 'GET') {
-      const config = await db.getConfig();
+      const config = await db.getConfig(session.tenantId);
       return res.json({ ok: true, config });
     }
     if (req.method === 'POST') {
       const { key, value } = req.body || {};
       if (!key || value === undefined) return res.status(400).json({ error: 'key and value required' });
-      await db.setConfig(key, value);
+      await db.setConfig(session.tenantId, key, value);
       return res.json({ ok: true });
     }
     res.status(405).end();

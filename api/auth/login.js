@@ -62,12 +62,14 @@ module.exports = async (req, res) => {
       // response, sparing the browser a separate /api/config request.
       const nextSessionId = randomUUID();
       const now = new Date().toISOString();
-      const [{ profile }, { error: sessionError }, config] = await Promise.all([
+      const [{ profile }, { error: sessionError }] = await Promise.all([
         loadProfile(user.id, VAULT_COLUMNS),
         supabase.from('direct_active_sessions').upsert({ user_id: user.id, session_id: nextSessionId, issued_at: now, updated_at: now }, { onConflict: 'user_id' }),
-        db.getConfig().catch(() => null),
       ]);
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
+      // La config (incluido el verificador de bóveda) viaja con el login, pero
+      // debe ser la de la firma del usuario, así que se lee ya con su tenant.
+      const config = await db.getConfig(profile.tenant_id || null).catch(() => null);
 
       return res.json({
         ...profileResponse(profile, []),

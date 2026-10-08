@@ -5,6 +5,8 @@ module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   if (session.role !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
+  // Sin tenant no se puede garantizar el aislamiento entre firmas: fallar cerrado.
+  if (!session.tenantId) return res.status(409).json({ error: 'Falta la migración de empresas' });
   const { id } = req.query;
   try {
     if (req.method === 'PUT') {
