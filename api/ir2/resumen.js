@@ -10,6 +10,10 @@ module.exports = async (req, res) => {
   if (!allowed) {
     return res.status(403).json({ error: isEstimate ? 'Sin acceso a Estimación Fiscal' : 'Sin acceso a IR-2' });
   }
+  // Aislamiento multiempresa: toda fila de ir2_resumen pertenece a un tenant.
+  // Sin tenant no se puede garantizar el aislamiento, así que se rechaza.
+  if (!session.tenantId) return res.status(409).json({ error: 'Falta la migración de empresas' });
+  const tenantId = session.tenantId;
 
   try {
     if (req.method === 'GET') {
@@ -20,6 +24,7 @@ module.exports = async (req, res) => {
         const { data, error } = await supabase
           .from('ir2_resumen')
           .select('*')
+          .eq('tenant_id', tenantId)
           .eq('rnc', rnc)
           .eq('anio', parseInt(anio))
           .eq('tipo', tipo)
@@ -30,6 +35,7 @@ module.exports = async (req, res) => {
         const { data, error } = await supabase
           .from('ir2_resumen')
           .select('rnc, anio, nombre, tipo, updated_at')
+          .eq('tenant_id', tenantId)
           .eq('rnc', rnc)
           .eq('tipo', tipo)
           .order('anio', { ascending: false });
@@ -45,8 +51,8 @@ module.exports = async (req, res) => {
       const { data: saved, error } = await supabase
         .from('ir2_resumen')
         .upsert(
-          { rnc, anio: parseInt(anio), nombre: nombre || '', tipo, data: data || {}, updated_at: new Date().toISOString() },
-          { onConflict: 'rnc,anio,tipo' }
+          { tenant_id: tenantId, rnc, anio: parseInt(anio), nombre: nombre || '', tipo, data: data || {}, updated_at: new Date().toISOString() },
+          { onConflict: 'tenant_id,rnc,anio,tipo' }
         )
         .select()
         .single();
@@ -60,6 +66,7 @@ module.exports = async (req, res) => {
       const { error } = await supabase
         .from('ir2_resumen')
         .delete()
+        .eq('tenant_id', tenantId)
         .eq('rnc', rnc)
         .eq('anio', parseInt(anio))
         .eq('tipo', tipo);
