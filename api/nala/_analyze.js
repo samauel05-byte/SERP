@@ -1,4 +1,5 @@
 import auth from '../../lib/auth.js';
+import rl from '../../lib/rate-limit.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -7,6 +8,10 @@ export default async function handler(req, res) {
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   if (session.role !== 'admin' && !session.access_nala) {
     return res.status(403).json({ error: 'Sin acceso a NALA' });
+  }
+  // Límite por usuario: el análisis usa visión de OpenAI (costoso), ritmo acotado.
+  if (!await rl.allow(req, 'nala-analyze', 60, 60 * 1000, session.userId)) {
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Espera un momento.' });
   }
 
   const { base64, mimeType, pdfText, mode } = req.body || {};

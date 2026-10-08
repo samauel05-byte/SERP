@@ -1,5 +1,6 @@
 const supabase = require('../../lib/supabase');
 const { ensureDefaultTenant } = require('../../lib/tenant');
+const { allow } = require('../../lib/rate-limit');
 
 module.exports = async (req, res) => {
   try {
@@ -11,6 +12,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
+      if (!await allow(req, 'setup', 5, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Intenta nuevamente en unos minutos.' });
       const { count } = await supabase
         .from('direct_profiles')
         .select('*', { count: 'exact', head: true });
@@ -26,7 +28,7 @@ module.exports = async (req, res) => {
         password,
         email_confirm: true,
       });
-      if (error) return res.status(400).json({ error: error.message });
+      if (error) { console.error(error); return res.status(400).json({ error: 'No se pudo crear el administrador' }); }
 
       const { error: profileError } = await supabase.from('direct_profiles').insert({
         id: user.id,
@@ -45,7 +47,7 @@ module.exports = async (req, res) => {
       });
       if (profileError) {
         await supabase.auth.admin.deleteUser(user.id);
-        return res.status(500).json({ error: profileError.message });
+        console.error(profileError); return res.status(500).json({ error: 'Error interno del servidor' });
       }
 
       return res.json({ ok: true });

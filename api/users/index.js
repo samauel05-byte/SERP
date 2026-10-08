@@ -66,7 +66,7 @@ module.exports = async (req, res) => {
         password,
         email_confirm: true,
       });
-      if (error) return res.status(400).json({ error: error.message });
+      if (error) { console.error(error); return res.status(400).json({ error: 'No se pudo crear el usuario' }); }
 
       const { error: profileError } = await supabase.from('direct_profiles').insert({
         id: user.id,
@@ -87,7 +87,7 @@ module.exports = async (req, res) => {
       });
       if (profileError) {
         await supabase.auth.admin.deleteUser(user.id);
-        return res.status(500).json({ error: profileError.message });
+        console.error(profileError); return res.status(500).json({ error: 'Error interno del servidor' });
       }
 
       return res.json({ ok: true, id: user.id });

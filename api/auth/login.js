@@ -26,7 +26,7 @@ function profileResponse(profile, defaultPortals) {
 module.exports = async (req, res) => {
   // POST: sign in server-side, return JWT + vault data in one call
   if (req.method === 'POST') {
-    if (!allow(req, 'login')) return res.status(429).json({ error: 'Demasiados intentos. Intenta nuevamente en unos minutos.' });
+    if (!await allow(req, 'login', 10, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Intenta nuevamente en unos minutos.' });
     const { username, password } = req.body || {};
     if (typeof username !== 'string' || typeof password !== 'string' || !/^[a-zA-Z0-9._-]{3,64}$/.test(username.trim())) {
       return res.status(400).json({ error: 'Credenciales inválidas' });
