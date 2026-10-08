@@ -98,6 +98,6 @@ module.exports = async (req, res) => {
     if (e.message?.includes('already registered') || e.message?.includes('duplicate')) {
       return res.status(409).json({ error: 'Usuario ya registrado' });
     }
-    res.status(500).json({ error: e.message });
+    console.error(e); res.status(500).json({ error: 'Error interno del servidor' });
   }
 };

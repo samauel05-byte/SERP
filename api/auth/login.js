@@ -76,7 +76,7 @@ module.exports = async (req, res) => {
         config,
       });
     } catch (e) {
-      return res.status(500).json({ error: e.message });
+      console.error(e); return res.status(500).json({ error: 'Error interno del servidor' });
     }
   }
 
@@ -89,7 +89,7 @@ module.exports = async (req, res) => {
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
       return res.json(profileResponse(profile, ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul']));
     } catch (e) {
-      return res.status(500).json({ error: e.message });
+      console.error(e); return res.status(500).json({ error: 'Error interno del servidor' });
     }
   }
 

@@ -133,9 +133,18 @@ module.exports = async (req, res) => {
       if (!Array.isArray(credentials) || credentials.length === 0) {
         return res.status(400).json({ error: 'Se requiere un array de credenciales' });
       }
+      // Límites para evitar abuso/DoS y entradas malformadas. El blob cifrado
+      // (ct) puede ser grande si lleva las tarjetas DGII, pero acotado.
+      if (credentials.length > 500) {
+        return res.status(400).json({ error: 'Demasiadas credenciales en una sola petición (máx. 500)' });
+      }
+      const okStr = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
       for (const c of credentials) {
-        if (!c.id || !c.institution || !c.iv || !c.ct) {
-          return res.status(400).json({ error: 'Cada credencial requiere id, institution, iv, ct' });
+        if (!okStr(c && c.id, 200) || !okStr(c.iv, 256) || !okStr(c.ct, 200000)) {
+          return res.status(400).json({ error: 'Cada credencial requiere id, iv y ct válidos' });
+        }
+        if (typeof c.institution !== 'string' || !/^[a-z0-9_-]{1,40}$/i.test(c.institution)) {
+          return res.status(400).json({ error: 'Institución no válida' });
         }
       }
       const count = await db.upsertCredentials(session.tenantId, credentials);
@@ -143,6 +152,6 @@ module.exports = async (req, res) => {
     }
     res.status(405).end();
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e); res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
