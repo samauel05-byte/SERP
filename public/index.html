@@ -1436,14 +1436,23 @@ window.addEventListener('message', e => {
     if (e.source !== document.getElementById('dgii-modulos-frame')?.contentWindow) return;
     const rnc = String(e.data.rnc || '').trim();
     if (!rnc || !masterKey) { toast('Ingresa un RNC primero', 'warn'); return; }
+    // El RNC puede venir con guiones/espacios o estar guardado en otro campo de
+    // la credencial (rnc, cédula, usuario). Se compara por solo dígitos y contra
+    // esos campos para no fallar por formato.
+    const onlyDigits = s => String(s || '').replace(/\D/g, '');
+    const credRnc = p => String(p.rnc || p.cedula || p.rncCedula || p.username || '');
+    const target = onlyDigits(rnc);
     (async () => {
       for (const c of getCompanies('dgii')) {
-        try { const p = await C.dec(masterKey, c.iv, c.ct); if (String(p.rnc || '').trim() === rnc) {
-          // Marca este lanzamiento para que el relay muestre el botón «Traer
-          // 606/607 a SERP» en la Oficina Virtual (jalado automático).
-          window.__serpDgiiCapture = true;
-          enterCompany(c.id); return;
-        } }
+        try { const p = await C.dec(masterKey, c.iv, c.ct);
+          const cand = credRnc(p);
+          if (cand && (cand.trim() === rnc || (target && onlyDigits(cand) === target))) {
+            // Marca este lanzamiento para que el relay muestre el botón «Traer
+            // 606/607 a SERP» en la Oficina Virtual (jalado automático).
+            window.__serpDgiiCapture = true;
+            enterCompany(c.id); return;
+          }
+        }
         catch {}
       }
       toast('No encontré una credencial DGII con ese RNC', 'warn');
@@ -1454,7 +1463,7 @@ window.addEventListener('message', e => {
     if (!frame || !frame.contentWindow) return;
     const creds = getCompanies('dgii');
     Promise.all(creds.map(async c => {
-      try { const p = await C.dec(masterKey, c.iv, c.ct); return {rnc: p.rnc||'', nombre: p.companyName||''}; }
+      try { const p = await C.dec(masterKey, c.iv, c.ct); return {rnc: String(p.rnc||p.cedula||p.rncCedula||p.username||''), nombre: p.companyName||''}; }
       catch { return null; }
     })).then(cos => {
       const companies = (cos||[]).filter(c => c && c.nombre);
