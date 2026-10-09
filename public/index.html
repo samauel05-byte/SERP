@@ -842,6 +842,7 @@ let masterKey = null, credentials = [], clients = [], appConfig = {}, lastPollTs
 let _dupeGroups = [];
 let activePortal = null;
 let sessionToken = null, currentUser = null, vaultSecret = null, activeSessionId = null;
+let refreshToken = null, tokenExpiresAt = 0, refreshTimer = null, _refreshing = null;
 
 /* ── Crypto ── */
 const C = {
@@ -887,14 +888,74 @@ function authH(body=false) {
   if (activeSessionId) h['X-Direct-Session'] = activeSessionId;
   return h;
 }
-async function apiRequest(path, options={}) {
+async function apiRequest(path, options={}, _retried=false) {
   const response=await fetch(path, options);
+  if(response.status===401 && sessionToken && !_retried){
+    // La sesión pudo solo vencer (token de 1 h): se intenta renovar en
+    // silencio y repetir la petición una vez antes de cerrar la bóveda.
+    if(await refreshSession()){
+      const opts={...options, headers:{...(options.headers||{})}};
+      if(opts.headers.Authorization) opts.headers.Authorization='Bearer '+sessionToken;
+      if(opts.headers['X-Direct-Session'] && activeSessionId) opts.headers['X-Direct-Session']=activeSessionId;
+      return apiRequest(path, opts, true);
+    }
+  }
   const data=await response.json().catch(()=>({}));
   if(response.status===401 && sessionToken){
     lockVault('Tu sesión fue cerrada porque este usuario inició sesión en otro equipo.');
     throw new Error('Sesión reemplazada');
   }
   return data;
+}
+
+// Renueva el access_token con el refresh_token (en el servidor; la anon key no
+// sale de ahí). Devuelve true si quedó una sesión válida. Varias llamadas a la
+// vez comparten la misma promesa para no pedir dos renovaciones en paralelo.
+function refreshSession(){
+  if(_refreshing) return _refreshing;
+  if(!refreshToken){ return Promise.resolve(false); }
+  _refreshing = (async () => {
+    try{
+      const h={'Content-Type':'application/json'};
+      if(activeSessionId) h['X-Direct-Session']=activeSessionId;
+      const r=await fetch('/api/auth/refresh',{method:'POST',headers:h,body:JSON.stringify({refresh_token:refreshToken})});
+      if(!r.ok) return false;
+      const d=await r.json().catch(()=>({}));
+      if(!d.ok||!d.access_token) return false;
+      sessionToken=d.access_token;
+      if(d.refresh_token) refreshToken=d.refresh_token;
+      tokenExpiresAt=d.expires_at?d.expires_at*1000:(Date.now()+55*60*1000);
+      sessionStorage.setItem('dtoken',sessionToken);
+      sessionStorage.setItem('drefresh',refreshToken||'');
+      sessionStorage.setItem('dexp',String(tokenExpiresAt));
+      // El iframe de Estimación lee el token de sessionStorage; avisar por si
+      // tiene un guardado en espera.
+      try{ const fr=document.getElementById('dgii-modulos-frame'); if(fr&&fr.contentWindow) fr.contentWindow.postMessage({action:'dgii-init', token: sessionToken, sessionId: activeSessionId, companies: null}, location.origin); }catch(e){}
+      scheduleRefresh();
+      return true;
+    }catch(e){ return false; }
+    finally{ _refreshing=null; }
+  })();
+  return _refreshing;
+}
+
+// Renovación proactiva: se programa ~2 min antes de que venza el token, así el
+// usuario no topa con el 401 mientras trabaja (p. ej. en Estimación Fiscal).
+function scheduleRefresh(){
+  if(refreshTimer){ clearTimeout(refreshTimer); refreshTimer=null; }
+  if(!refreshToken||!sessionToken) return;
+  let ms = (tokenExpiresAt||0) - Date.now() - 120000;
+  if(!(ms>0)) ms = 1000;
+  if(ms>21600000) ms=21600000; // nunca más de 6 h entre chequeos
+  refreshTimer=setTimeout(()=>{ if(sessionToken&&refreshToken) refreshSession(); }, ms);
+}
+
+function storeSession(res){
+  refreshToken = res.refresh_token || null;
+  tokenExpiresAt = res.expires_at ? res.expires_at*1000 : (Date.now()+55*60*1000);
+  sessionStorage.setItem('drefresh', refreshToken||'');
+  sessionStorage.setItem('dexp', String(tokenExpiresAt));
+  scheduleRefresh();
 }
 // Escapa texto antes de insertarlo con innerHTML. Los nombres de empresa y
 // usuarios vienen descifrados de la bóveda (texto libre) y NO deben ejecutarse
@@ -927,6 +988,12 @@ async function boot() {
       try {
         sessionToken = storedToken;
         activeSessionId = storedSessionId;
+        refreshToken = sessionStorage.getItem('drefresh') || null;
+        tokenExpiresAt = parseInt(sessionStorage.getItem('dexp')||'0',10) || 0;
+        // Si el token guardado ya venció (pestaña reabierta tras > 1 h), se
+        // renueva antes de seguir para no caer en el 401 del arranque.
+        if(refreshToken && tokenExpiresAt && tokenExpiresAt < Date.now()+60000) await refreshSession();
+        scheduleRefresh();
         const s = JSON.parse(storedSess);
         currentUser = {username:s.username||'', role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_clientes:s.access_clientes, portals:s.portals};
         const v = JSON.parse(storedVault);
@@ -982,6 +1049,7 @@ async function handleSetup() {
     activeSessionId = signIn.session_id || null;
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     sessionStorage.setItem('dtoken', sessionToken);
+    storeSession(signIn);
 
     currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
     vaultSecret = vaultSecretBytes;
@@ -1040,6 +1108,7 @@ async function handleLogin() {
     sessionToken = res.access_token;
     activeSessionId = res.session_id || null;
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
+    storeSession(res);
     currentUser = { username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals };
 
     // 2. Home data only needs the token: fetch it while the vault keys are derived.
@@ -1085,7 +1154,10 @@ async function loadHome(pending) {
 
 function lockVault(message='') {
   masterKey=null; vaultSecret=null; sessionToken=null; activeSessionId=null; currentUser=null;
+  refreshToken=null; tokenExpiresAt=0;
+  if(refreshTimer){ clearTimeout(refreshTimer); refreshTimer=null; }
   sessionStorage.removeItem('dtoken'); sessionStorage.removeItem('dsession'); sessionStorage.removeItem('dvault');
+  sessionStorage.removeItem('drefresh'); sessionStorage.removeItem('dexp');
   localStorage.removeItem('direct_session_id');
   stopPolling();
   show('view-login');
@@ -1381,7 +1453,17 @@ window.addEventListener('message', e => {
       catch { return null; }
     })).then(cos => {
       const companies = (cos||[]).filter(c => c && c.nombre);
-      frame.contentWindow.postMessage({action:'dgii-init', token: sessionToken, companies}, location.origin);
+      frame.contentWindow.postMessage({action:'dgii-init', token: sessionToken, sessionId: activeSessionId, companies}, location.origin);
+    });
+  }
+  // El módulo de Estimación pide renovar la sesión cuando su guardado recibe un
+  // 401 (token vencido). Se renueva aquí (tiene el refresh_token) y se le
+  // devuelve el token nuevo para que reintente sin que el usuario relogee.
+  if (e.data.action === 'dgii-session-refresh') {
+    if (e.source !== document.getElementById('dgii-modulos-frame')?.contentWindow) return;
+    refreshSession().then(ok => {
+      const fr = document.getElementById('dgii-modulos-frame');
+      if (fr && fr.contentWindow) fr.contentWindow.postMessage({action:'dgii-token', ok, token: ok?sessionToken:'', sessionId: activeSessionId}, location.origin);
     });
   }
 });

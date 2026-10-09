@@ -50,6 +50,8 @@ module.exports = async (req, res) => {
       // round trip to the auth server is needed.
       const grant = await authRes.json();
       const access_token = grant.access_token;
+      const refresh_token = grant.refresh_token || null;
+      const expires_at = grant.expires_at || null;
       let user = grant.user;
       if (!user?.id) {
         const { data, error: userErr } = await supabase.auth.getUser(access_token);
@@ -74,6 +76,8 @@ module.exports = async (req, res) => {
       return res.json({
         ...profileResponse(profile, []),
         access_token,
+        refresh_token,
+        expires_at,
         session_id: sessionError ? null : nextSessionId,
         config,
       });

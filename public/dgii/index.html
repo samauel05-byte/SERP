@@ -303,7 +303,18 @@ select option{background:var(--surf2)}
 
 <script>
 const API='/api/ir2/resumen';
-let _token='',_companies=[];
+let _token='',_companies=[],_sessionId='',_awaitRefresh=null;
+const sessionId=()=>_sessionId||localStorage.getItem('direct_session_id')||'';
+// Pide al padre renovar la sesión (tiene el refresh_token) y espera el token
+// nuevo. Devuelve true si quedó sesión válida. Timeout por si no contesta.
+function requestRefresh(){
+  return new Promise(resolve=>{
+    let done=false;
+    _awaitRefresh=(ok)=>{ if(done)return; done=true; resolve(ok); };
+    try{ window.parent.postMessage({action:'dgii-session-refresh'},'*'); }catch(e){ done=true; resolve(false); }
+    setTimeout(()=>{ if(!done){ done=true; _awaitRefresh=null; resolve(false); } },8000);
+  });
+}
 // Prefiere el token más reciente que la app guarda en sessionStorage (mismo
 // origen): tras un re-login el iframe no se recarga, así que _token quedaría
 // obsoleto. Usar primero dtoken evita el 401 por token viejo.
@@ -629,17 +640,23 @@ async function load(){
 }
 
 async function saveAll(){
-  const tk=token();
-  if(!tk){alert('No hay sesión activa');return;}
+  if(!token()){alert('No hay sesión activa');return;}
   const ri=document.getElementById('rnc-inp');
   if(ri) RNC=ri.value.trim();
   if(!RNC){alert('Ingresa un RNC primero');return;}
+  const body=JSON.stringify({rnc:RNC,anio:ANIO,nombre:NOMBRE,tipo:'dgii-modulos',data:DATA});
+  const send=()=>{
+    const h={Authorization:'Bearer '+token(),'Content-Type':'application/json'};
+    if(sessionId()) h['X-Direct-Session']=sessionId();
+    return fetch(API,{method:'POST',headers:h,body});
+  };
   try{
-    const response=await fetch(API,{
-      method:'POST',
-      headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json'},
-      body:JSON.stringify({rnc:RNC,anio:ANIO,nombre:NOMBRE,tipo:'dgii-modulos',data:DATA})
-    });
+    let response=await send();
+    // Token vencido: pedir al padre que renueve la sesión y reintentar una vez,
+    // sin que el usuario tenga que volver a entrar.
+    if(response.status===401){
+      if(await requestRefresh()) response=await send();
+    }
     if(!response.ok){
       if(response.status===401) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión en la app y guarda de nuevo (tus datos siguen en pantalla).');
       let detail='';
@@ -693,12 +710,28 @@ function changeAnio(y){
 
 /* ── postMessage from parent ── */
 window.addEventListener('message',e=>{
-  if(!e.data||e.data.action!=='dgii-init') return;
-  _token=e.data.token||'';
-  _companies=e.data.companies||[];
-  renderCoSel();
-  renderAnioSel();
-  load();
+  if(!e.data) return;
+  if(e.data.action==='dgii-init'){
+    _token=e.data.token||'';
+    if(e.data.sessionId) _sessionId=e.data.sessionId;
+    // El broadcast de renovación manda companies:null; solo se re-renderiza la
+    // lista cuando llega de verdad (en el init), para no vaciar el selector.
+    if(Array.isArray(e.data.companies)){
+      _companies=e.data.companies;
+      renderCoSel();
+      renderAnioSel();
+      load();
+    }
+    return;
+  }
+  // Respuesta a la petición de renovación (dgii-session-refresh): guardar el
+  // token nuevo y liberar al guardado que estaba esperando para reintentar.
+  if(e.data.action==='dgii-token'){
+    if(e.data.ok && e.data.token) _token=e.data.token;
+    if(e.data.sessionId) _sessionId=e.data.sessionId;
+    if(_awaitRefresh){ const r=_awaitRefresh; _awaitRefresh=null; r(!!e.data.ok); }
+    return;
+  }
 });
 
 /* ── Init ── */
