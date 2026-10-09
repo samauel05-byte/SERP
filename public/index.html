@@ -1357,6 +1357,21 @@ function openDgiiModulos() {
 window.addEventListener('message', e => {
   if (!e.data) return;
   if (e.data.action === 'showPortals') showPortals();
+  // «Jalar de DGII» (Estimación Fiscal): abre la Oficina Virtual de esa empresa
+  // por el relay (auto-login), para ir a «Consulta de Envíos». El jalado de la
+  // tabla se hará desde ahí. Solo se acepta desde el iframe de este origen.
+  if (e.data.action === 'dgii-open-ofv') {
+    if (e.source !== document.getElementById('dgii-modulos-frame')?.contentWindow) return;
+    const rnc = String(e.data.rnc || '').trim();
+    if (!rnc || !masterKey) { toast('Ingresa un RNC primero', 'warn'); return; }
+    (async () => {
+      for (const c of getCompanies('dgii')) {
+        try { const p = await C.dec(masterKey, c.iv, c.ct); if (String(p.rnc || '').trim() === rnc) { enterCompany(c.id); return; } }
+        catch {}
+      }
+      toast('No encontré una credencial DGII con ese RNC', 'warn');
+    })();
+  }
   if (e.data.action === 'dgii-ready') {
     const frame = document.getElementById('dgii-modulos-frame');
     if (!frame || !frame.contentWindow) return;

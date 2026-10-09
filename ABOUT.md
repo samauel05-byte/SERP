@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Estimación Fiscal — «Jalar de DGII» (paso 1)**: en la pestaña de Envíos, un botón «Jalar de DGII» abre la Oficina Virtual de esa empresa por el relay (auto-login) para ir a «Consulta de Envíos». Es el primer paso del jalado automático del 606/607; la extracción de la tabla viene después.
 - **Estimación Fiscal — importar Envíos 606/607 (ingesta)**: la pestaña de «Consulta Envíos» ahora tiene un botón «Importar / Pegar 606-607»: se pega la tabla de envíos de la Oficina Virtual (o de Excel) y el módulo detecta las filas y calcula los totales solo, sin tecleo (tolerante a formato de números dominicano y US, con vista previa antes de aplicar). Es la primera etapa para automatizar la estimación; el cálculo fiscal y el jalado automático desde la DGII vienen después.
 
 - **Direct — Citrus, ONAPI, Formalízate e IDOPPRIL con acceso directo**: estos portales ya tienen su URL de inicio de sesión configurada, así que se abren y autollenan a través del relay como el resto (Citrus `ecf.citrus.com.do`, ONAPI `onapi.gob.do/siteServices`, Formalízate `vu.formalizate.gob.do`, IDOPPRIL `idoppril.gob.do`). Antes estaban definidos pero sin URL, por lo que no se podían abrir.
