@@ -304,7 +304,10 @@ select option{background:var(--surf2)}
 <script>
 const API='/api/ir2/resumen';
 let _token='',_companies=[];
-const token=()=>_token||sessionStorage.getItem('dtoken')||'';
+// Prefiere el token más reciente que la app guarda en sessionStorage (mismo
+// origen): tras un re-login el iframe no se recarga, así que _token quedaría
+// obsoleto. Usar primero dtoken evita el 401 por token viejo.
+const token=()=>sessionStorage.getItem('dtoken')||_token||'';
 let RNC='',NOMBRE='',ANIO=new Date().getFullYear();
 
 /* ── Module definitions ── */
