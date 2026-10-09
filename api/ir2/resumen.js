@@ -5,8 +5,10 @@ module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   const requestedType = req.method === 'POST' ? req.body?.tipo : req.query?.tipo;
-  const isEstimate = requestedType === 'estimacion';
-  const allowed = session.role === 'admin' || (isEstimate ? session.access_estimacion : session.access_ir2);
+  // 'dgii-modulos' es el módulo de Estimación Fiscal (Anexos DGII); se rige por
+  // el permiso de Estimación, igual que 'estimacion'. Se admite también IR-2.
+  const isEstimate = requestedType === 'estimacion' || requestedType === 'dgii-modulos';
+  const allowed = session.role === 'admin' || (isEstimate ? (session.access_estimacion || session.access_ir2) : session.access_ir2);
   if (!allowed) {
     return res.status(403).json({ error: isEstimate ? 'Sin acceso a Estimación Fiscal' : 'Sin acceso a IR-2' });
   }

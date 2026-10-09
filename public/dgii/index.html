@@ -637,7 +637,11 @@ async function saveAll(){
       headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json'},
       body:JSON.stringify({rnc:RNC,anio:ANIO,nombre:NOMBRE,tipo:'dgii-modulos',data:DATA})
     });
-    if(!response.ok) throw new Error('No se pudo guardar la información');
+    if(!response.ok){
+      let detail='';
+      try { const j=await response.json(); detail=j&&j.error?j.error:''; } catch {}
+      throw new Error(`(${response.status}) ${detail||'No se pudo guardar la información'}`);
+    }
     showBadge();
     return true;
   }catch(e){alert('Error guardando: '+e.message);}
