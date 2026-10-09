@@ -1438,7 +1438,12 @@ window.addEventListener('message', e => {
     if (!rnc || !masterKey) { toast('Ingresa un RNC primero', 'warn'); return; }
     (async () => {
       for (const c of getCompanies('dgii')) {
-        try { const p = await C.dec(masterKey, c.iv, c.ct); if (String(p.rnc || '').trim() === rnc) { enterCompany(c.id); return; } }
+        try { const p = await C.dec(masterKey, c.iv, c.ct); if (String(p.rnc || '').trim() === rnc) {
+          // Marca este lanzamiento para que el relay muestre el botón «Traer
+          // 606/607 a SERP» en la Oficina Virtual (jalado automático).
+          window.__serpDgiiCapture = true;
+          enterCompany(c.id); return;
+        } }
         catch {}
       }
       toast('No encontré una credencial DGII con ese RNC', 'warn');
@@ -1465,6 +1470,17 @@ window.addEventListener('message', e => {
       const fr = document.getElementById('dgii-modulos-frame');
       if (fr && fr.contentWindow) fr.contentWindow.postMessage({action:'dgii-token', ok, token: ok?sessionToken:'', sessionId: activeSessionId}, location.origin);
     });
+  }
+  // Jalado automático 606/607: el relay (pestaña de la Oficina Virtual abierta
+  // con «Jalar de DGII») manda el texto de las tablas de «Consulta de Envíos».
+  // Solo se acepta desde el origen del relay. Se reenvía al iframe de Estimación
+  // para que su importador lo detecte y prepare las filas (con vista previa).
+  if (e.data.type === 'serp-dgii-capture') {
+    if (e.origin !== 'https://portal-rd-relay.samauel05.workers.dev') return;
+    const text = typeof e.data.text === 'string' ? e.data.text : '';
+    const fr = document.getElementById('dgii-modulos-frame');
+    if (fr && fr.contentWindow) fr.contentWindow.postMessage({action:'dgii-envios-captured', text, url: String(e.data.url||'')}, location.origin);
+    toast('Datos traídos de la DGII — revisa en Estimación Fiscal','ok');
   }
 });
 
@@ -2031,6 +2047,10 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
   // A unique flow id keeps the relay's one-time DGII submission state scoped
   // to this exact launch, never to an older browser tab or prior login.
   const proxyPayload = { user: payload.user, pass: payload.pass, flow: serpFlowId(), origin: location.origin };
+  // «Jalar de DGII»: pide al relay que muestre el botón de captura de 606/607 en
+  // la Oficina Virtual. Bandera de un solo uso para no afectar aperturas normales.
+  if (institution === 'dgii' && window.__serpDgiiCapture) { proxyPayload.capture = true; }
+  window.__serpDgiiCapture = false;
   window.DX?.onFlow(proxyPayload.flow, window.__serpEnteringCred);
   if (payload.cedula) proxyPayload.cedula = payload.cedula;
   if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;

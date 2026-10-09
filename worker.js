@@ -1025,8 +1025,48 @@ export default {
     try { window.opener.postMessage({ type: 'serp-login-result', flow: p.flow, result: result }, p.origin); } catch(e) {}
   }
   function scheduleReport(){ setTimeout(reportLoginResult, 1500); setTimeout(reportLoginResult, 5000); }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); scheduleReport(); });
-  else { waitAndRun(100); scheduleReport(); }
+  // ── Jalado automático 606/607 (solo DGII, solo cuando se abrió con «Jalar de
+  // DGII»: p.capture). Añade un botón flotante que serializa las tablas de la
+  // pantalla (p. ej. «Consulta de Envíos») y las manda a la app (opener), que
+  // las pasa por su importador. No toca el auto-login ni afecta a otros portales.
+  function serpSerializeTables(){
+    var out=[];
+    var tables=Array.prototype.slice.call(document.querySelectorAll('table'));
+    tables.forEach(function(t){
+      var rows=Array.prototype.slice.call(t.querySelectorAll('tr'));
+      if(rows.length<2) return;
+      var lines=[];
+      rows.forEach(function(tr){
+        var cells=Array.prototype.slice.call(tr.querySelectorAll('th,td'));
+        if(!cells.length) return;
+        var line=cells.map(function(c){ return ((c.innerText||c.textContent||'').replace(/\\s+/g,' ')).trim(); }).join('\\t');
+        if(line.replace(/\\t/g,'').trim()!=='') lines.push(line);
+      });
+      if(lines.length>=2) out.push(lines.join('\\n'));
+    });
+    return out.join('\\n\\n');
+  }
+  function serpSendCapture(btn){
+    try{
+      var text=serpSerializeTables();
+      window.opener.postMessage({ type:'serp-dgii-capture', flow:(p.flow||hash), url:location.href, text:text }, p.origin);
+      if(btn){ btn.textContent='Enviado a SERP ✓'; setTimeout(function(){ try{ btn.textContent='Traer 606/607 a SERP'; }catch(e){} }, 2500); }
+    }catch(e){}
+  }
+  function setupSerpCapture(){
+    var serpIsDgii='${hostname}'.indexOf('dgii.gov.do')!==-1;
+    if(!p || !p.capture || !serpIsDgii || !window.opener || !p.origin) return;
+    if(document.getElementById('serp-cap-btn')) return;
+    var b=document.createElement('button');
+    b.id='serp-cap-btn';
+    b.type='button';
+    b.textContent='Traer 606/607 a SERP';
+    b.setAttribute('style','position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#0060e0;color:#fff;border:none;border-radius:8px;padding:11px 16px;font:700 13px system-ui,-apple-system,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer');
+    b.addEventListener('click', function(){ serpSendCapture(b); });
+    (document.body||document.documentElement).appendChild(b);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); scheduleReport(); setupSerpCapture(); });
+  else { waitAndRun(100); scheduleReport(); setupSerpCapture(); }
 })();
 <\/script>`;
 

@@ -732,7 +732,29 @@ window.addEventListener('message',e=>{
     if(_awaitRefresh){ const r=_awaitRefresh; _awaitRefresh=null; r(!!e.data.ok); }
     return;
   }
+  // Jalado automático: el relay mandó el texto de las tablas de «Consulta de
+  // Envíos». Se vuelca en el importador (mismo parser tolerante) con vista
+  // previa, para que revises y confirmes antes de agregar las filas.
+  if(e.data.action==='dgii-envios-captured'){
+    receiveCapturedEnvios(e.data.text||'');
+    return;
+  }
 });
+
+// Abre la pestaña de Envíos, vuelca lo capturado en el importador y muestra la
+// vista previa. No agrega filas solo: se confirma con «Agregar filas» (los
+// montos son sensibles y así verificas el mapeo de columnas).
+function receiveCapturedEnvios(text){
+  sw(4);
+  const box=document.getElementById('envios-import');
+  if(box) box.style.display='block';
+  const ta=document.getElementById('envios-import-text');
+  if(ta) ta.value=text||'';
+  previewEnviosImport();
+  const n=_enviosParsed.length;
+  if(n){ alert('Traído de la DGII: '+n+' fila(s) de envíos detectada(s). Revisa la vista previa y pulsa «Agregar filas».'); }
+  else { alert('Traje la pantalla de la DGII pero no detecté una tabla de envíos. Abre «Consulta de Envíos» (606/607), consulta un período y vuelve a pulsar «Traer 606/607 a SERP».'); }
+}
 
 /* ── Init ── */
 (function init(){
