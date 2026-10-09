@@ -87,6 +87,7 @@ Contraseña del usuario (solo en memoria del navegador)
 - Los nombres de empresa van cifrados: solo se descifran en el navegador
 - **Aislamiento multiempresa**: clientes y credenciales se consultan con el tenant del perfil autenticado
 - **Sesión única por usuario**: un nuevo inicio desde otro equipo bloquea automáticamente la sesión anterior
+- **Renovación silenciosa de sesión**: el `access_token` dura 1 h; el navegador guarda el `refresh_token` solo en `sessionStorage` (vida de la pestaña) y lo canjea en `POST /api/auth/refresh`, que renueva contra Supabase **en el servidor** (la anon key no sale de ahí). La renovación es proactiva (unos minutos antes de vencer) y reactiva (al recibir un 401 se renueva y se reintenta la petición una vez antes de bloquear la bóveda). Respeta la sesión única: un navegador ya desplazado por otro no puede renovarse (se valida `X-Direct-Session` contra `direct_active_sessions`). El iframe de Estimación Fiscal solicita la renovación a la app padre y reintenta su guardado.
 - **RLS sin acceso directo desde navegador**: las operaciones pasan por rutas autenticadas del servidor (rol de servicio)
 
 ---

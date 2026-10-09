@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Sesión que no se cae a mitad de trabajo (renovación silenciosa)**: el token de acceso dura 1 hora; antes, al pasar ese tiempo, guardar en Estimación Fiscal (u otra pantalla) fallaba con «Tu sesión expiró» y había que volver a entrar. Ahora la app renueva la sesión sola —de forma proactiva unos minutos antes de vencer y, si hace falta, al vuelo cuando una petición recibe 401— reintentando el guardado sin que el usuario tenga que relogearse ni perder lo que tiene en pantalla. La renovación corre en el servidor (la anon key de Supabase nunca sale de ahí) y mantiene la sesión única por equipo: un navegador ya desplazado por otro no puede renovarse. El iframe de Estimación pide la renovación a la app y reintenta su guardado automáticamente.
 - **Estimación Fiscal — «Jalar de DGII» (paso 1)**: en la pestaña de Envíos, un botón «Jalar de DGII» abre la Oficina Virtual de esa empresa por el relay (auto-login) para ir a «Consulta de Envíos». Es el primer paso del jalado automático del 606/607; la extracción de la tabla viene después.
 - **Estimación Fiscal — importar Envíos 606/607 (ingesta)**: la pestaña de «Consulta Envíos» ahora tiene un botón «Importar / Pegar 606-607»: se pega la tabla de envíos de la Oficina Virtual (o de Excel) y el módulo detecta las filas y calcula los totales solo, sin tecleo (tolerante a formato de números dominicano y US, con vista previa antes de aplicar). Es la primera etapa para automatizar la estimación; el cálculo fiscal y el jalado automático desde la DGII vienen después.
 
