@@ -1451,7 +1451,7 @@ function renderPortalGrid() {
     const allPortals=['dgii','tss','trabajo','sirla','carnet','azul'];
     const userPortals=Array.isArray(currentUser?.portals)?currentUser.portals:allPortals;
     allowed.push(...(currentUser?.role==='admin'?allPortals:userPortals));
-    allowed.push('camara','digisign','gdmail','nexo');
+    allowed.push('camara','onapi','formalizate','citrus','idoppril','digisign','gdmail','nexo');
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
