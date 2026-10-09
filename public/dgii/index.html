@@ -219,11 +219,28 @@ select option{background:var(--surf2)}
   </div>
 </div>
 
-<!-- TAB 4: CONSULTA ENVÍOS 606 -->
+<!-- TAB 4: CONSULTA ENVÍOS 606/607 -->
 <div class="section" id="s4">
   <div class="sec-hdr">
-    <span class="sec-lbl">Consulta Envíos 606 — Histórico de Declaraciones</span>
-    <button class="btn-add" onclick="addRow('envios606')">+ Agregar</button>
+    <span class="sec-lbl">Consulta Envíos 606/607 — Histórico de Declaraciones</span>
+    <div style="display:flex;gap:8px">
+      <button class="btn-add" onclick="toggleEnviosImport()">Importar / Pegar 606-607</button>
+      <button class="btn-add" onclick="addRow('envios606')">+ Agregar</button>
+    </div>
+  </div>
+  <!-- Importador: pega la consulta de envíos de la Oficina Virtual (o de Excel) -->
+  <div id="envios-import" style="display:none;margin:0 0 12px;padding:12px;border:1px solid var(--bd,#d0d0d0);border-radius:8px;background:var(--bg2,#f7f7f7)">
+    <div style="font-size:12px;color:var(--fg3,#666);margin:0 0 6px">
+      Pega aquí la tabla de «Consulta de Envíos» de la DGII (una fila por envío). Columnas, en orden:
+      <strong>Período · Tipo · Fecha envío · Estado · Nº registros · Total monto · Total ITBIS · Total retención · Referencia</strong>.
+      Acepta columnas separadas por tabulación (copiar/pegar de la OfV o de Excel). Se muestra una vista previa antes de aplicar.
+    </div>
+    <textarea id="envios-import-text" rows="6" oninput="previewEnviosImport()" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px" placeholder="202401&#9;Ordinario&#9;15/02/2024&#9;Aceptado&#9;120&#9;1,250,000.00&#9;225,000.00&#9;0.00&#9;REF-123"></textarea>
+    <div id="envios-import-preview" style="font-size:12px;color:var(--fg3,#666);margin:6px 0"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-add" id="envios-import-apply" onclick="applyEnviosImport()" disabled>Agregar filas</button>
+      <button class="btn-danger" onclick="toggleEnviosImport(true)">Cancelar</button>
+    </div>
   </div>
   <div class="tbl-wrap">
     <table>
@@ -511,6 +528,82 @@ function onCell(el){
 
 function addRow(mod){DATA[mod].push({...MODS[mod].empty});renderMod(mod);}
 function delRow(mod,i){DATA[mod].splice(i,1);renderMod(mod);}
+
+/* ── Importador de Envíos 606/607 (Etapa 1: ingesta) ── */
+// Convierte números con formato US ("1,250,000.00") o dominicano/europeo
+// ("1.250.000,00"). El separador decimal es el último que aparece; el otro son
+// miles. Si solo hay un tipo de separador, se decide por los dígitos que le siguen.
+function parseNumDO(s){
+  if(s==null) return 0;
+  let t=String(s).replace(/[^\d.,\-]/g,'').trim();
+  if(!t) return 0;
+  const hasC=t.indexOf(',')>-1, hasD=t.indexOf('.')>-1;
+  if(hasC && hasD){
+    const dec = t.lastIndexOf(',')>t.lastIndexOf('.') ? ',' : '.';
+    const thou = dec===',' ? '.' : ',';
+    t = t.split(thou).join('').replace(dec,'.');
+  } else if(hasC){
+    const parts=t.split(',');
+    t = (parts.length===2 && parts[1].length<=2) ? parts.join('.') : parts.join('');
+  } else if(hasD){
+    const parts=t.split('.');
+    if(!(parts.length===2 && parts[1].length<=2)) t=parts.join('');
+  }
+  const v=parseFloat(t);
+  return isFinite(v)?v:0;
+}
+function splitCells(line){
+  if(line.indexOf('\t')>-1) return line.split('\t').map(c=>c.trim());
+  return line.split(/\s{2,}|\s*\|\s*/).map(c=>c.trim()).filter(c=>c!=='');
+}
+function looksHeader(cells){
+  const j=cells.join(' ').toLowerCase();
+  return /per[ií]odo|estado|itbis|retenci|registros/.test(j) && !/^\d{6}$|\d{2}\/\d{4}|\d{4}\d{2}/.test(cells[0]||'');
+}
+function parseEnviosText(text){
+  const out=[];
+  (text||'').split(/\r?\n/).forEach(line=>{
+    const raw=line.trim(); if(!raw) return;
+    const cells=splitCells(raw);
+    if(!cells.length) return;
+    if(looksHeader(cells)) return;
+    const periodo=cells[0]||'', tipo=cells[1]||'Ordinario', fecha=cells[2]||'', estado=cells[3]||'',
+          nreg=cells[4]||'', monto=cells[5]||'', itbis=cells[6]||'', ret=cells[7]||'', ref=cells[8]||'',
+          rest=cells.slice(9);
+    out.push({ periodo, tipo, fecha_envio:fecha, estado, nro_reg:parseNumDO(nreg),
+      total_monto:parseNumDO(monto), total_itbis:parseNumDO(itbis), total_ret:parseNumDO(ret),
+      ref_dgii:ref, obs:rest.join(' ') });
+  });
+  return out;
+}
+let _enviosParsed=[];
+function toggleEnviosImport(forceClose){
+  const box=document.getElementById('envios-import'); if(!box) return;
+  const open = !forceClose && box.style.display==='none';
+  box.style.display = open ? 'block' : 'none';
+  if(!open){
+    document.getElementById('envios-import-text').value='';
+    document.getElementById('envios-import-preview').textContent='';
+    document.getElementById('envios-import-apply').disabled=true;
+    _enviosParsed=[];
+  }
+}
+function previewEnviosImport(){
+  _enviosParsed=parseEnviosText(document.getElementById('envios-import-text').value);
+  const prev=document.getElementById('envios-import-preview');
+  const btn=document.getElementById('envios-import-apply');
+  if(!_enviosParsed.length){ prev.textContent='Sin filas detectadas todavía.'; btn.disabled=true; return; }
+  const tm=_enviosParsed.reduce((s,r)=>s+n(r.total_monto),0);
+  const ti=_enviosParsed.reduce((s,r)=>s+n(r.total_itbis),0);
+  prev.innerHTML=`Detectadas <strong>${_enviosParsed.length}</strong> fila(s) · Monto ${f(tm)} · ITBIS ${f(ti)}. Revisa y pulsa «Agregar filas».`;
+  btn.disabled=false;
+}
+function applyEnviosImport(){
+  if(!_enviosParsed.length) return;
+  DATA.envios606=(DATA.envios606||[]).concat(_enviosParsed.map(r=>({...MODS['envios606'].empty, ...r})));
+  renderMod('envios606');
+  toggleEnviosImport(true);
+}
 
 /* ── API ── */
 async function load(){
