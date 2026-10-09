@@ -18,3 +18,6 @@ alter table public.direct_config
 
 alter table public.direct_config
   add primary key (tenant_id, key);
+
+-- Recarga la caché de esquema de PostgREST tras cambiar la clave primaria.
+notify pgrst, 'reload schema';

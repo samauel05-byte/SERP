@@ -20,3 +20,7 @@ alter table public.ir2_resumen
   add constraint ir2_resumen_tenant_rnc_anio_tipo_key unique (tenant_id, rnc, anio, tipo);
 
 create index if not exists ir2_resumen_tenant_idx on public.ir2_resumen (tenant_id);
+
+-- Recarga la caché de esquema de PostgREST para que el nuevo onConflict
+-- (tenant_id, rnc, anio, tipo) sea reconocido de inmediato por supabase-js.
+notify pgrst, 'reload schema';
