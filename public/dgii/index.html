@@ -224,6 +224,7 @@ select option{background:var(--surf2)}
   <div class="sec-hdr">
     <span class="sec-lbl">Consulta Envíos 606/607 — Histórico de Declaraciones</span>
     <div style="display:flex;gap:8px">
+      <button class="btn-add" onclick="jalarDgii()" title="Abre la Oficina Virtual de la DGII de esta empresa para consultar los envíos">Jalar de DGII</button>
       <button class="btn-add" onclick="toggleEnviosImport()">Importar / Pegar 606-607</button>
       <button class="btn-add" onclick="addRow('envios606')">+ Agregar</button>
     </div>
@@ -575,6 +576,14 @@ function parseEnviosText(text){
       ref_dgii:ref, obs:rest.join(' ') });
   });
   return out;
+}
+// «Jalar de DGII»: pide a la app abrir la Oficina Virtual de esta empresa por el
+// relay (auto-login). Desde ahí se va a «Consulta de Envíos». El RNC sale del
+// encabezado del módulo; la app resuelve la credencial y hace el auto-login.
+function jalarDgii(){
+  const rnc=(document.getElementById('rnc-inp')?.value||RNC||'').trim();
+  if(!rnc){ alert('Ingresa un RNC primero'); return; }
+  window.parent.postMessage({action:'dgii-open-ofv', rnc}, '*');
 }
 let _enviosParsed=[];
 function toggleEnviosImport(forceClose){
