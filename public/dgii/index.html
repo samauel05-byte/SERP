@@ -638,6 +638,7 @@ async function saveAll(){
       body:JSON.stringify({rnc:RNC,anio:ANIO,nombre:NOMBRE,tipo:'dgii-modulos',data:DATA})
     });
     if(!response.ok){
+      if(response.status===401) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión en la app y guarda de nuevo (tus datos siguen en pantalla).');
       let detail='';
       try { const j=await response.json(); detail=j&&j.error?j.error:''; } catch {}
       throw new Error(`(${response.status}) ${detail||'No se pudo guardar la información'}`);
