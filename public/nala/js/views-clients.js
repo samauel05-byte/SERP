@@ -8,7 +8,8 @@
     return NALA.modal({
       title: client ? 'Editar empresa cliente' : 'Registrar empresa cliente', okText: 'Guardar', wide: true,
       body: `<div class="fields">
-        <label class="f full"><span>Razón social</span><input id="c-name" value="${esc(c.legal_name || '')}" maxlength="180"></label>
+        <label class="f full"><span>Razón social</span><input id="c-name" value="${esc(c.legal_name || '')}" maxlength="180" list="nala-empresas-dl" autocomplete="off"></label>
+        <datalist id="nala-empresas-dl">${(NALA.state.clients || []).filter(x => x.legal_name).map(x => `<option value="${esc(x.legal_name)}">${esc(x.rnc || x.cedula || '')}</option>`).join('')}</datalist>
         <label class="f"><span>RNC</span><div class="row" style="flex-wrap:nowrap"><input id="c-rnc" value="${esc(c.rnc || '')}" inputmode="numeric" style="flex:1"><button class="btn sm" type="button" id="c-check">Consultar DGII</button></div></label>
         <label class="f"><span>Cédula</span><input id="c-ced" value="${esc(c.cedula || '')}" inputmode="numeric"></label>
         <div class="full muted" id="c-rnc-result"></div>
@@ -53,6 +54,27 @@
     });
   }
   wireRncCheck();
+
+  // Guía central de empresas: en el formulario de cliente, al escribir/elegir el
+  // nombre de una empresa ya registrada se rellena su RNC (y cédula), y al
+  // escribir un RNC conocido se rellena el nombre. Usa NALA.state.clients (la
+  // misma guía de la firma). Solo rellena campos vacíos, nunca pisa lo escrito.
+  document.addEventListener('input', e => {
+    const list = NALA.state.clients || [];
+    if (e.target.id === 'c-name') {
+      const c = list.find(x => x.legal_name && x.legal_name.toLowerCase() === e.target.value.trim().toLowerCase());
+      if (!c) return;
+      const rncEl = document.getElementById('c-rnc'); const cedEl = document.getElementById('c-ced');
+      if (rncEl && c.rnc && !rncEl.value.trim()) rncEl.value = c.rnc;
+      if (cedEl && c.cedula && !cedEl.value.trim()) cedEl.value = c.cedula;
+    } else if (e.target.id === 'c-rnc') {
+      const d = (e.target.value || '').replace(/\D/g, '');
+      if (!d) return;
+      const c = list.find(x => String(x.rnc || '') === d);
+      const nameEl = document.getElementById('c-name');
+      if (c && nameEl && !nameEl.value.trim()) nameEl.value = c.legal_name;
+    }
+  });
 
   function rncSummary(r, compact = false) {
     const s = r.structure; const o = r.official;

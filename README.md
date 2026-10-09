@@ -104,7 +104,7 @@ Contraseña del usuario (solo en memoria del navegador)
 | **Estimación Fiscal** | Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA |
 | **Clientes** | Gestión de los clientes de la empresa operadora mediante Excel |
 
-**Guía central de empresas**: `public/js/empresas.js` es el conector compartido que lee la lista de clientes (`/api/clients`, aislada por firma) y autocompleta **nombre ↔ RNC** donde se pidan (Estimación Fiscal, IR-2, CAMI). Al elegir/escribir el nombre rellena el RNC y viceversa; normaliza los datos (quita el prefijo «GENERALES » de la importación y deduplica por nombre). Cada módulo lo incluye y conecta su par de campos con `SERP_EMPRESAS.attach(nombreId, rncId)`.
+**Guía central de empresas**: `public/js/empresas.js` es el conector compartido que lee la lista de clientes (`/api/clients`, aislada por firma) y autocompleta **nombre ↔ RNC** donde se pidan (Estimación Fiscal, IR-2, CAMI). Al elegir/escribir el nombre rellena el RNC y viceversa; normaliza los datos (quita el prefijo «GENERALES » de la importación y deduplica por nombre). Cada módulo lo incluye y conecta su par de campos con `SERP_EMPRESAS.attach(nombreId, rncId)`. NALA usa la misma guía con su propia lista ya cargada (`NALA.state.clients`) en el formulario de empresa cliente.
 
 ---
 
