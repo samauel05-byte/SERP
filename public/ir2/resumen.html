@@ -875,5 +875,8 @@ function init(){
 document.addEventListener('DOMContentLoaded', init);
 Object.assign(window,{goBack,switchTab,openAnexos,openDgiiSection,importDgiiFile,add607,add606,addTercero,delDgii,delTercero,delIr13,onDgii,onM,onT,onIr13,onHdrChange,onAnioChange,onTaxRatesChange,onInputChange,save});
 </script>
+<!-- Guía central de empresas: autocompletar nombre ↔ RNC desde /api/clients -->
+<script src="/js/empresas.js"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){try{ SERP_EMPRESAS.attach('h-nombre','h-rnc'); }catch(e){}});</script>
 </body>
 </html>

@@ -770,5 +770,27 @@ function receiveCapturedEnvios(text){
   setTimeout(()=>{ if(!_token) load(); },800);
 })();
 </script>
+<!-- Guía central de empresas: datalist de RNC en el campo RNC + autollenar el nombre -->
+<script src="/js/empresas.js"></script>
+<script>
+(function(){
+  if(!window.SERP_EMPRESAS) return;
+  SERP_EMPRESAS.load().then(function(list){
+    var withRnc=list.filter(function(e){return e.rnc;});
+    var dl=document.getElementById('serp-rnc-dl');
+    if(!dl){ dl=document.createElement('datalist'); dl.id='serp-rnc-dl'; document.body.appendChild(dl); }
+    dl.innerHTML=withRnc.map(function(e){return '<option value="'+e.rnc+'">'+String(e.nombre).replace(/"/g,'&quot;')+'</option>';}).join('');
+    var ri=document.getElementById('rnc-inp');
+    if(ri){
+      ri.setAttribute('list','serp-rnc-dl');
+      var byRnc={}; withRnc.forEach(function(e){ byRnc[e.rnc]=e; });
+      ri.addEventListener('input',function(){
+        var e=byRnc[(ri.value||'').replace(/\D/g,'')];
+        if(e){ try{ RNC=e.rnc; NOMBRE=e.nombre; }catch(x){} }
+      });
+    }
+  });
+})();
+</script>
 </body>
 </html>
