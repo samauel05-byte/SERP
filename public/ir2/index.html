@@ -851,5 +851,8 @@ cargarLocal();
 syncEmpresa();
 if(rows.length===0)recalcAll();
 </script>
+<!-- Guía central de empresas: autocompletar nombre ↔ RNC desde /api/clients -->
+<script src="/js/empresas.js"></script>
+<script>try{ SERP_EMPRESAS.attach('e-nombre','e-rnc'); }catch(e){}</script>
 </body>
 </html>

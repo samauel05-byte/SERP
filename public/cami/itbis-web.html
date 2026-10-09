@@ -2322,5 +2322,8 @@ $('btn-xls-ir2').addEventListener('click',exportIR2Draft);$('btn-rst-ir2').addEv
 $('btn-it1-dgii').addEventListener('click',exportIT1DGII);
 renderCardTotal();
 </script>
+<!-- Guía central de empresas: autocompletar nombre ↔ RNC desde /api/clients -->
+<script src="/js/empresas.js"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){try{ SERP_EMPRESAS.attach('in-razon','in-rnc'); SERP_EMPRESAS.attach('ir2-razon','ir2-rnc'); }catch(e){}});</script>
 </body>
 </html>
