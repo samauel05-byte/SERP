@@ -56,6 +56,7 @@ Los portales se abren a través de `portal-rd-relay.samauel05.workers.dev`, que:
 - Reescribe recursos y navegación para que el portal siga funcionando dentro del relay «como un sistema normal», sin extensiones de navegador.
 - **Aísla la sesión de cada empresa por `flow`**: al abrir una segunda empresa del mismo portal, su sesión no hereda la de la primera (cookies con prefijo `serp_<flow>_`). Aplica tanto a los portales clásicos (DGII, etc.) como a los SPA (Ministerio de Trabajo, SISALRIL).
 - Avisa a Direct el resultado del inicio de sesión por `postMessage`.
+- **Jalado automático 606/607 (solo DGII)**: cuando la Oficina Virtual se abre desde Estimación Fiscal con «Jalar de DGII» (el lanzamiento lleva `capture` en el hash), el relay inyecta un botón flotante «Traer 606/607 a SERP» que serializa las tablas de la pantalla (p. ej. «Consulta de Envíos») y las manda a la app por `postMessage`; la app las pasa a su importador con vista previa. Aislado tras esa bandera: no aparece en aperturas normales ni en otros portales.
 
 El relay se despliega automáticamente desde `main`.
 
