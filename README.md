@@ -95,7 +95,7 @@ Contraseña del usuario (solo en memoria del navegador)
 
 | Módulo | Descripción |
 |--------|-------------|
-| **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos, favoritos, recientes, calendario de vencimientos, historial de entradas y permisos por empresa |
+| **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos de contraseña, favoritos, historial de entradas y permisos por empresa |
 | **CAMI** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 e IT-1 |
 | **NALA** | Flujo fiscal 606 y 607: carga masiva, extracción OCR/IA, validación, auditoría, aprobación y exportación DGII; chat IA e IR-17 (ver `docs/nala/README.md`) |
 | **IR-2** | Declaración de renta |
@@ -123,10 +123,9 @@ El admin puede:
 ## Características de Direct
 
 - **Auto-login**: un clic envía automáticamente las credenciales al portal en una nueva pestaña
-- **Favoritos y recientes**: acceso rápido a las empresas marcadas y a las últimas usadas
+- **Favoritos**: acceso rápido a las empresas marcadas
 - **Aviso de contraseña vencida**: si un portal rechaza la clave, la empresa se marca para actualizarla
 - **Revisión de tarjetas de códigos DGII**: revisa/corrige la tarjeta y avisa si faltan códigos o hay repetidos
-- **Calendario de vencimientos**: recordatorios de IT-1, 606/607 y TSS
 - **Historial de entradas**: registro de quién entró a qué portal y cuándo (solo admin)
 - **Permisos por empresa**: cada usuario ve únicamente las empresas asignadas
 - **Cifrado AES-256-GCM** en el navegador — las credenciales viajan y se almacenan siempre cifradas
@@ -157,7 +156,7 @@ SERP/
 ├── lib/                   — Núcleo: auth, tenant, db/supabase y librerías NALA (formats, dgii-template, …)
 ├── public/
 │   ├── index.html         — App Direct (HTML + CSS + JS)
-│   ├── js/                — direct-extras (inicio, favoritos, calendario, historial, tarjetas, permisos)
+│   ├── js/                — direct-extras (inicio, favoritos, historial, tarjetas, permisos)
 │   └── nala/              — App NALA (módulos + asistente)
 ├── worker.js              — Relay Cloudflare Worker de los portales
 ├── supabase/migrations/   — Migraciones SQL (tenants, sesión única, NALA, eventos Direct, …)
