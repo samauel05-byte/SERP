@@ -90,7 +90,6 @@
 
     const pending = credentials.filter(c => DX.needsUpdate(c));
     const fav = DX.favs().map(credById).filter(Boolean);
-    const rec = DX.recent.map(r => credById(r.credential_id)).filter(Boolean).filter(c => !fav.includes(c)).slice(0, 8);
     const nameOf = async c => esc(((await plainOf(c)).companyName) || 'Sin nombre');
     let html = '';
 
@@ -98,10 +97,7 @@
       const rows = await Promise.all(pending.map(async c => `<div class="dx-alert-row"><span>⚠️ ${await nameOf(c)} · ${esc(instName(c.institution))}</span><button class="btn btn-ghost dx-sm" data-fix="${esc(c.id)}">Actualizar clave</button></div>`));
       html += `<div class="dx-card dx-alert"><div class="dx-h">Contraseñas por actualizar (${pending.length})</div>${rows.join('')}</div>`;
     }
-    const cal = DX.calendarHtml();
-    if (cal) html += cal;
     if (fav.length) html += `<div class="dx-card"><div class="dx-h">★ Favoritos</div><div class="dx-row">${(await Promise.all(fav.map(async c => tile(c, await nameOf(c))))).join('')}</div></div>`;
-    if (rec.length) html += `<div class="dx-card"><div class="dx-h">Recientes</div><div class="dx-row">${(await Promise.all(rec.map(async c => tile(c, await nameOf(c))))).join('')}</div></div>`;
     box.innerHTML = html;
 
     box.querySelectorAll('[data-enter]').forEach(b => b.addEventListener('click', () => enterCompany(b.dataset.enter)));
